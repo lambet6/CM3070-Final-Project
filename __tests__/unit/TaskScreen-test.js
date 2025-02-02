@@ -1,13 +1,14 @@
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 
-// mock tasks-server module:
-jest.mock('../../Servers/tasks-server', () => ({
-  loadTasksFromStorage: jest.fn(),
-  saveTasksToStorage: jest.fn(),
+// Mock the manager methods
+jest.mock('../../services/task-manager', () => ({
+  getTasks: jest.fn(),
+  createNewTask: jest.fn(),
+  editExistingTask: jest.fn()
 }));
 
-import { loadTasksFromStorage, saveTasksToStorage } from '../../Servers/tasks-server';
+import { getTasks, createNewTask, editExistingTask } from '../../services/task-manager';
 import TasksScreen from '../../TasksScreen';
 
 describe('TasksScreen (unit)', () => {
@@ -15,86 +16,114 @@ describe('TasksScreen (unit)', () => {
     jest.clearAllMocks();
   });
 
-  it('loads tasks on mount', async () => {
-    loadTasksFromStorage.mockResolvedValueOnce([
-      { id: '1', title: 'Mock Task', dueDate: new Date().toISOString(), priority: 'High' }
-    ]);
+  it('loads tasks on mount and displays them in correct sections', async () => {
+    // Suppose getTasks returns grouped data
+    getTasks.mockResolvedValueOnce({
+      high: [
+        { id: '1', title: 'High Task', dueDate: '2025-01-01T00:00:00.000Z', priority: 'High' }
+      ],
+      medium: [],
+      low: [
+        { id: '2', title: 'Low Task', dueDate: '2025-02-01T00:00:00.000Z', priority: 'Low' }
+      ]
+    });
 
     const { getByText } = render(<TasksScreen />);
 
     // Wait for tasks to load
     await waitFor(() => {
-      // The screen appends "— [Date]" to the title
-      expect(getByText(/^Mock Task —/)).toBeTruthy();
+      // Ensure manager was called
+      expect(getTasks).toHaveBeenCalled();
+      // Check if tasks appear
+      expect(getByText(/^High Task —/)).toBeTruthy();
+      expect(getByText(/^Low Task —/)).toBeTruthy();
     });
-
-    // Also check that loadTasks was called
-    expect(loadTasksFromStorage).toHaveBeenCalledTimes(1);
   });
 
-  it('adds a new task', async () => {
-    // No tasks initially
-    loadTasksFromStorage.mockResolvedValueOnce([]);
+  it('creates a new task', async () => {
+    // Initially no tasks
+    getTasks.mockResolvedValueOnce({ high: [], medium: [], low: [] });
+
+    // When createNewTask is called, it returns updated grouped data
+    createNewTask.mockResolvedValueOnce({
+      high: [
+        { id: '101', title: 'New Task', dueDate: '2025-05-01T00:00:00.000Z', priority: 'High' }
+      ],
+      medium: [],
+      low: []
+    });
 
     const { getByTestId, getByText, queryByText } = render(<TasksScreen />);
-    // Wait for initial load
-    await waitFor(() => {
-      expect(loadTasksFromStorage).toHaveBeenCalled();
-    });
 
-    // Press the FAB to open modal
+    // Wait for initial getTasks to complete
+    await waitFor(() => expect(getTasks).toHaveBeenCalled());
+
+    // Press the FAB to open the "Add" modal
     fireEvent.press(getByTestId('fab-add-task'));
 
-    // Provide some input
-    // Suppose we have testID="input-title" for <TextInput />
-    fireEvent.changeText(getByTestId('input-title'), 'New Task Title');
+    // Fill in the title
+    // Suppose the TextInput has testID="input-title"
+    fireEvent.changeText(getByTestId('input-title'), 'My New Task');
+    
+    // Choose Priority "High" - if you handle that via a Picker, you might do
+    // fireEvent(getByTestId('picker-priority'), 'onValueChange', 'High');
 
-    // Press "Save"
+    // Press Save
     fireEvent.press(getByText('Save'));
 
-    // Wait for the UI to show the new task
+    // Wait for createNewTask to resolve and updated tasks to appear
     await waitFor(() => {
-      expect(queryByText(/^New Task Title —/)).toBeTruthy();
+      expect(createNewTask).toHaveBeenCalledWith('My New Task', 'Medium', expect.any(Date));
+      // or if you changed the priority to 'High', you check that argument
+      expect(getByText(/^New Task —/)).toBeTruthy();
     });
-
-    // Check that saveTasks was called with the new task
-    expect(saveTasksToStorage).toHaveBeenCalled();
-    // We can inspect the actual arguments if we want:
-    const callArg = saveTasksToStorage.mock.calls[0][0];
-    expect(callArg[0].title).toBe('New Task Title');
   });
 
   it('edits an existing task', async () => {
-    const mockExisting = [
-      { id: '100', title: 'Old Title', priority: 'Low', dueDate: new Date().toISOString() }
-    ];
-    loadTasksFromStorage.mockResolvedValueOnce(mockExisting);
+    // The screen first loads tasks
+    getTasks.mockResolvedValueOnce({
+      high: [],
+      medium: [
+        { id: '200', title: 'Old Title', priority: 'Medium', dueDate: '2025-05-01T00:00:00.000Z' }
+      ],
+      low: []
+    });
 
-    const { getByText, findByText, getByTestId } = render(<TasksScreen />);
+    // When we edit the task, the manager returns new grouped data
+    editExistingTask.mockResolvedValueOnce({
+      high: [
+        { id: '200', title: 'Edited Title', priority: 'High', dueDate: '2025-07-01T00:00:00.000Z' }
+      ],
+      medium: [],
+      low: []
+    });
 
-    // Wait for the existing task
+    const { getByText, getByTestId, findByText } = render(<TasksScreen />);
+
+    // Wait for the old task to appear
     await findByText(/^Old Title —/);
 
-    // Simulate long press to edit
+    // Long-press to edit
     fireEvent(getByText(/^Old Title —/), 'onLongPress');
 
     // Change the title
-    const newTitle = 'Edited Title'
-    const input = getByTestId('input-title');
-    fireEvent.changeText(input, newTitle);
+    fireEvent.changeText(getByTestId('input-title'), 'Edited Title');
 
-    // Press "Save"
+    // Pick a new priority "High" 
+    fireEvent(getByTestId('picker-priority'), 'onValueChange', 'High');
+
+    // Press Save
     fireEvent.press(getByText('Save'));
 
-    // Wait for UI update
+    // Wait for editExistingTask to be called and UI to refresh
     await waitFor(() => {
+      expect(editExistingTask).toHaveBeenCalledWith(
+        '200',
+        'Edited Title',
+        'High',   
+        expect.any(Date)
+      );
       expect(getByText(/^Edited Title —/)).toBeTruthy();
     });
-
-    // Confirm the server got the updated tasks
-    expect(saveTasksToStorage).toHaveBeenCalledTimes(1);
-    const updatedArg = saveTasksToStorage.mock.calls[0][0];
-    expect(updatedArg[0].title).toBe(newTitle);
   });
 });
-

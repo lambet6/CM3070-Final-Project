@@ -12,7 +12,6 @@ import {
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
-
 import {
   getTasks,
   createNewTask,
@@ -169,6 +168,7 @@ export default function TasksScreen() {
             <Text style={styles.label}>Priority:</Text>
             <View style={styles.pickerContainer}>
               <Picker
+                testID='picker-priority'
                 selectedValue={taskPriority}
                 onValueChange={(val) => setTaskPriority(val)}
               >
