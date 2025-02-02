@@ -7,90 +7,86 @@ import {
   Pressable,
   FlatList,
   TouchableOpacity,
-  StyleSheet
+  StyleSheet,
+  TextInput
 } from 'react-native';
-// import { Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { loadTasksFromStorage, saveTasksToStorage } from './Servers/tasks-server';
 
-const TASKS_KEY = '@myapp_tasks';
+import {
+  getTasks,
+  createNewTask,
+  editExistingTask
+} from './services/task-manager';
+// import { Ionicons } from '@expo/vector-icons';
 
 export default function TasksScreen() {
-  // State for tasks
-  const [tasks, setTasks] = useState([]);
+  // We store tasks in grouped form: { high: [], medium: [], low: [] }
+  const [tasks, setTasks] = useState({ high: [], medium: [], low: [] });
 
-  // Modal visibility & editing
+  // Modal / editing states
   const [isModalVisible, setModalVisible] = useState(false);
-  const [editingTask, setEditingTask] = useState(null);
+  const [editingTaskId, setEditingTaskId] = useState(null);
 
   // Form fields
   const [taskTitle, setTaskTitle] = useState('');
-  const [taskPriority, setTaskPriority] = useState('Medium'); 
+  const [taskPriority, setTaskPriority] = useState('Medium');
   const [taskDueDate, setTaskDueDate] = useState(new Date());
-
-  // We need to control when to display the date picker
   const [showDatePicker, setShowDatePicker] = useState(false);
 
+  // Load tasks on mount
   useEffect(() => {
-    loadTasks();
+    loadAndSetTasks();
   }, []);
 
-  // Load tasks from AsyncStorage
-  const loadTasks = async () => {
-    const stored = await loadTasksFromStorage();
-    setTasks(stored);
+  // Helper to refresh tasks from the manager
+  const loadAndSetTasks = async () => {
+    const groupedTasks = await getTasks();
+    setTasks(groupedTasks);
   };
 
-  // Save tasks to AsyncStorage
-  const saveTasks = async (newTasks) => {
-    setTasks(newTasks);
-    await saveTasksToStorage(newTasks);
-  };
-
-  // Open modal for adding a new task
+  // Open modal in "Add" mode
   const openAddModal = () => {
-    setEditingTask(null);
+    setEditingTaskId(null);
     setTaskTitle('');
     setTaskPriority('Medium');
-    setTaskDueDate(new Date()); // default to today's date
+    setTaskDueDate(new Date());
     setModalVisible(true);
   };
 
-  // Open modal for editing
-  const openEditModal = (task) => {
-    setEditingTask(task);
-    setTaskTitle(task.title);
-    setTaskPriority(task.priority);
-    // Convert stored date string to JS Date object, if needed
-    setTaskDueDate(task.dueDate ? new Date(task.dueDate) : new Date());
+  // Open modal in "Edit" mode
+  const openEditModal = (taskId, title, priority, dueDateString) => {
+    setEditingTaskId(taskId);
+    setTaskTitle(title);
+    setTaskPriority(priority);
+    setTaskDueDate(dueDateString ? new Date(dueDateString) : new Date());
     setModalVisible(true);
   };
 
-  // Handle saving a task
-  const handleSaveTask = () => {
-    if (editingTask) {
-      // Editing existing
-      const updatedTasks = tasks.map(t =>
-        t.id === editingTask.id
-          ? { ...t, title: taskTitle, priority: taskPriority, dueDate: taskDueDate.toISOString() }
-          : t
+  // Save (create or edit) the task
+  const handleSaveTask = async () => {
+    if (editingTaskId) {
+      // Edit existing
+      const updated = await editExistingTask(
+        editingTaskId,
+        taskTitle,
+        taskPriority,
+        taskDueDate
       );
-      saveTasks(updatedTasks);
+      setTasks(updated);
     } else {
-      // Creating new
-      const newTask = {
-        id: Date.now().toString(),
-        title: taskTitle,
-        priority: taskPriority,
-        dueDate: taskDueDate.toISOString()
-      };
-      saveTasks([...tasks, newTask]);
+      // Create new
+      const updated = await createNewTask(
+        taskTitle,
+        taskPriority,
+        taskDueDate
+      );
+      setTasks(updated);
     }
     setModalVisible(false);
   };
 
-  // Handler for date picker changes
+  // Date picker callback
   const onDateChange = (event, selectedDate) => {
     setShowDatePicker(false);
     if (selectedDate) {
@@ -98,63 +94,50 @@ export default function TasksScreen() {
     }
   };
 
-  // Group & sort tasks by priority
-  const groupAndSortTasks = () => {
-    const high = tasks.filter((t) => t.priority === 'High');
-    const medium = tasks.filter((t) => t.priority === 'Medium');
-    const low = tasks.filter((t) => t.priority === 'Low');
-
-    const sortByDate = (a, b) => new Date(a.dueDate) - new Date(b.dueDate);
-    high.sort(sortByDate);
-    medium.sort(sortByDate);
-    low.sort(sortByDate);
-
-    return { high, medium, low };
-  };
-
+  // Renders a single task item
   const renderTaskItem = (task) => (
     <TouchableOpacity
       style={styles.taskItem}
-      onLongPress={() => openEditModal(task)}
+      onLongPress={() => openEditModal(task.id, task.title, task.priority, task.dueDate)}
     >
       <Text>
-        {task.title} — {(new Date(task.dueDate)).toDateString()}
+        {task.title} — {new Date(task.dueDate).toDateString()}
       </Text>
     </TouchableOpacity>
   );
 
-  const { high, medium, low } = groupAndSortTasks();
-
   return (
-    <View testID='tasks-screen' style={styles.container}>
-      {/* High Priority */}
+    <View testID="tasks-screen" style={styles.container}>
+
       <Text style={styles.priorityHeader}>High Priority</Text>
       <FlatList
-        data={high}
+        data={tasks.high}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => renderTaskItem(item)}
       />
 
-      {/* Medium Priority */}
       <Text style={styles.priorityHeader}>Medium Priority</Text>
       <FlatList
-        data={medium}
+        data={tasks.medium}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => renderTaskItem(item)}
       />
 
-      {/* Low Priority */}
       <Text style={styles.priorityHeader}>Low Priority</Text>
       <FlatList
-        data={low}
+        data={tasks.low}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => renderTaskItem(item)}
       />
 
-      {/* Floating "Add Task" Button */}
-      <Pressable testID="fab-add-task" style={styles.fab} onPress={openAddModal}>
+      {/* Add Task FAB */}
+      <Pressable
+        testID="fab-add-task"
+        style={styles.fab}
+        onPress={openAddModal}
+      >
         {/* <Ionicons name="add" size={32} color="#fff" /> */}
-        <Text>+</Text>
+        <Text style={{ color: '#fff', fontSize: 24 }}>+</Text>
       </Pressable>
 
       {/* Modal for Add/Edit */}
@@ -167,15 +150,12 @@ export default function TasksScreen() {
         <View style={styles.modalBackdrop}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>
-              {editingTask ? 'Edit Task' : 'Add Task'}
+              {editingTaskId ? 'Edit Task' : 'Add Task'}
             </Text>
 
-            {/* Task Title */}
+            {/* Title */}
             <Text style={styles.label}>Title:</Text>
-            <Pressable
-              style={styles.inputArea}
-              onPress={() => {}}
-            >
+            <View style={styles.inputArea}>
               <TextInput
                 testID="input-title"
                 style={styles.inputText}
@@ -183,14 +163,14 @@ export default function TasksScreen() {
                 value={taskTitle}
                 onChangeText={setTaskTitle}
               />
-            </Pressable>
+            </View>
 
             {/* Priority Picker */}
             <Text style={styles.label}>Priority:</Text>
             <View style={styles.pickerContainer}>
               <Picker
                 selectedValue={taskPriority}
-                onValueChange={(value) => setTaskPriority(value)}
+                onValueChange={(val) => setTaskPriority(val)}
               >
                 <Picker.Item label="Low" value="Low" />
                 <Picker.Item label="Medium" value="Medium" />
@@ -214,7 +194,7 @@ export default function TasksScreen() {
                 mode="date"
                 display="calendar"
                 onChange={onDateChange}
-                minimumDate={new Date()} // disallows any date before 'today'
+                minimumDate={new Date()}
               />
             )}
 
@@ -229,12 +209,11 @@ export default function TasksScreen() {
   );
 }
 
-// Example styles
-import { TextInput } from 'react-native';
+// Example Styles
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    padding: 16 
+  container: {
+    flex: 1,
+    padding: 16
   },
   priorityHeader: {
     fontSize: 18,
@@ -280,17 +259,17 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     fontWeight: 'bold'
   },
-  pickerContainer: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 4,
-    marginBottom: 10
-  },
   inputArea: {
     borderWidth: 1,
     borderColor: '#ccc',
     paddingVertical: 10,
     paddingHorizontal: 8,
+    borderRadius: 4,
+    marginBottom: 10
+  },
+  pickerContainer: {
+    borderWidth: 1,
+    borderColor: '#ccc',
     borderRadius: 4,
     marginBottom: 10
   },
