@@ -5,103 +5,105 @@ import {
   Button,
   Modal,
   Pressable,
-  TextInput,
   FlatList,
   TouchableOpacity,
   StyleSheet
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Ionicons } from '@expo/vector-icons';
+// import { Ionicons } from '@expo/vector-icons';
+import { Picker } from '@react-native-picker/picker';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { loadTasksFromStorage, saveTasksToStorage } from './Servers/tasks-server';
 
 const TASKS_KEY = '@myapp_tasks';
 
 export default function TasksScreen() {
-  // State for all tasks
+  // State for tasks
   const [tasks, setTasks] = useState([]);
 
-  // Modal and editing state
+  // Modal visibility & editing
   const [isModalVisible, setModalVisible] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
-  
+
   // Form fields
   const [taskTitle, setTaskTitle] = useState('');
-  const [taskPriority, setTaskPriority] = useState('Medium');
-  const [taskDueDate, setTaskDueDate] = useState('');
+  const [taskPriority, setTaskPriority] = useState('Medium'); 
+  const [taskDueDate, setTaskDueDate] = useState(new Date());
 
-  // Load tasks on mount
+  // We need to control when to display the date picker
+  const [showDatePicker, setShowDatePicker] = useState(false);
+
   useEffect(() => {
     loadTasks();
   }, []);
 
+  // Load tasks from AsyncStorage
   const loadTasks = async () => {
-    try {
-      const storedTasks = await AsyncStorage.getItem(TASKS_KEY);
-      if (storedTasks !== null) {
-        setTasks(JSON.parse(storedTasks));
-      }
-    } catch (err) {
-      console.error('Error loading tasks:', err);
-    }
+    const stored = await loadTasksFromStorage();
+    setTasks(stored);
   };
 
+  // Save tasks to AsyncStorage
   const saveTasks = async (newTasks) => {
-    try {
-      setTasks(newTasks); // Update local state
-      await AsyncStorage.setItem(TASKS_KEY, JSON.stringify(newTasks));
-    } catch (err) {
-      console.error('Error saving tasks:', err);
-    }
+    setTasks(newTasks);
+    await saveTasksToStorage(newTasks);
   };
 
-  // Open modal for a new task
+  // Open modal for adding a new task
   const openAddModal = () => {
     setEditingTask(null);
     setTaskTitle('');
     setTaskPriority('Medium');
-    setTaskDueDate('');
+    setTaskDueDate(new Date()); // default to today's date
     setModalVisible(true);
   };
 
-  // Open modal to edit an existing task
+  // Open modal for editing
   const openEditModal = (task) => {
     setEditingTask(task);
     setTaskTitle(task.title);
     setTaskPriority(task.priority);
-    setTaskDueDate(task.dueDate);
+    // Convert stored date string to JS Date object, if needed
+    setTaskDueDate(task.dueDate ? new Date(task.dueDate) : new Date());
     setModalVisible(true);
   };
 
+  // Handle saving a task
   const handleSaveTask = () => {
     if (editingTask) {
-      // Editing existing task
+      // Editing existing
       const updatedTasks = tasks.map(t =>
         t.id === editingTask.id
-          ? { ...t, title: taskTitle, priority: taskPriority, dueDate: taskDueDate }
+          ? { ...t, title: taskTitle, priority: taskPriority, dueDate: taskDueDate.toISOString() }
           : t
       );
       saveTasks(updatedTasks);
     } else {
-      // Creating new task
+      // Creating new
       const newTask = {
-        id: Date.now().toString(), // rudimentary unique ID
+        id: Date.now().toString(),
         title: taskTitle,
         priority: taskPriority,
-        dueDate: taskDueDate
+        dueDate: taskDueDate.toISOString()
       };
       saveTasks([...tasks, newTask]);
     }
-
     setModalVisible(false);
   };
 
-  // Group by priority and sort by dueDate
+  // Handler for date picker changes
+  const onDateChange = (event, selectedDate) => {
+    setShowDatePicker(false);
+    if (selectedDate) {
+      setTaskDueDate(selectedDate);
+    }
+  };
+
+  // Group & sort tasks by priority
   const groupAndSortTasks = () => {
-    // Partition tasks by priority
     const high = tasks.filter((t) => t.priority === 'High');
     const medium = tasks.filter((t) => t.priority === 'Medium');
     const low = tasks.filter((t) => t.priority === 'Low');
 
-    // Simple date sorting
     const sortByDate = (a, b) => new Date(a.dueDate) - new Date(b.dueDate);
     high.sort(sortByDate);
     medium.sort(sortByDate);
@@ -115,14 +117,16 @@ export default function TasksScreen() {
       style={styles.taskItem}
       onLongPress={() => openEditModal(task)}
     >
-      <Text>{task.title} — {task.dueDate}</Text>
+      <Text>
+        {task.title} — {(new Date(task.dueDate)).toDateString()}
+      </Text>
     </TouchableOpacity>
   );
 
   const { high, medium, low } = groupAndSortTasks();
 
   return (
-    <View style={styles.container}>
+    <View testID='tasks-screen' style={styles.container}>
       {/* High Priority */}
       <Text style={styles.priorityHeader}>High Priority</Text>
       <FlatList
@@ -147,9 +151,10 @@ export default function TasksScreen() {
         renderItem={({ item }) => renderTaskItem(item)}
       />
 
-      {/* Floating Action Button for "Add Task" */}
-      <Pressable style={styles.fab} onPress={openAddModal}>
-        <Ionicons name="add" size={32} color="#fff" />
+      {/* Floating "Add Task" Button */}
+      <Pressable testID="fab-add-task" style={styles.fab} onPress={openAddModal}>
+        {/* <Ionicons name="add" size={32} color="#fff" /> */}
+        <Text>+</Text>
       </Pressable>
 
       {/* Modal for Add/Edit */}
@@ -165,30 +170,58 @@ export default function TasksScreen() {
               {editingTask ? 'Edit Task' : 'Add Task'}
             </Text>
 
-            <TextInput
-              style={styles.input}
-              placeholder="Task Title"
-              value={taskTitle}
-              onChangeText={setTaskTitle}
-            />
+            {/* Task Title */}
+            <Text style={styles.label}>Title:</Text>
+            <Pressable
+              style={styles.inputArea}
+              onPress={() => {}}
+            >
+              <TextInput
+                testID="input-title"
+                style={styles.inputText}
+                placeholder="Task Title"
+                value={taskTitle}
+                onChangeText={setTaskTitle}
+              />
+            </Pressable>
 
-            {/* Could use a Picker instead of TextInput for priority */}
-            <TextInput
-              style={styles.input}
-              placeholder="Priority (High, Medium, Low)"
-              value={taskPriority}
-              onChangeText={setTaskPriority}
-            />
+            {/* Priority Picker */}
+            <Text style={styles.label}>Priority:</Text>
+            <View style={styles.pickerContainer}>
+              <Picker
+                selectedValue={taskPriority}
+                onValueChange={(value) => setTaskPriority(value)}
+              >
+                <Picker.Item label="Low" value="Low" />
+                <Picker.Item label="Medium" value="Medium" />
+                <Picker.Item label="High" value="High" />
+              </Picker>
+            </View>
 
-            <TextInput
-              style={styles.input}
-              placeholder="Due Date (YYYY-MM-DD)"
-              value={taskDueDate}
-              onChangeText={setTaskDueDate}
-            />
+            {/* Date Picker */}
+            <Text style={styles.label}>Due Date:</Text>
+            <Pressable
+              style={styles.inputArea}
+              onPress={() => setShowDatePicker(true)}
+            >
+              <Text style={styles.inputText}>
+                {taskDueDate.toDateString()}
+              </Text>
+            </Pressable>
+            {showDatePicker && (
+              <DateTimePicker
+                value={taskDueDate}
+                mode="date"
+                display="calendar"
+                onChange={onDateChange}
+                minimumDate={new Date()} // disallows any date before 'today'
+              />
+            )}
 
-            <Button title="Save" onPress={handleSaveTask} />
-            <Button title="Cancel" onPress={() => setModalVisible(false)} />
+            <View style={styles.buttonRow}>
+              <Button title="Save" onPress={handleSaveTask} />
+              <Button title="Cancel" onPress={() => setModalVisible(false)} />
+            </View>
           </View>
         </View>
       </Modal>
@@ -196,6 +229,8 @@ export default function TasksScreen() {
   );
 }
 
+// Example styles
+import { TextInput } from 'react-native';
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
@@ -227,7 +262,7 @@ const styles = StyleSheet.create({
   modalBackdrop: {
     flex: 1,
     justifyContent: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.4)'
+    backgroundColor: 'rgba(0,0,0,0.4)'
   },
   modalContent: {
     margin: 24,
@@ -240,11 +275,31 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     fontWeight: 'bold'
   },
-  input: {
+  label: {
+    marginTop: 10,
+    marginBottom: 4,
+    fontWeight: 'bold'
+  },
+  pickerContainer: {
     borderWidth: 1,
     borderColor: '#ccc',
     borderRadius: 4,
-    padding: 8,
     marginBottom: 10
+  },
+  inputArea: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    borderRadius: 4,
+    marginBottom: 10
+  },
+  inputText: {
+    fontSize: 16
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 8
   }
 });

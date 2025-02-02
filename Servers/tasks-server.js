@@ -1,20 +1,22 @@
-const TASKS_KEY = '@myapp_tasks';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const saveTasksToStorage = async (tasks) => {
+export const TASKS_KEY = '@myapp_tasks';
+
+export const loadTasksFromStorage = async () => {
   try {
-    const jsonValue = JSON.stringify(tasks);
-    await AsyncStorage.setItem(TASKS_KEY, jsonValue);
-  } catch (e) {
-    console.log('Error saving tasks', e);
+    const jsonValue = await AsyncStorage.getItem(TASKS_KEY);
+    return jsonValue != null ? JSON.parse(jsonValue) : [];
+  } catch (error) {
+    console.log('Error loading tasks:', error);
+    return [];
   }
 };
 
-const loadTasksFromStorage = async () => {
-    try {
-      const jsonValue = await AsyncStorage.getItem(TASKS_KEY);
-      return jsonValue != null ? JSON.parse(jsonValue) : [];
-    } catch (e) {
-      console.log('Error loading tasks', e);
-      return [];
-    }
+export const saveTasksToStorage = async (tasks) => {
+  try {
+    const jsonValue = JSON.stringify(tasks);
+    await AsyncStorage.setItem(TASKS_KEY, jsonValue);
+  } catch (error) {
+    console.log('Error saving tasks:', error);
+  }
 };
