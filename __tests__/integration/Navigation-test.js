@@ -2,52 +2,65 @@ import * as React from 'react';
 import { render, fireEvent, screen } from '@testing-library/react-native';
 import { RootNavigator } from '../../RootNavigator';
 
-test('shows calendar screen when Calendar tab is pressed', async () => {
-  render(<RootNavigator />);
 
-  fireEvent.press(screen.getByTestId('calendar-tab'));
+describe('Navigation tests', () => {
+  beforeAll(() => {
+    // Only use fake timers in this file
+    jest.useFakeTimers();
+  });
 
-  const calendarScreen = await screen.findByTestId('calendar-screen');
-  expect(calendarScreen).toBeOnTheScreen();
-});
+  afterAll(() => {
+    // Restore real timers after these tests finish
+    jest.useRealTimers();
+  });
+  
+  test('shows calendar screen when Calendar tab is pressed', async () => {
+    render(<RootNavigator />);
 
-test('shows goals screen when Goals tab is pressed', async () => {
-  render(<RootNavigator />);
+    fireEvent.press(screen.getByTestId('calendar-tab'));
 
-  fireEvent.press(screen.getByTestId('goals-tab'));
+    const calendarScreen = await screen.findByTestId('calendar-screen');
+    expect(calendarScreen).toBeOnTheScreen();
+  });
 
-  const goalsScreen = await screen.findByTestId('goals-screen');
-  expect(goalsScreen).toBeOnTheScreen();
-});
+  test('shows goals screen when Goals tab is pressed', async () => {
+    render(<RootNavigator />);
 
-test('shows wellbeing screen when Wellbeing tab is pressed', async () => {
-  render(<RootNavigator />);
+    fireEvent.press(screen.getByTestId('goals-tab'));
 
-  fireEvent.press(screen.getByTestId('wellbeing-tab'));
+    const goalsScreen = await screen.findByTestId('goals-screen');
+    expect(goalsScreen).toBeOnTheScreen();
+  });
 
-  const wellbeingScreen = await screen.findByTestId('wellbeing-screen');
-  expect(wellbeingScreen).toBeOnTheScreen();
-});
+  test('shows wellbeing screen when Wellbeing tab is pressed', async () => {
+    render(<RootNavigator />);
 
-test('navigates through all screens correctly', async () => {
-  render(<RootNavigator />);
+    fireEvent.press(screen.getByTestId('wellbeing-tab'));
 
-  // The initial screen is tasks
-  expect(screen.getByTestId('tasks-screen')).toBeOnTheScreen();
+    const wellbeingScreen = await screen.findByTestId('wellbeing-screen');
+    expect(wellbeingScreen).toBeOnTheScreen();
+  });
 
-  // Calendar
-  fireEvent.press(screen.getByTestId('calendar-tab'));
-  expect(await screen.findByTestId('calendar-screen')).toBeOnTheScreen();
+  test('navigates through all screens correctly', async () => {
+    render(<RootNavigator />);
 
-  // Goals
-  fireEvent.press(screen.getByTestId('goals-tab'));
-  expect(await screen.findByTestId('goals-screen')).toBeOnTheScreen();
+    // The initial screen is tasks
+    expect(screen.getByTestId('tasks-screen')).toBeOnTheScreen();
 
-  // Wellbeing
-  fireEvent.press(screen.getByTestId('wellbeing-tab'));
-  expect(await screen.findByTestId('wellbeing-screen')).toBeOnTheScreen();
+    // Calendar
+    fireEvent.press(screen.getByTestId('calendar-tab'));
+    expect(await screen.findByTestId('calendar-screen')).toBeOnTheScreen();
 
-  // Back to Tasks
-  fireEvent.press(screen.getByTestId('tasks-tab'));
-  expect(await screen.findByTestId('tasks-screen')).toBeOnTheScreen();
+    // Goals
+    fireEvent.press(screen.getByTestId('goals-tab'));
+    expect(await screen.findByTestId('goals-screen')).toBeOnTheScreen();
+
+    // Wellbeing
+    fireEvent.press(screen.getByTestId('wellbeing-tab'));
+    expect(await screen.findByTestId('wellbeing-screen')).toBeOnTheScreen();
+
+    // Back to Tasks
+    fireEvent.press(screen.getByTestId('tasks-tab'));
+    expect(await screen.findByTestId('tasks-screen')).toBeOnTheScreen();
+  });
 });
