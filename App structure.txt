@@ -1,0 +1,23 @@
+/your-app
+│── /screens            # UI Components (View Layer)
+│   │── TasksScreen.js
+│   │── CalendarScreen.js
+│
+│── /managers           # Business Logic (Controller Layer)
+│   │── task-manager.js
+│   │── calendar-manager.js
+│
+│── /repositories       # Data Layer (Model Layer)
+│   │── task-repository.js
+│   │── calendar-repository.js
+│
+│── /components         # Reusable Components (Modals, Buttons)
+│   │── TaskModal.js
+│
+│── /store (optional)   # Global State Management (Zustand/Redux)
+│   │── taskStore.js
+│
+│── /utils              # Helper Functions (Date Utilities)
+│   │── dateUtils.js
+│
+│── App.js

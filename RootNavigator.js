@@ -3,16 +3,9 @@ import { View, Text } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import TasksScreen from './TasksScreen';
+import CalendarScreen from './CalendarScreen';
 
 const Tab = createBottomTabNavigator();
-
-function CalendarScreen() {
-  return (
-    <View testID="calendar-screen" style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-      <Text>Calendar Screen</Text>
-    </View>
-  );
-}
 
 function GoalsScreen() {
   return (
