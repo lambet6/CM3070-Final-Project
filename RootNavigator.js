@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import TasksScreen from './TasksScreen';
+import TasksScreen from './screens/TaskScreen';
 import CalendarScreen from './CalendarScreen';
 
 const Tab = createBottomTabNavigator();
