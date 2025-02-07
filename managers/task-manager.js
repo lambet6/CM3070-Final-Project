@@ -58,3 +58,13 @@ export async function editExistingTask(taskId, newTitle, newPriority, newDueDate
   await saveTasksToRepo(updatedTasks);
   return groupAndSortTasks(updatedTasks);
 }
+
+// Get tasks for a given week
+export async function getTasksForWeek(startDate, endDate) {
+  const allTasks = await getTasksFromRepo();
+  return allTasks.filter(task => {
+    const due = new Date(task.dueDate);
+    return due >= startDate && due <= endDate;
+  });
+}
+
