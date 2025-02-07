@@ -9,12 +9,11 @@ import {
 import { useCalendarStore } from '../store/calendarStore';
 import { useTaskStore } from '../store/taskStore';
 import TaskModal from '../components/TaskModal';
-import { startOfWeek, endOfWeek } from 'date-fns';
 import { generateWeekDays } from '../utilities/dateUtils';
 
 export default function CalendarScreen() {
     const { events, loadCalendarEvents } = useCalendarStore();
-    const { tasks, loadTasks, addTask } = useTaskStore();
+    const { getTodayTasks, getWeekTasks, addTask } = useTaskStore();
 
     const [isModalVisible, setModalVisible] = useState(false);
     const [taskTitle, setTaskTitle] = useState('');
@@ -24,32 +23,23 @@ export default function CalendarScreen() {
     const [currentWeek, setCurrentWeek] = useState([]);
 
     useEffect(() => {
-        const start = startOfWeek(today);
-        const end = endOfWeek(today);
-        loadCalendarEvents(start, end);  
-        loadTasks();
+        loadCalendarEvents();
         setCurrentWeek(generateWeekDays());
     }, []);
 
-    // Save new task using `taskStore.js`
-    const handleSaveTask = async () => {
-        await addTask(taskTitle, taskPriority, taskDueDate);
-        setModalVisible(false);
-    };
-
-    const todayFormatted = today.toDateString();
-    const todayTasks = [...tasks.high, ...tasks.medium, ...tasks.low].filter(task =>
-        new Date(task.dueDate).toDateString() === todayFormatted
-    );
+    // Get pre-filtered tasks from Zustand store
+    const todayTasks = getTodayTasks();
+    const weekTasks = getWeekTasks();
 
     return (
         <View testID="calendar-screen" style={styles.container}>
+            {/* Weekly View */}
             <Text style={styles.header}>This Week</Text>
             <View style={styles.weekGrid}>
                 {currentWeek.map((day, index) => {
                     const isToday = day.toDateString() === today.toDateString();
                     const dayEvents = events.filter(event => new Date(event.startDate).toDateString() === day.toDateString());
-                    const dayTasks = [...tasks.high, ...tasks.medium, ...tasks.low].filter(task => new Date(task.dueDate).toDateString() === day.toDateString());
+                    const dayTasks = weekTasks.filter(task => new Date(task.dueDate).toDateString() === day.toDateString());
 
                     return (
                         <View key={index} style={[styles.dayBox, isToday && styles.todayBox]}>
@@ -69,6 +59,7 @@ export default function CalendarScreen() {
                 })}
             </View>
 
+            {/* Daily Tasks */} 
             <Text style={styles.header}>Today</Text>
             <View style={styles.timelineContainer}>
                 <ScrollView>
@@ -92,7 +83,10 @@ export default function CalendarScreen() {
             <TaskModal
                 visible={isModalVisible}
                 onClose={() => setModalVisible(false)}
-                onSave={handleSaveTask}
+                onSave={() => {
+                    addTask(taskTitle, taskPriority, taskDueDate);
+                    setModalVisible(false);
+                }}
                 taskTitle={taskTitle}
                 setTaskTitle={setTaskTitle}
                 taskPriority={taskPriority}
@@ -103,7 +97,6 @@ export default function CalendarScreen() {
         </View>
     );
 }
-
 
 const styles = StyleSheet.create({
     container: {
