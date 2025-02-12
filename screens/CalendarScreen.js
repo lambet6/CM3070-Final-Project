@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import {
     View,
     Text,
@@ -10,10 +10,11 @@ import { useCalendarStore } from '../store/calendarStore';
 import { useTaskStore } from '../store/taskStore';
 import TaskModal from '../components/TaskModal';
 import { generateWeekDays } from '../utilities/dateUtils';
+import { useFocusEffect } from '@react-navigation/native';
 
 export default function CalendarScreen() {
     const { events, loadCalendarEvents } = useCalendarStore();
-    const { getTodayTasks, getWeekTasks, addTask } = useTaskStore();
+    const { getTodayTasks, getWeekTasks, addTask, toggleCompleteTask } = useTaskStore();
 
     const [isModalVisible, setModalVisible] = useState(false);
     const [taskTitle, setTaskTitle] = useState('');
@@ -21,11 +22,26 @@ export default function CalendarScreen() {
     const [taskDueDate, setTaskDueDate] = useState(new Date());
     const [today, setToday] = useState(new Date());
     const [currentWeek, setCurrentWeek] = useState([]);
+    const intervalRef = useRef(null); // Store the interval reference
 
-    useEffect(() => {
-        loadCalendarEvents();
-        setCurrentWeek(generateWeekDays());
-    }, []);
+    useFocusEffect(
+        React.useCallback(() => {
+            console.log('📅 Calendar Screen is focused!');
+
+            setCurrentWeek(generateWeekDays());
+            loadCalendarEvents(); // Load events immediately
+
+            const interval = setInterval(() => {
+                console.log('🔄 Polling: Checking for new events...');
+                loadCalendarEvents();
+            }, 3000);
+
+            return () => {
+                console.log('❌ Stopping polling.');
+                clearInterval(interval);
+            };
+        }, [])
+    );
 
     // Get pre-filtered tasks from Zustand store
     const todayTasks = getTodayTasks();
@@ -59,24 +75,30 @@ export default function CalendarScreen() {
                 })}
             </View>
 
-            {/* Daily Tasks */} 
+            {/* Daily Tasks */}
             <Text style={styles.header}>Today</Text>
             <View style={styles.timelineContainer}>
                 <ScrollView>
                     {todayTasks.length === 0 ? (
                         <Text style={styles.noTasksText}>No tasks scheduled for today.</Text>
                     ) : (
-                        todayTasks.map((item, index) => (
-                            <View key={index} style={styles.timelineItem}>
-                                <Text style={styles.timelineText}>{item.title}</Text>
-                                <Text style={styles.statusIcon}>○</Text>
-                            </View>
+                        todayTasks.map((task, index) => (
+                            <TouchableOpacity
+                                key={index}
+                                style={[styles.timelineItem, task.completed && styles.completedTask]}
+                                onPress={() => toggleCompleteTask(task.id)} // ✅ Toggle completion on tap
+                            >
+                                <Text style={[styles.timelineText, task.completed && styles.strikethrough]}>
+                                    {task.title}
+                                </Text>
+                                <Text style={[styles.statusIcon, task.completed && styles.completedText]}>{task.completed ? '☑' : '☐'}</Text>
+                            </TouchableOpacity>
                         ))
                     )}
                 </ScrollView>
             </View>
 
-            <TouchableOpacity style={styles.fab} onPress={() => setModalVisible(true)}>
+            <TouchableOpacity testID="fab-add-task" style={styles.fab} onPress={() => setModalVisible(true)}>
                 <Text style={styles.fabText}>+</Text>
             </TouchableOpacity>
 
@@ -100,91 +122,100 @@ export default function CalendarScreen() {
 
 const styles = StyleSheet.create({
     container: {
-      flex: 1,
-      padding: 10,
-      backgroundColor: '#F5F5F5'
+        flex: 1,
+        padding: 10,
+        backgroundColor: '#F5F5F5'
     },
     header: {
-      fontSize: 22,
-      fontWeight: 'bold',
-      marginBottom: 10
+        fontSize: 22,
+        fontWeight: 'bold',
+        marginBottom: 10
     },
     weekGrid: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      marginBottom: 20
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        marginBottom: 20
     },
     dayBox: {
-      width: '25%',
-      aspectRatio: 1,
-      backgroundColor: '#ddd',
-      borderWidth: 1,
-      borderColor: 'gray',
-      borderRadius: 8,
-      alignItems: 'center',
-      justifyContent: 'center'
+        width: '25%',
+        aspectRatio: 1,
+        backgroundColor: '#ddd',
+        borderWidth: 1,
+        borderColor: 'gray',
+        borderRadius: 8,
+        alignItems: 'center',
+        justifyContent: 'center'
     },
     todayBox: {
-      backgroundColor: '#bbb',
-      borderWidth:5,
+        backgroundColor: '#bbb',
+        borderWidth: 5,
     },
     dayLabel: {
-      fontSize: 12,
-      fontWeight: 'bold'
+        fontSize: 12,
+        fontWeight: 'bold'
     },
     dayBoxItems: {
-      width:'100%',
-      flex:1
+        width: '100%',
+        flex: 1
     },
     eventItem: {
-      backgroundColor: '#777',
-      color: 'white',
-      fontSize: 10,
-      padding: 2,
-      marginTop: 1,
-      borderRadius: 3
+        backgroundColor: '#777',
+        color: 'white',
+        fontSize: 10,
+        padding: 2,
+        marginTop: 1,
+        borderRadius: 3
     },
     taskItem: {
-      backgroundColor: 'lightblue',
-      color: 'black',
-      fontSize: 10,
-      padding: 2,
-      marginTop: 1,
-      borderRadius: 3
+        backgroundColor: 'lightblue',
+        color: 'black',
+        fontSize: 10,
+        padding: 2,
+        marginTop: 1,
+        borderRadius: 3
     },
     timelineContainer: {
-      backgroundColor: '#EAEAEA',
-      borderRadius: 8,
-      padding: 10
+        backgroundColor: '#EAEAEA',
+        borderRadius: 8,
+        padding: 10
     },
     timelineItem: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      paddingVertical: 8
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        backgroundColor: '#eee',
+        padding: 12,
+        marginBottom: 4,
+        borderRadius: 4,
     },
     timelineText: {
-      fontSize: 16
+        fontSize: 16
     },
-    completedText: {
-      textDecorationLine: 'line-through',
-      color: '#777'
+    completedTask: {
+        backgroundColor: '#d3d3d3', // Light gray for completed tasks
+    },
+    strikethrough: {
+        textDecorationLine: 'line-through',
+        color: '#777'
     },
     statusIcon: {
-      fontSize: 20
+        fontSize: 20
     },
+    completedText: {
+      color: '#777'
+    },  
     fab: {
-      position: 'absolute',
-      bottom: 40,
-      right: 20,
-      backgroundColor: 'blue',
-      width: 60,
-      height: 60,
-      borderRadius: 30,
-      justifyContent: 'center',
-      alignItems: 'center'
+        position: 'absolute',
+        bottom: 40,
+        right: 20,
+        backgroundColor: 'blue',
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        justifyContent: 'center',
+        alignItems: 'center'
     },
     fabText: {
-      color: '#fff',
-      fontSize: 30
+        color: '#fff',
+        fontSize: 30
     }
-  });
+});

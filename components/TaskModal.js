@@ -34,6 +34,7 @@ export default function TaskModal({
 
   return (
     <Modal
+    testID="task-modal"
       visible={visible}
       transparent={true}
       animationType="slide"
@@ -87,8 +88,8 @@ export default function TaskModal({
           )}
 
           <View style={styles.buttonRow}>
-            <Button title="Save" onPress={onSave} />
-            <Button title="Cancel" onPress={onClose} />
+            <Button testID="modal-save-button" title="Save" onPress={onSave} />
+            <Button testID="modal-cancel-button" title="Cancel" onPress={onClose} />
           </View>
         </View>
       </View>

@@ -1,10 +1,10 @@
 import { create } from 'zustand';
-import { getWeeklyCalendarData } from '../managers/calendar-manager';
+import { getWeeklyCalendarEvents } from '../managers/calendar-manager';
 
 export const useCalendarStore = create((set) => ({
   events: [],
-  loadCalendarData: async () => {
-    const { events } = await getWeeklyCalendarData();
+  loadCalendarEvents: async () => {
+    const events = await getWeeklyCalendarEvents();
     set({ events });
   }
 }));

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { getTasks, createNewTask, editExistingTask } from '../managers/task-manager';
+import { getTasks, createNewTask, editExistingTask, toggleTaskCompletion } from '../managers/task-manager';
 import { isSameDay, startOfWeek, endOfWeek } from 'date-fns';
 
 export const useTaskStore = create((set, get) => ({
@@ -7,17 +7,22 @@ export const useTaskStore = create((set, get) => ({
 
   loadTasks: async () => {
     const fetchedTasks = await getTasks();
-    set({ tasks: fetchedTasks });
+    set({ tasks: sortTasks(fetchedTasks) });
   },
 
   addTask: async (title, priority, dueDate) => {
     const updatedTasks = await createNewTask(title, priority, dueDate);
-    set({ tasks: updatedTasks });
+    set({ tasks: sortTasks(updatedTasks) });
   },
 
   editTask: async (taskId, title, priority, dueDate) => {
     const updatedTasks = await editExistingTask(taskId, title, priority, dueDate);
-    set({ tasks: updatedTasks });
+    set({ tasks: sortTasks(updatedTasks) });
+  },
+
+  toggleCompleteTask: async (taskId) => {
+    const updatedTasks = await toggleTaskCompletion(taskId);
+    set({ tasks: sortTasks(updatedTasks) });
   },
 
   // Selector for Today's Tasks
@@ -40,3 +45,15 @@ export const useTaskStore = create((set, get) => ({
     });
   }
 }));
+
+// Helper Function: Move Completed Tasks to Bottom
+function sortTasks(tasks) {
+  const moveCompletedToBottom = (taskList) =>
+    [...taskList.filter(t => !t.completed), ...taskList.filter(t => t.completed)];
+
+  return {
+    high: moveCompletedToBottom(tasks.high),
+    medium: moveCompletedToBottom(tasks.medium),
+    low: moveCompletedToBottom(tasks.low),
+  };
+}

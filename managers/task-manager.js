@@ -7,6 +7,7 @@ export function createTask(title, priority, dueDate) {
     title,
     priority,
     dueDate: dueDate.toISOString(),
+    completed: false,
   };
 }
 
@@ -59,12 +60,18 @@ export async function editExistingTask(taskId, newTitle, newPriority, newDueDate
   return groupAndSortTasks(updatedTasks);
 }
 
-// Get tasks for a given week
-export async function getTasksForWeek(startDate, endDate) {
-  const allTasks = await getTasksFromRepo();
-  return allTasks.filter(task => {
-    const due = new Date(task.dueDate);
-    return due >= startDate && due <= endDate;
-  });
+export async function toggleTaskCompletion(taskId) {
+  const tasks = await getTasksFromRepo();
+
+  // Find and modify the task in memory
+  const updatedTasks = tasks.map(task =>
+    task.id === taskId ? { ...task, completed: !task.completed } : task
+  );
+
+  // Save the updated tasks back to storage
+  await saveTasksToRepo(updatedTasks);
+
+  return groupAndSortTasks(updatedTasks);
 }
+
 

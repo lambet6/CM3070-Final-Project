@@ -11,10 +11,13 @@ export async function getStoredCalendarEvents(startDate, endDate) {
         console.warn('No default calendar found, returning empty events');
         return [];
       }
-      
-      return await Calendar.getEventsAsync([defaultCalendarId], startDate, endDate);
+      console.log(defaultCalendarId)
+      const events = await Calendar.getEventsAsync([defaultCalendarId], startDate, endDate);
+      console.log(events.map(a => a.title));
+      console.log('tick');
+      return events;
     } catch (error) {
-      console.error('Error retrieving calendar events:', error);
+      console.warn('Error retrieving calendar events:', error);
       return [];
     }
   }

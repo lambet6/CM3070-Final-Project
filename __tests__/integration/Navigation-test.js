@@ -2,18 +2,35 @@ import * as React from 'react';
 import { render, fireEvent, screen } from '@testing-library/react-native';
 import { RootNavigator } from '../../RootNavigator';
 
+// ✅ Mock Zustand Store
+jest.mock('../../store/calendarStore', () => ({
+  useCalendarStore: jest.fn(() => ({
+    events: [],
+    loadCalendarEvents: jest.fn() // Ensure this function exists in tests
+  }))
+}));
+
+jest.mock('../../store/taskStore', () => ({
+  useTaskStore: jest.fn(() => ({
+    tasks: { high: [], medium: [], low: [] }, 
+    loadTasks: jest.fn(() => []),
+    addTask: jest.fn(() => []),
+    editTask: jest.fn(() => []),
+    getTodayTasks: jest.fn(() => []),
+    getWeekTasks: jest.fn(() => [])
+  }))
+}));
+
 
 describe('Navigation tests', () => {
   beforeAll(() => {
-    // Only use fake timers in this file
-    jest.useFakeTimers();
+    jest.useFakeTimers(); 
   });
 
   afterAll(() => {
-    // Restore real timers after these tests finish
     jest.useRealTimers();
   });
-  
+
   test('shows calendar screen when Calendar tab is pressed', async () => {
     render(<RootNavigator />);
 

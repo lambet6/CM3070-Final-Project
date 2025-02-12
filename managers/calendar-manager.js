@@ -8,7 +8,7 @@ export async function getWeeklyCalendarEvents() {
         const calendarEvents = await getStoredCalendarEvents(startDate, endDate);
         return calendarEvents;
     } catch (err) {
-        console.error('Error getting weekly calendar data:', err);
+        console.warn('Error getting weekly calendar data:', err);
         return [];
     }
 }

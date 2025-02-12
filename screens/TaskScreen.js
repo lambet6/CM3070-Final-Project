@@ -10,7 +10,7 @@ import { useTaskStore } from '../store/taskStore';  // Zustand for state managem
 import TaskModal from '../components/TaskModal';
 
 export default function TasksScreen() {
-  const { tasks, loadTasks, addTask, editTask } = useTaskStore();  // Global task store
+  const { tasks, loadTasks, addTask, editTask, toggleCompleteTask } = useTaskStore();  // Global task store
   const [isModalVisible, setModalVisible] = useState(false);
   const [taskTitle, setTaskTitle] = useState('');
   const [taskPriority, setTaskPriority] = useState('Medium');
@@ -56,8 +56,13 @@ export default function TasksScreen() {
   };
 
   const renderTaskItem = (task) => (
-    <TouchableOpacity style={styles.taskItem} onLongPress={() => openEditModal(task)}>
-      <Text>{task.title} — {new Date(task.dueDate).toDateString()}</Text>
+    <TouchableOpacity
+      style={[styles.taskItem, task.completed && styles.completedTask]}
+      onPress={() => toggleCompleteTask(task.id)} 
+    >
+      <Text style={[styles.taskText, task.completed && styles.strikethrough]}>
+        {task.title} — {new Date(task.dueDate).toDateString()}
+      </Text>
     </TouchableOpacity>
   );
 
@@ -113,6 +118,16 @@ const styles = StyleSheet.create({
     padding: 12,
     marginBottom: 4,
     borderRadius: 4,
+  },
+  completedTask: {
+    backgroundColor: '#d3d3d3', // Light gray background for completed tasks
+  },
+  taskText: {
+    fontSize: 16,
+  },
+  strikethrough: {
+    textDecorationLine: 'line-through',
+    color: '#888', // Dimmed color for completed tasks
   },
   fab: {
     position: 'absolute',

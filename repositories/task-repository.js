@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const TASKS_KEY = '@myapp_tasks';
+export const TASKS_KEY = '@myapp_tasks';
 
 export async function getTasksFromRepo() {
   try {
@@ -19,3 +19,4 @@ export async function saveTasksToRepo(tasks) {
     console.error('Error saving tasks:', error);
   }
 }
+
