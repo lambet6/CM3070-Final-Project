@@ -4,16 +4,9 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import TasksScreen from './screens/TaskScreen';
 import CalendarScreen from './screens/CalendarScreen';
+import GoalsScreen from './screens/GoalsScreen';
 
 const Tab = createBottomTabNavigator();
-
-function GoalsScreen() {
-  return (
-    <View testID="goals-screen" style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-      <Text>Goals Screen</Text>
-    </View>
-  );
-}
 
 function WellbeingScreen() {
   return (

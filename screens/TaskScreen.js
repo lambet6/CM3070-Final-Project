@@ -58,6 +58,7 @@ export default function TasksScreen() {
   const renderTaskItem = (task) => (
     <TouchableOpacity
       style={[styles.taskItem, task.completed && styles.completedTask]}
+      onLongPress={() => openEditModal(task)}
       onPress={() => toggleCompleteTask(task.id)} 
     >
       <Text style={[styles.taskText, task.completed && styles.strikethrough]}>

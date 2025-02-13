@@ -1,5 +1,4 @@
-// components/TaskModal.js
-import React from 'react';
+import { useState } from 'react';
 import {
   View,
   Text,
@@ -23,7 +22,7 @@ export default function TaskModal({
   taskDueDate,
   setTaskDueDate
 }) {
-  const [showDatePicker, setShowDatePicker] = React.useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   const onDateChange = (event, selectedDate) => {
     setShowDatePicker(false);
@@ -34,7 +33,7 @@ export default function TaskModal({
 
   return (
     <Modal
-    testID="task-modal"
+      testID="task-modal"
       visible={visible}
       transparent={true}
       animationType="slide"

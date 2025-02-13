@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { NavigationContainer } from '@react-navigation/native';
 import { useCalendarStore } from '../../../store/calendarStore';
 import { useTaskStore } from '../../../store/taskStore';
 import CalendarScreen from '../../../screens/CalendarScreen';
@@ -17,7 +18,6 @@ describe('CalendarScreen', () => {
     jest.clearAllMocks();
   });
 
-  // Renders the Calendar Screen correctly
   it('renders the CalendarScreen without crashing', () => {
     useCalendarStore.mockReturnValue({
       events: [],
@@ -28,36 +28,42 @@ describe('CalendarScreen', () => {
       getTodayTasks: jest.fn().mockReturnValue([]),
       getWeekTasks: jest.fn().mockReturnValue([]),
       addTask: jest.fn(),
+      toggleCompleteTask: jest.fn(),
     });
 
-    const { getByTestId } = render(<CalendarScreen />);
+    const { getByTestId } = render(
+      <NavigationContainer>
+        <CalendarScreen />
+      </NavigationContainer>
+    );
     expect(getByTestId('calendar-screen')).toBeTruthy();
   });
 
-  // Displays tasks and events for the correct week
   it('renders tasks and events correctly in the weekly view', () => {
     useCalendarStore.mockReturnValue({
-      events: [
-        { id: '1', title: 'Meeting', startDate: new Date()}
-      ],
+      events: [{ id: '1', title: 'Meeting', startDate: new Date() }],
       loadCalendarEvents: jest.fn(),
     });
 
     useTaskStore.mockReturnValue({
       getTodayTasks: jest.fn().mockReturnValue([]),
       getWeekTasks: jest.fn().mockReturnValue([
-        { id: '2', title: 'Project Task', dueDate: new Date() }
+        { id: '2', title: 'Project Task', dueDate: new Date() },
       ]),
       addTask: jest.fn(),
+      toggleCompleteTask: jest.fn(),
     });
 
-    const { getByText } = render(<CalendarScreen />);
+    const { getByText } = render(
+      <NavigationContainer>
+      <CalendarScreen />
+      </NavigationContainer>
+    );
 
     expect(getByText('Meeting')).toBeTruthy();
     expect(getByText('Project Task')).toBeTruthy();
   });
 
-  // Displays today's tasks correctly
   it('renders tasks for today in the Today section', () => {
     useCalendarStore.mockReturnValue({
       events: [],
@@ -66,18 +72,96 @@ describe('CalendarScreen', () => {
 
     useTaskStore.mockReturnValue({
       getTodayTasks: jest.fn().mockReturnValue([
-        { id: '3', title: 'Daily Standup' }
+        { id: '3', title: 'Daily Standup', completed: false },
       ]),
       getWeekTasks: jest.fn().mockReturnValue([]),
       addTask: jest.fn(),
+      toggleCompleteTask: jest.fn(),
     });
 
-    const { getByText } = render(<CalendarScreen />);
+    const { getByText } = render(
+      <NavigationContainer>
+      <CalendarScreen />
+      </NavigationContainer>
+    );
     
     expect(getByText('Daily Standup')).toBeTruthy();
   });
 
-  // Opens and closes the modal when clicking the add button
+  // it('marks a task as complete when tapped', async () => {
+  //   const mockToggleCompleteTask = jest.fn();
+    
+  //   useCalendarStore.mockReturnValue({
+  //     events: [],
+  //     loadCalendarEvents: jest.fn(),
+  //   });
+
+  //   const mockGetTodayTasks = jest.fn()
+  //     .mockReturnValue([{ id: '4', title: 'Unfinished Task', dueDate: new Date(), completed: false }])
+
+  //   useTaskStore.mockReturnValue({
+  //     getTodayTasks: mockGetTodayTasks,
+  //     getWeekTasks: jest.fn().mockReturnValue([]),
+  //     addTask: jest.fn(),
+  //     toggleCompleteTask: mockToggleCompleteTask,
+  //   });
+
+  //   const { getByText, rerender } = render(
+  //     <NavigationContainer>
+  //       <CalendarScreen />
+  //     </NavigationContainer>
+  //   );
+
+  //   // Ensure task exists before completion
+  //   expect(getByText('Unfinished Task')).toBeTruthy();
+
+  //   // Tap the task to complete it
+  //   fireEvent.press(getByText('Unfinished Task'));
+
+  //   // Simulate UI update (mock store return updated data)
+  //   rerender(
+  //     <NavigationContainer>
+  //       <CalendarScreen />
+  //     </NavigationContainer>
+  //   );
+
+  //   await waitFor(() => {
+  //     expect(getByText('Unfinished Task')).toHaveStyle({ textDecorationLine: 'line-through' });
+  //   });
+  // });
+
+  // it('moves completed tasks to the bottom', async () => {
+  //   useCalendarStore.mockReturnValue({
+  //     events: [],
+  //     loadCalendarEvents: jest.fn(),
+  //   });
+
+  //   const mockGetTodayTasks = jest.fn()
+  //     .mockReturnValueOnce([
+  //       { id: '5', title: 'Urgent Task', completed: false },
+  //       { id: '6', title: 'Completed Task', completed: true },
+  //     ]);
+
+  //   useTaskStore.mockReturnValue({
+  //     getTodayTasks: mockGetTodayTasks,
+  //     getWeekTasks: jest.fn().mockReturnValue([]),
+  //     addTask: jest.fn(),
+  //     toggleCompleteTask: jest.fn(),
+  //   });
+
+  //   const { getAllByText } = render(
+  //     <NavigationContainer>
+  //       <CalendarScreen />
+  //     </NavigationContainer>
+  //   );
+    
+  //   const tasks = getAllByText(/Task$/);
+    
+  //   // Ensure incomplete tasks come first
+  //   expect(tasks[0].props.children).toContain('Urgent Task');
+  //   expect(tasks[1].props.children).toContain('Completed Task');
+  // });
+
   it('opens and closes the task modal', () => {
     useCalendarStore.mockReturnValue({
       events: [],
@@ -90,7 +174,11 @@ describe('CalendarScreen', () => {
       addTask: jest.fn(),
     });
 
-    const { getByTestId, queryByTestId } = render(<CalendarScreen />);
+    const { getByTestId, queryByTestId } = render(
+      <NavigationContainer>
+        <CalendarScreen />
+      </NavigationContainer>
+    );
 
     // Click on the FAB button
     fireEvent.press(getByTestId('fab-add-task'));
@@ -116,11 +204,15 @@ describe('CalendarScreen', () => {
     useTaskStore.mockReturnValue({
       getTodayTasks: mockGetTodayTasks,
       getWeekTasks: jest.fn().mockReturnValue([]),
-      addTask: jest.fn(), // No need to check this directly
+      addTask: jest.fn(),
     });
 
     // Render the component
-    const { getByTestId, getByText, unmount } = render(<CalendarScreen />);
+    const { getByTestId, getByText, rerender } = render(
+      <NavigationContainer>
+        <CalendarScreen />
+      </NavigationContainer>
+    );
 
     // Open modal
     fireEvent.press(getByTestId('fab-add-task'));
@@ -129,19 +221,21 @@ describe('CalendarScreen', () => {
     fireEvent.changeText(getByTestId('input-title'), 'New Task');
     fireEvent.press(getByTestId('modal-save-button'));
 
-    // Update the mock to return the new task
+    // Update mock return value for new state
     mockGetTodayTasks.mockReturnValue([
       { id: '100', title: 'New Task', dueDate: '2025-02-12T10:00:00.000Z' }
     ]);
 
-    // Unmount and re-render to reflect store update
-    unmount();
-    const { getByText: getByTextAfterUpdate } = render(<CalendarScreen />);
+    // Rerender to reflect store update
+    rerender(
+      <NavigationContainer>
+        <CalendarScreen />
+      </NavigationContainer>
+    );
 
     // Assert that the new task appears in the UI
     await waitFor(() => {
-      expect(getByTextAfterUpdate('New Task')).toBeTruthy();
+      expect(getByText('New Task')).toBeTruthy();
     });
   });
-
 });
