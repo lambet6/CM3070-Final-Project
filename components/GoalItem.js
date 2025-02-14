@@ -1,4 +1,3 @@
-// GoalItem.js
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -17,7 +16,6 @@ export default function GoalItem({ item, updateGoal, deleteGoal }) {
   const [hoursFocused, setHoursFocused] = useState(false);
 
   const handleUpdate = () => {
-    console.log('Updating goal...');
     const finalTitle = localTitle.trim();
     updateGoal(item.id, finalTitle, localHours);
     setLocalTitle(finalTitle);
@@ -26,7 +24,6 @@ export default function GoalItem({ item, updateGoal, deleteGoal }) {
   // Whenever titleFocused or hoursFocused changes, check if both are false
   useEffect(() => {
     if (!titleFocused && !hoursFocused) {
-      // Now we know both have definitely become false
       handleUpdate();
     }
   }, [titleFocused, hoursFocused]);
@@ -40,7 +37,7 @@ export default function GoalItem({ item, updateGoal, deleteGoal }) {
   return (
     <View style={styles.goalItem}>
       <TextInput
-        autoFocus={true}
+        autoFocus={localTitle=='New Goal'}
         style={styles.goalText}
         placeholder="Enter goal"
         value={localTitle}
@@ -51,7 +48,6 @@ export default function GoalItem({ item, updateGoal, deleteGoal }) {
         }}
         onBlur={() => {
           setTitleFocused(false);
-          console.log('title blur');
         }}
       />
       <TextInput
@@ -63,7 +59,6 @@ export default function GoalItem({ item, updateGoal, deleteGoal }) {
         onFocus={() => setHoursFocused(true)}
         onBlur={() => {
           setHoursFocused(false);
-          console.log('number blur');
         }}
       />
       <Pressable onPress={() => deleteGoal(item.id)} style={styles.deleteButton}>

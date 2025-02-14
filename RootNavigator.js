@@ -5,16 +5,9 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import TasksScreen from './screens/TaskScreen';
 import CalendarScreen from './screens/CalendarScreen';
 import GoalsScreen from './screens/GoalsScreen';
+import WellbeingScreen from './screens/WellbeingScreen';
 
 const Tab = createBottomTabNavigator();
-
-function WellbeingScreen() {
-  return (
-    <View testID="wellbeing-screen" style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-      <Text>Wellbeing Screen</Text>
-    </View>
-  );
-}
 
 export function RootNavigator() {
   return (
