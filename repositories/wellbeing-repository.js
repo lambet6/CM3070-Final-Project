@@ -14,3 +14,13 @@ export const saveMoodToRepo = async (moodData) => {
   await AsyncStorage.setItem(MOOD_DATA_KEY, JSON.stringify(newData));
   console.log('Saved Mood Data to Repo:', newData);
 };
+
+export const updateMoodForToday = async (moodData) => {
+  const existingData = await getMoodDataFromRepo();
+  const today = new Date().toISOString().split('T')[0];
+  const updatedData = existingData.filter(entry => entry.date.split('T')[0] !== today);
+  updatedData.push(moodData);
+  await AsyncStorage.setItem(MOOD_DATA_KEY, JSON.stringify(updatedData));
+  console.log('Updated Mood Data for Today:', updatedData);
+};
+

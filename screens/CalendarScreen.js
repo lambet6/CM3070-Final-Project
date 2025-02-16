@@ -9,8 +9,8 @@ import {
 import { useCalendarStore } from '../store/calendarStore';
 import { useTaskStore } from '../store/taskStore';
 import TaskModal from '../components/TaskModal';
-import { generateWeekDays } from '../utilities/dateUtils';
 import { useFocusEffect } from '@react-navigation/native';
+import { startOfWeek, endOfWeek, eachDayOfInterval } from 'date-fns';
 
 export default function CalendarScreen() {
     const { events, loadCalendarEvents } = useCalendarStore();
@@ -28,7 +28,11 @@ export default function CalendarScreen() {
         React.useCallback(() => {
             console.log('📅 Calendar Screen is focused!');
 
-            setCurrentWeek(generateWeekDays());
+            const start = startOfWeek(new Date(), { weekStartsOn: 1 });
+            const end = endOfWeek(new Date(), { weekStartsOn: 1 });
+            const days = eachDayOfInterval({ start, end });
+            setCurrentWeek(days);
+
             loadCalendarEvents(); // Load events immediately
 
             const interval = setInterval(() => {

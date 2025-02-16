@@ -1,4 +1,4 @@
-import { getMoodDataFromRepo, saveMoodToRepo } from '../repositories/wellbeing-repository';
+import { getMoodDataFromRepo, updateMoodForToday } from '../repositories/wellbeing-repository';
 
 export const getMoodData = async () => {
   const data = await getMoodDataFromRepo();
@@ -20,7 +20,7 @@ const moodToValue = (mood) => {
 };
 
 export const saveMood = async (mood) => {
-  const newMoodData = { mood, moodValue: moodToValue(mood), date: new Date() };
-  await saveMoodToRepo(newMoodData);
+  const newMoodData = { mood, moodValue: moodToValue(mood), date: new Date().toISOString() };
+  await updateMoodForToday(newMoodData);
   return newMoodData;
 };

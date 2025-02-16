@@ -3,52 +3,74 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useWellbeingStore } from '../store/wellbeingStore';
 import { LineChart } from 'react-native-chart-kit';
 import { Dimensions } from 'react-native';
-
-const moods = ['Very low', 'Low', 'Neutral', 'Happy', 'Very happy'];
+import { moodValues } from '../utilities/constants';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
 export default function WellbeingScreen() {
-  const { moodData, addMood, loadMoodData } = useWellbeingStore();
+  const { moodData, addMood, loadMoodData, getLast14DaysMoodData } = useWellbeingStore();
 
   useEffect(() => {
-    loadMoodData();
+    const initializeData = async () => {
+      loadMoodData();
+    };
+    initializeData();
   }, []);
 
   useEffect(() => {
     console.log('Mood Data:', moodData);
-    if (moodData.length > 0) {
-      console.log('LineChart Data:', {
-        labels: moodData.map((_, index) => index.toString()),
-        datasets: [
-          {
-            data: moodData.map((entry) => entry.moodValue),
-          },
-        ],
-      });
-    }
   }, [moodData]);
 
   const handleMoodPress = (mood) => {
     addMood(mood);
   };
 
+  const today = new Date().toISOString().split('T')[0];
+  const todayMood = moodData.find(entry => entry.date.split('T')[0] === today)?.mood;
+
+  const getOrdinalSuffix = (day) => {
+    if (day > 3 && day < 21) return 'th';
+    switch (day % 10) {
+      case 1: return 'st';
+      case 2: return 'nd';
+      case 3: return 'rd';
+      default: return 'th';
+    }
+  };
+
+  const formatDate = (dateString, index, labels) => {
+    const date = new Date(dateString);
+    const day = date.getDate();
+    const month = date.toLocaleString('default', { month: 'short' });
+    const suffix = getOrdinalSuffix(day);
+    const isFirstEntryOfMonth = index === 0 || new Date(labels[index - 1]).getMonth() !== date.getMonth();
+    return isFirstEntryOfMonth ? `${day}${suffix} ${month}` : `${day}${suffix}`;
+  };
+
+  const { labels, data } = getLast14DaysMoodData(moodData);
+
   return (
     <View testID="wellbeing-screen" style={styles.container}>
       <Text style={styles.title}>Track your mood and tasks completed over time</Text>
       <Text style={styles.subtitle}>How are you feeling today?</Text>
       <View style={styles.moodContainer}>
-        {moods.map((mood, index) => (
-          <TouchableOpacity key={index} onPress={() => handleMoodPress(mood)}>
-            <Text style={styles.moodText}>{mood}</Text>
+        {Object.values(moodValues).map((mood, index) => (
+          <TouchableOpacity
+            key={index}
+            onPress={() => handleMoodPress(mood[0])}
+            style={todayMood === mood[0] ? styles.selectedMoodButton : styles.moodButton}
+          >
+            <MaterialCommunityIcons name={mood[1]} size={44} color="black" />
+            <Text style={styles.moodText}>{mood[0]}</Text>
           </TouchableOpacity>
         ))}
       </View>
       {moodData.length > 0 && (
         <LineChart
           data={{
-            labels: moodData.map((_, index) => index.toString()),
+            labels: labels.map((label, index) => formatDate(label, index, labels)),
             datasets: [
               {
-                data: moodData.map((entry) => entry.moodValue),
+                data,
               },
             ],
           }}
@@ -56,19 +78,24 @@ export default function WellbeingScreen() {
           height={220}
           yAxisLabel=""
           yAxisSuffix=""
+          yLabelsOffset={5}
+          yAxisInterval={1}
+          xLabelsOffset={5}
+          verticalLabelRotation={-45}
+          formatYLabel={(value) => moodValues[value]}
           chartConfig={{
             backgroundColor: '#e26a00',
             backgroundGradientFrom: '#fb8c00',
             backgroundGradientTo: '#ffa726',
-            decimalPlaces: 2,
-            color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
-            style: {
-              borderRadius: 16,
+            decimalPlaces: 0,
+            propsForVerticalLabels: {
+              margin: 20,
             },
+            color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
           }}
           style={{
-            marginVertical: 8,
             borderRadius: 16,
+            paddingRight: 75,
           }}
         />
       )}
@@ -79,7 +106,7 @@ export default function WellbeingScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
+    padding: 8,
     backgroundColor: '#fff',
   },
   title: {
@@ -96,9 +123,28 @@ const styles = StyleSheet.create({
   moodContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
+    verticalAlign: 'center',
     marginVertical: 16,
   },
+  moodButton: {
+    flex:1,
+    alignSelf: 'center',
+    alignItems: 'center',
+    margin: 3,
+    padding: 4,
+    borderRadius: 5,
+    backgroundColor: '#ddd',
+  },
+  selectedMoodButton: {
+    flex:1,
+    alignSelf: 'center',
+    alignItems: 'center',
+    margin: 3,
+    padding: 10,
+    borderRadius: 5,
+    backgroundColor: '#ffa726',
+  },
   moodText: {
-    fontSize: 14,
+    fontSize: 12,
   },
 });
