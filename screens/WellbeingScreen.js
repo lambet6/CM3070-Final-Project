@@ -10,15 +10,8 @@ export default function WellbeingScreen() {
   const { moodData, addMood, loadMoodData, getLast14DaysMoodData } = useWellbeingStore();
 
   useEffect(() => {
-    const initializeData = async () => {
-      loadMoodData();
-    };
-    initializeData();
+    loadMoodData();
   }, []);
-
-  useEffect(() => {
-    console.log('Mood Data:', moodData);
-  }, [moodData]);
 
   const handleMoodPress = (mood) => {
     addMood(mood);
@@ -47,58 +40,62 @@ export default function WellbeingScreen() {
   };
 
   const { labels, data } = getLast14DaysMoodData(moodData);
+  const shouldShowChart = Array.isArray(moodData) && moodData.length > 0 && data.some(value => value > 0);
 
   return (
     <View testID="wellbeing-screen" style={styles.container}>
-      <Text style={styles.title}>Track your mood and tasks completed over time</Text>
-      <Text style={styles.subtitle}>How are you feeling today?</Text>
-      <View style={styles.moodContainer}>
+      <Text testID="wellbeing-title" style={styles.title}>Track your mood and tasks completed over time</Text>
+      <Text testID="mood-prompt" style={styles.subtitle}>How are you feeling today?</Text>
+      <View testID="mood-buttons-container" style={styles.moodContainer}>
         {Object.values(moodValues).map((mood, index) => (
           <TouchableOpacity
             key={index}
+            testID={`mood-button-${mood[0].toLowerCase()}`}
             onPress={() => handleMoodPress(mood[0])}
             style={todayMood === mood[0] ? styles.selectedMoodButton : styles.moodButton}
           >
             <MaterialCommunityIcons name={mood[1]} size={44} color="black" />
-            <Text style={styles.moodText}>{mood[0]}</Text>
+            <Text testID={`mood-text-${mood[0].toLowerCase()}`} style={styles.moodText}>{mood[0]}</Text>
           </TouchableOpacity>
         ))}
       </View>
-      {moodData.length > 0 && (
-        <LineChart
-          data={{
-            labels: labels.map((label, index) => formatDate(label, index, labels)),
-            datasets: [
-              {
-                data,
+      {shouldShowChart ? (
+        <View testID="mood-chart">
+          <LineChart
+            data={{
+              labels: labels.map((label, index) => formatDate(label, index, labels)),
+              datasets: [
+                {
+                  data,
+                },
+              ],
+            }}
+            width={Dimensions.get('window').width - 16}
+            height={220}
+            yAxisLabel=""
+            yAxisSuffix=""
+            yLabelsOffset={5}
+            yAxisInterval={1}
+            xLabelsOffset={5}
+            verticalLabelRotation={-45}
+            formatYLabel={(value) => moodValues[value]}
+            chartConfig={{
+              backgroundColor: '#e26a00',
+              backgroundGradientFrom: '#fb8c00',
+              backgroundGradientTo: '#ffa726',
+              decimalPlaces: 0,
+              propsForVerticalLabels: {
+                margin: 20,
               },
-            ],
-          }}
-          width={Dimensions.get('window').width - 16}
-          height={220}
-          yAxisLabel=""
-          yAxisSuffix=""
-          yLabelsOffset={5}
-          yAxisInterval={1}
-          xLabelsOffset={5}
-          verticalLabelRotation={-45}
-          formatYLabel={(value) => moodValues[value]}
-          chartConfig={{
-            backgroundColor: '#e26a00',
-            backgroundGradientFrom: '#fb8c00',
-            backgroundGradientTo: '#ffa726',
-            decimalPlaces: 0,
-            propsForVerticalLabels: {
-              margin: 20,
-            },
-            color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
-          }}
-          style={{
-            borderRadius: 16,
-            paddingRight: 75,
-          }}
-        />
-      )}
+              color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+            }}
+            style={{
+              borderRadius: 16,
+              paddingRight: 75,
+            }}
+          />
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -107,7 +104,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 8,
-    backgroundColor: '#fff',
   },
   title: {
     fontSize: 18,

@@ -2,7 +2,10 @@ import * as React from 'react';
 import { render, fireEvent, screen } from '@testing-library/react-native';
 import { RootNavigator } from '../../RootNavigator';
 
-// ✅ Mock Zustand Store
+// Mock MaterialCommunityIcons
+jest.mock('@expo/vector-icons/MaterialCommunityIcons', () => 'MaterialCommunityIcons');
+
+// // ✅ Mock Zustand Store
 jest.mock('../../store/calendarStore', () => ({
   useCalendarStore: jest.fn(() => ({
     events: [],
@@ -21,6 +24,25 @@ jest.mock('../../store/taskStore', () => ({
   }))
 }));
 
+jest.mock('../../store/goalsStore', () => ({
+  useGoalsStore: jest.fn(() => ({
+    goals: [],
+    loadGoals: jest.fn(),
+    addNewGoal: jest.fn(),
+    updateGoal: jest.fn(),
+    deleteGoal: jest.fn()
+  }))
+}));
+
+// Add wellbeingStore mock
+jest.mock('../../store/wellbeingStore', () => ({
+  useWellbeingStore: jest.fn(() => ({
+    moodData: [],
+    loadMoodData: jest.fn(),
+    addMood: jest.fn(),
+    getLast14DaysMoodData: jest.fn(() => ({ labels: [], data: [] }))
+  }))
+}));
 
 describe('Navigation tests', () => {
   beforeAll(() => {
