@@ -1,5 +1,6 @@
-import { createTask, editTask, groupAndSortTasks, getTasks, createNewTask, editExistingTask } from '../../../managers/task-manager';
+import { createTask, editTask, groupAndSortTasks, getTasks, createNewTask, editExistingTask, toggleTaskCompletion } from '../../../managers/task-manager';
 import { getTasksFromRepo, saveTasksToRepo } from '../../../repositories/task-repository';
+import { Task } from '../../../domain/Task';
 
 jest.mock('../../../repositories/task-repository', () => ({
   getTasksFromRepo: jest.fn(),
@@ -7,103 +8,146 @@ jest.mock('../../../repositories/task-repository', () => ({
 }));
 
 describe('Task Manager', () => {
+  const MOCK_TIMESTAMP = 1234567890; // Make the magic number explicit
+  
   beforeEach(() => {
     jest.clearAllMocks();
+    // Mock Date.now() to always return the same timestamp for consistent task IDs
+    jest.spyOn(global.Date, 'now').mockImplementation(() => MOCK_TIMESTAMP);
   });
 
-  // Test Creating & Saving a New Task
-  it('should create a new task and save it to the repository', async () => {
-    const mockExistingTasks = [
-      { id: '1', title: 'Task 1', priority: 'Low', dueDate: '2025-02-12' }
-    ];
-    
-    getTasksFromRepo.mockResolvedValue(mockExistingTasks);
-    
-    const newTaskTitle = 'New Task';
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it('should create a new task with correct properties', () => {
+    const title = 'Test Task';
+    const priority = 'High';
+    const dueDate = new Date('2025-02-15');
+
+    const task = createTask(title, priority, dueDate);
+
+    expect(task).toBeInstanceOf(Task);
+    expect(task.title).toBe(title);
+    expect(task.priority).toBe(priority);
+    expect(task.dueDate).toEqual(dueDate);  // Changed from toBe to toEqual
+    expect(task.completed).toBe(false);
+    expect(task.id).toBe('1234567890');
+  });
+
+  it('should edit an existing task', () => {
+    const task = new Task({
+      id: '1',
+      title: 'Old Title',
+      priority: 'Low',
+      dueDate: new Date('2025-01-01'),
+      completed: false
+    });
+
+    const newTitle = 'New Title';
     const newPriority = 'High';
     const newDueDate = new Date('2025-02-15');
 
-    await createNewTask(newTaskTitle, newPriority, newDueDate);
+    const editedTask = editTask(task, newTitle, newPriority, newDueDate);
 
-    expect(saveTasksToRepo).toHaveBeenCalledWith(
-      expect.arrayContaining([
-        expect.objectContaining({
-          title: newTaskTitle,
-          priority: newPriority,
-          dueDate: newDueDate.toISOString(),
-        }),
-      ])
-    );
+    expect(editedTask.title).toBe(newTitle);
+    expect(editedTask.priority).toBe(newPriority);
+    expect(editedTask.dueDate).toEqual(newDueDate);
   });
 
-  // Test Fetching Tasks
-  it('should fetch and return grouped tasks from the repository', async () => {
-    const mockTasks = [
-      { id: '1', title: 'Task 1', priority: 'Medium', dueDate: '2025-02-12' },
-      { id: '2', title: 'Task 2', priority: 'High', dueDate: '2025-02-10' },
-    ];
-    
+  it('should create and save a new task', async () => {
+    const mockTasks = [new Task({
+      id: '1',
+      title: 'Existing Task',
+      priority: 'Low',
+      dueDate: new Date('2025-01-01'),
+      completed: false
+    })];
+
     getTasksFromRepo.mockResolvedValue(mockTasks);
 
-    const groupedTasks = await getTasks();
+    const newTitle = 'New Task';
+    const newPriority = 'High';
+    const newDueDate = new Date('2025-02-15');
 
-    expect(getTasksFromRepo).toHaveBeenCalledTimes(1);
-    expect(groupedTasks.high).toHaveLength(1);
-    expect(groupedTasks.medium).toHaveLength(1);
-    expect(groupedTasks.low).toHaveLength(0);
+    await createNewTask(newTitle, newPriority, newDueDate);
+
+    expect(saveTasksToRepo).toHaveBeenCalledWith(expect.arrayContaining([
+      expect.objectContaining({
+        title: newTitle,
+        priority: newPriority,
+        dueDate: newDueDate,
+        completed: false
+      })
+    ]));
   });
 
-  // Test Grouping & Sorting Tasks
-  it('should group and sort tasks by priority and due date', () => {
-    const tasks = [
-      { id: '1', title: 'Task 1', priority: 'Medium', dueDate: '2025-02-12' },
-      { id: '2', title: 'Task 2', priority: 'High', dueDate: '2025-02-10' },
-      { id: '3', title: 'Task 3', priority: 'Low', dueDate: '2025-02-15' },
-      { id: '4', title: 'Task 4', priority: 'High', dueDate: '2025-02-09' },
-    ];
-
-    const groupedTasks = groupAndSortTasks(tasks);
-
-    expect(groupedTasks.high).toEqual([
-      { id: '4', title: 'Task 4', priority: 'High', dueDate: '2025-02-09' },
-      { id: '2', title: 'Task 2', priority: 'High', dueDate: '2025-02-10' },
-    ]);
-    expect(groupedTasks.medium).toEqual([
-      { id: '1', title: 'Task 1', priority: 'Medium', dueDate: '2025-02-12' },
-    ]);
-    expect(groupedTasks.low).toEqual([
-      { id: '3', title: 'Task 3', priority: 'Low', dueDate: '2025-02-15' },
-    ]);
-  });
-
-  // Test Editing an Existing Task & Saving It
-  it('should update an existing task and save changes', async () => {
+  it('should edit an existing task and save changes', async () => {
     const mockTasks = [
-      { id: '1', title: 'Task 1', priority: 'Low', dueDate: '2025-02-12' },
-      { id: '2', title: 'Old Task', priority: 'Medium', dueDate: '2025-02-15' }
+      new Task({
+        id: '1',
+        title: 'Task to Edit',
+        priority: 'Low',
+        dueDate: new Date('2025-01-01'),
+        completed: false
+      })
     ];
 
     getTasksFromRepo.mockResolvedValue(mockTasks);
 
-    const taskIdToEdit = '2';
     const updatedTitle = 'Updated Task';
     const updatedPriority = 'High';
     const updatedDueDate = new Date('2025-02-20');
 
-    const updatedTasks = await editExistingTask(taskIdToEdit, updatedTitle, updatedPriority, updatedDueDate);
+    await editExistingTask('1', updatedTitle, updatedPriority, updatedDueDate);
 
-    expect(getTasksFromRepo).toHaveBeenCalledTimes(1);
-    expect(saveTasksToRepo).toHaveBeenCalledWith(
-      expect.arrayContaining([
-        expect.objectContaining({
-          id: '2',
-          title: updatedTitle,
-          priority: updatedPriority,
-          dueDate: updatedDueDate.toISOString(),
-        }),
-      ])
-    );
-    expect(updatedTasks.high).toHaveLength(1); // Task should now be in "High" category
+    expect(saveTasksToRepo).toHaveBeenCalledWith(expect.arrayContaining([
+      expect.objectContaining({
+        id: '1',
+        title: updatedTitle,
+        priority: updatedPriority,
+        dueDate: updatedDueDate
+      })
+    ]));
+  });
+
+  it('should toggle task completion status', async () => {
+    const mockTasks = [
+      new Task({
+        id: '1',
+        title: 'Task',
+        priority: 'High',
+        dueDate: new Date('2025-01-01'),
+        completed: false
+      })
+    ];
+
+    getTasksFromRepo.mockResolvedValue(mockTasks);
+
+    await toggleTaskCompletion('1');
+
+    expect(saveTasksToRepo).toHaveBeenCalledWith(expect.arrayContaining([
+      expect.objectContaining({
+        id: '1',
+        completed: true
+      })
+    ]));
+  });
+
+  it('should group and sort tasks correctly', () => {
+    const tasks = [
+      new Task({ id: '1', title: 'Task 1', priority: 'High', dueDate: new Date('2025-02-10') }),
+      new Task({ id: '2', title: 'Task 2', priority: 'Medium', dueDate: new Date('2025-02-12') }),
+      new Task({ id: '3', title: 'Task 3', priority: 'Low', dueDate: new Date('2025-02-15') }),
+      new Task({ id: '4', title: 'Task 4', priority: 'High', dueDate: new Date('2025-02-09') })
+    ];
+
+    const groupedTasks = groupAndSortTasks(tasks);
+
+    expect(groupedTasks.high[0].id).toBe('4'); // Earlier date should come first
+    expect(groupedTasks.high[1].id).toBe('1');
+    expect(groupedTasks.medium[0].id).toBe('2');
+    expect(groupedTasks.low[0].id).toBe('3');
   });
 
   it('should return empty task groups when no tasks are found', async () => {

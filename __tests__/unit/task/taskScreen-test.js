@@ -8,148 +8,182 @@ jest.mock('../../../store/taskStore', () => ({
 }));
 
 describe('TaskScreen', () => {
-    beforeEach(() => {
-      jest.clearAllMocks();
+  const mockTasks = {
+    high: [{ id: '1', title: 'High Task', priority: 'High', dueDate: new Date('2025-02-10'), completed: false }],
+    medium: [{ id: '2', title: 'Medium Task', priority: 'Medium', dueDate: new Date('2025-02-11'), completed: false }],
+    low: [{ id: '3', title: 'Low Task', priority: 'Low', dueDate: new Date('2025-02-12'), completed: false }]
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    useTaskStore.mockReturnValue({
+      tasks: mockTasks,
+      loadTasks: jest.fn(),
+      addTask: jest.fn(),
+      editTask: jest.fn(),
+      toggleCompleteTask: jest.fn()
     });
+  });
 
-    // ✅ 1️⃣ Test: Renders the TaskScreen
-    it('renders the TaskScreen correctly', () => {
-      useTaskStore.mockReturnValue({
-        tasks: { high: [], medium: [], low: [] },
-        loadTasks: jest.fn(),
-        addTask: jest.fn(),
-        editTask: jest.fn(),
-      });
-
-      const { getByTestId } = render(<TasksScreen />);
-      expect(getByTestId('tasks-screen')).toBeTruthy();
-    });
-
-    // ✅ 2️⃣ Test: Displays tasks in correct priority groups
-    it('renders tasks in priority groups', () => {
-      useTaskStore.mockReturnValue({
-        tasks: {
-          high: [{ id: '1', title: 'High Task', dueDate: '2025-02-10T00:00:00.000Z' }],
-          medium: [{ id: '2', title: 'Medium Task', dueDate: '2025-02-11T00:00:00.000Z' }],
-          low: [{ id: '3', title: 'Low Task', dueDate: '2025-02-12T00:00:00.000Z' }],
-        },
-        loadTasks: jest.fn(),
-        addTask: jest.fn(),
-        editTask: jest.fn(),
-      });
-
+  describe('Task Display', () => {
+    it('displays tasks organized in priority sections', async() => {
       const { getByText } = render(<TasksScreen />);
       
-      expect(getByText('High Task — Mon Feb 10 2025')).toBeTruthy();
-      expect(getByText('Medium Task — Tue Feb 11 2025')).toBeTruthy();
-      expect(getByText('Low Task — Wed Feb 12 2025')).toBeTruthy();
+      await waitFor(() => {
+        // Verify priority sections are visible
+        expect(getByText('High Priority')).toBeTruthy();
+        expect(getByText('Medium Priority')).toBeTruthy();
+        expect(getByText('Low Priority')).toBeTruthy();
+        
+        // Verify tasks are displayed under correct sections
+        expect(getByText(/High Task/)).toBeTruthy();
+        expect(getByText(/Medium Task/)).toBeTruthy();
+        expect(getByText(/Low Task/)).toBeTruthy();
+      });
+
     });
 
-    // ✅ 3️⃣ Test: Opens and closes the modal
-    it('opens and closes the task modal', () => {
+    it('shows task due dates alongside task titles', async () => {
+      const { getByText } = render(<TasksScreen />);
+      await waitFor(() => {
+        expect(getByText('High Task — Mon Feb 10 2025')).toBeTruthy();
+        expect(getByText('Medium Task — Tue Feb 11 2025')).toBeTruthy();
+        expect(getByText('Low Task — Wed Feb 12 2025')).toBeTruthy();
+      });
+    });
+  });
+
+  describe('Adding Tasks', () => {
+    it('shows add task modal when FAB is pressed', async () => {
+      const { getByTestId, getByText } = render(<TasksScreen />);
+      
+      fireEvent.press(getByTestId('fab-add-task'));
+      
+      await waitFor(() => {
+        expect(getByText('Add Task')).toBeTruthy();
+        expect(getByTestId('input-title')).toBeTruthy();
+        expect(getByTestId('picker-priority')).toBeTruthy();
+      });
+    });
+
+    it('displays the new task in UI after adding', async () => {
+      const { getByTestId, getByText } = render(<TasksScreen />);
+      
+      fireEvent.press(getByTestId('fab-add-task'));
+      fireEvent.changeText(getByTestId('input-title'), 'New Test Task');
+      fireEvent.press(getByTestId('modal-save-button'));
+
       useTaskStore.mockReturnValue({
-        tasks: { high: [], medium: [], low: [] },
+        tasks: {
+          ...mockTasks,
+          medium: [...mockTasks.medium, { id: '4', title: 'New Test Task', priority: 'Medium', dueDate: new Date(), completed: false }]
+        },
         loadTasks: jest.fn(),
         addTask: jest.fn(),
         editTask: jest.fn(),
+        toggleCompleteTask: jest.fn()
       });
 
-      const { getByTestId, queryByTestId } = render(<TasksScreen />);
+      const { getByText: getByTextAfterUpdate } = render(<TasksScreen />);
+      await waitFor(() => {
+        expect(getByTextAfterUpdate(/New Test Task/)).toBeTruthy();
+      });
+    });
+  });
 
-      // Open modal
+  describe('Editing Tasks', () => {
+    it('opens edit modal with current task data when task is long-pressed', async () => {
+      const { getByText, getByTestId } = render(<TasksScreen />);
+      
+      fireEvent(getByText(/High Task/), 'onLongPress');
+      
+      await waitFor(() => {
+        expect(getByTestId('input-title').props.value).toBe('High Task');
+        expect(getByText('Edit Task')).toBeTruthy();
+      });
+    });
+
+    it('updates task display after editing', async () => {
+      const { getByText, getByTestId } = render(<TasksScreen />);
+      
+      fireEvent(getByText(/High Task/), 'onLongPress');
+      fireEvent.changeText(getByTestId('input-title'), 'Updated Task Title');
+      fireEvent.press(getByTestId('modal-save-button'));
+
+      useTaskStore.mockReturnValue({
+        tasks: {
+          ...mockTasks,
+          high: [{ ...mockTasks.high[0], title: 'Updated Task Title' }]
+        },
+        loadTasks: jest.fn(),
+        addTask: jest.fn(),
+        editTask: jest.fn(),
+        toggleCompleteTask: jest.fn()
+      });
+
+      const { getByText: getByTextAfterUpdate } = render(<TasksScreen />);
+      await waitFor(() => {
+        expect(getByTextAfterUpdate('Updated Task Title — Mon Feb 10 2025')).toBeTruthy();
+      });
+    });
+  });
+
+  describe('Task Completion', () => {
+    it('visually indicates when a task is completed', async () => {
+      const { getByText } = render(<TasksScreen />);
+      
+      fireEvent.press(getByText(/High Task/));
+
+      useTaskStore.mockReturnValue({
+        tasks: {
+          ...mockTasks,
+          high: [{ ...mockTasks.high[0], completed: true }]
+        },
+        loadTasks: jest.fn(),
+        addTask: jest.fn(),
+        editTask: jest.fn(),
+        toggleCompleteTask: jest.fn()
+      });
+
+      const { getByText: getByTextAfterUpdate } = render(<TasksScreen />);
+      await waitFor(() => {
+        const taskText = getByTextAfterUpdate(/High Task/);
+        const taskItem = taskText.parent.parent;
+        expect(taskItem.props.style).toMatchObject({
+          backgroundColor: '#d3d3d3'
+        });
+      });
+    });
+  });
+
+  describe('Modal Behavior', () => {
+    it('clears form inputs when modal is closed', async () => {
+      const { getByTestId } = render(<TasksScreen />);
+      
       fireEvent.press(getByTestId('fab-add-task'));
-      expect(getByTestId('task-modal')).toBeTruthy();
-
-      // Close modal
+      fireEvent.changeText(getByTestId('input-title'), 'Test Task');
       fireEvent.press(getByTestId('modal-cancel-button'));
-      expect(queryByTestId('task-modal')).toBeNull();
-    });
-
-    // ✅ 4️⃣ Test: Adds a new task and updates the screen
-    it('adds a new task and updates the screen', async () => {
-      const mockAddTask = jest.fn();
-
-      useTaskStore.mockReturnValue({
-        tasks: { high: [], medium: [], low: [] },
-        loadTasks: jest.fn(),
-        addTask: mockAddTask,
-        editTask: jest.fn(),
-      });
-
-      const { getByTestId, getByText, unmount } = render(<TasksScreen />);
-
-      // Open modal
       fireEvent.press(getByTestId('fab-add-task'));
 
-      // Enter task details
-      fireEvent.changeText(getByTestId('input-title'), 'New Task');
-      fireEvent.press(getByTestId('modal-save-button'));
-
-      // ✅ Mock `useTaskStore` to return the new task
-      useTaskStore.mockReturnValue({
-        tasks: {
-          high: [{ id: '100', title: 'New Task', dueDate: '2025-02-12T10:00:00.000Z' }],
-          medium: [],
-          low: [],
-        },
-        loadTasks: jest.fn(),
-        addTask: mockAddTask,
-        editTask: jest.fn(),
-      });
-
-      // Unmount and re-render
-      unmount();
-      const { getByText: getByTextAfterUpdate } = render(<TasksScreen />);
-
-      // ✅ Verify UI updates
       await waitFor(() => {
-        expect(getByTextAfterUpdate('New Task — Wed Feb 12 2025')).toBeTruthy();
+        expect(getByTestId('input-title').props.value).toBe('');
       });
     });
 
-    // ✅ 5️⃣ Test: Edits an existing task and updates UI
-    it('edits an existing task and updates the screen', async () => {
-      const mockEditTask = jest.fn();
-
-      useTaskStore.mockReturnValue({
-        tasks: {
-          high: [{ id: '1', title: 'Old Task', priority: 'High', dueDate: '2025-02-10T00:00:00.000Z' }],
-          medium: [],
-          low: [],
-        },
-        loadTasks: jest.fn(),
-        addTask: jest.fn(),
-        editTask: mockEditTask,
-      });
-
-      const { getByText, getByTestId, unmount } = render(<TasksScreen />);
-
-      // Open edit modal
-      fireEvent(getByText('Old Task — Mon Feb 10 2025'), 'onLongPress');
-
-      // Change title
-      fireEvent.changeText(getByTestId('input-title'), 'Updated Task');
-      fireEvent.press(getByTestId('modal-save-button'));
-
-      // ✅ Mock `useTaskStore` to return updated task
-      useTaskStore.mockReturnValue({
-        tasks: {
-          high: [{ id: '1', title: 'Updated Task', priority: 'High', dueDate: '2025-02-10T00:00:00.000Z' }],
-          medium: [],
-          low: [],
-        },
-        loadTasks: jest.fn(),
-        addTask: jest.fn(),
-        editTask: mockEditTask,
-      });
-
-      // Unmount and re-render
-      unmount();
-      const { getByText: getByTextAfterUpdate } = render(<TasksScreen />);
-
-      // ✅ Verify UI updates
+    it('removes modal from view when cancelled', async () => {
+      const { getByTestId, queryByTestId } = render(<TasksScreen />);
+      
+      fireEvent.press(getByTestId('fab-add-task'));
+      
       await waitFor(() => {
-        expect(getByTextAfterUpdate('Updated Task — Mon Feb 10 2025')).toBeTruthy();
+        expect(getByTestId('task-modal')).toBeTruthy();
+      });
+      
+      fireEvent.press(getByTestId('modal-cancel-button'));
+      
+      await waitFor(() => {
+        expect(queryByTestId('task-modal')).toBeNull();
       });
     });
+  });
 });

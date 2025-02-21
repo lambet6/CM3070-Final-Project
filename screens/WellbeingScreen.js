@@ -39,9 +39,17 @@ export default function WellbeingScreen() {
     return isFirstEntryOfMonth ? `${day}${suffix} ${month}` : `${day}${suffix}`;
   };
 
-  const { labels, data } = getLast14DaysMoodData(moodData);
-  const shouldShowChart = Array.isArray(moodData) && moodData.length > 0 && data.some(value => value > 0);
-
+  const { labels, data } = getLast14DaysMoodData();
+  
+  // Filter out days with zero moodValue
+  const filtered = labels
+    .map((label, index) => ({ label, value: data[index] }))
+    .filter(item => item.value > 0);
+  const finalLabels = filtered.map(item => item.label);
+  const finalData = filtered.map(item => item.value);
+  
+  const shouldShowChart = finalData.length > 0;
+  
   return (
     <View testID="wellbeing-screen" style={styles.container}>
       <Text testID="wellbeing-title" style={styles.title}>Track your mood and tasks completed over time</Text>
@@ -63,10 +71,10 @@ export default function WellbeingScreen() {
         <View testID="mood-chart">
           <LineChart
             data={{
-              labels: labels.map((label, index) => formatDate(label, index, labels)),
+              labels: finalLabels.map((label, index) => formatDate(label, index, finalLabels)),
               datasets: [
                 {
-                  data,
+                  data: finalData,
                 },
               ],
             }}
@@ -78,7 +86,7 @@ export default function WellbeingScreen() {
             yAxisInterval={1}
             xLabelsOffset={5}
             verticalLabelRotation={-45}
-            formatYLabel={(value) => moodValues[value]}
+            formatYLabel={(value) => moodValues[value][0]}
             chartConfig={{
               backgroundColor: '#e26a00',
               backgroundGradientFrom: '#fb8c00',
@@ -136,7 +144,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     alignItems: 'center',
     margin: 3,
-    padding: 10,
+    padding: 5,
     borderRadius: 5,
     backgroundColor: '#ffa726',
   },

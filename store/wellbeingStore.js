@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import { getMoodData, saveMood } from '../managers/wellbeing-manager';
-import { moodValues } from '../utilities/constants';
 
 export const useWellbeingStore = create((set) => ({
   moodData: [],
@@ -17,18 +16,18 @@ export const useWellbeingStore = create((set) => ({
       return { moodData: updatedMoodData };
     });
   },
-  getLast14DaysMoodData: (moodData) => {
+  getLast14DaysMoodData: () => {
+    const moodData = useWellbeingStore.getState().moodData;
     const last14Days = Array.from({ length: 14 }, (_, i) => {
       const date = new Date();
       date.setDate(date.getDate() - (13 - i));
       return date.toISOString().split('T')[0];
     });
-
-    const formattedData = last14Days.map(date => {
+    const fullData = last14Days.map(date => {
       const entry = moodData.find(entry => entry.date.split('T')[0] === date);
-      return entry ? entry.moodValue : 0;
+      return { date, moodValue: entry ? entry.moodValue : 0 };
     });
-
-    return { labels: last14Days, data: formattedData };
+    
+    return { labels: last14Days, data: fullData.map(item => item.moodValue) };
   }
 }));

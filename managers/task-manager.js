@@ -1,33 +1,32 @@
 import { getTasksFromRepo, saveTasksToRepo } from '../repositories/task-repository';
+import { Task } from '../domain/Task';
 
-// Task Creation
+// Create a new domain object
 export function createTask(title, priority, dueDate) {
-  return {
-    id: Date.now().toString(),
+  return new Task({
+    id: Date.now().toString(),  // or use uuid
     title,
     priority,
-    dueDate: dueDate.toISOString(),
+    dueDate,    
     completed: false,
-  };
+  });
 }
 
-// Task Editing
-export function editTask(originalTask, newTitle, newPriority, newDueDate) {
-  return {
-    ...originalTask,
-    title: newTitle,
-    priority: newPriority,
-    dueDate: newDueDate.toISOString(),
-  };
+export function editTask(task, newTitle, newPriority, newDueDate) {
+  task.title = newTitle;
+  task.priority = newPriority;
+  task.dueDate = new Date(newDueDate);
+  return task;
 }
 
-// Group tasks by priority
+// Group tasks by priority and sort by date
 export function groupAndSortTasks(tasks) {
   const high = tasks.filter((t) => t.priority === 'High');
   const medium = tasks.filter((t) => t.priority === 'Medium');
   const low = tasks.filter((t) => t.priority === 'Low');
 
-  const sortByDate = (a, b) => new Date(a.dueDate) - new Date(b.dueDate);
+  // Sort by dueDate
+  const sortByDate = (a, b) => a.dueDate - b.dueDate;
   high.sort(sortByDate);
   medium.sort(sortByDate);
   low.sort(sortByDate);
@@ -37,25 +36,30 @@ export function groupAndSortTasks(tasks) {
 
 // Fetch Tasks
 export async function getTasks() {
-  const tasks = await getTasksFromRepo();
+  const tasks = await getTasksFromRepo(); // returns Task[] domain objects
   return groupAndSortTasks(tasks);
 }
 
 // Add New Task
 export async function createNewTask(title, priority, dueDate) {
-  const tasks = await getTasksFromRepo();
+  const tasks = await getTasksFromRepo(); // domain objects
   const newTask = createTask(title, priority, dueDate);
-  const updatedTasks = [...tasks, newTask];
-  await saveTasksToRepo(updatedTasks);
-  return groupAndSortTasks(updatedTasks);
+  tasks.push(newTask);
+
+  await saveTasksToRepo(tasks);
+  return groupAndSortTasks(tasks);
 }
 
 // Edit Task
 export async function editExistingTask(taskId, newTitle, newPriority, newDueDate) {
   const tasks = await getTasksFromRepo();
-  const updatedTasks = tasks.map((t) =>
-    t.id === taskId ? editTask(t, newTitle, newPriority, newDueDate) : t
-  );
+  const updatedTasks = tasks.map((t) => {
+    if (t.id === taskId) {
+      return editTask(t, newTitle, newPriority, newDueDate);
+    }
+    return t;
+  });
+
   await saveTasksToRepo(updatedTasks);
   return groupAndSortTasks(updatedTasks);
 }
@@ -63,15 +67,13 @@ export async function editExistingTask(taskId, newTitle, newPriority, newDueDate
 export async function toggleTaskCompletion(taskId) {
   const tasks = await getTasksFromRepo();
 
-  // Find and modify the task in memory
-  const updatedTasks = tasks.map(task =>
-    task.id === taskId ? { ...task, completed: !task.completed } : task
-  );
+  const updatedTasks = tasks.map((t) => {
+    if (t.id === taskId) {
+      t.toggleCompletion(); // domain method on Task
+    }
+    return t;
+  });
 
-  // Save the updated tasks back to storage
   await saveTasksToRepo(updatedTasks);
-
   return groupAndSortTasks(updatedTasks);
 }
-
-

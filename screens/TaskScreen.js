@@ -59,14 +59,14 @@ export default function TasksScreen() {
     <TouchableOpacity
       style={[styles.taskItem, task.completed && styles.completedTask]}
       onLongPress={() => openEditModal(task)}
-      onPress={() => toggleCompleteTask(task.id)} 
+      onPress={() => toggleCompleteTask(task.id)}
     >
       <Text style={[styles.taskText, task.completed && styles.strikethrough]}>
-        {task.title} — {new Date(task.dueDate).toDateString()}
+        {task.title} — {task.dueDate.toDateString()} 
       </Text>
     </TouchableOpacity>
   );
-
+  
   return (
     <View testID="tasks-screen" style={styles.container}>
       {/* High Priority Tasks */}

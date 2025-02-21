@@ -37,6 +37,7 @@ export default function GoalItem({ item, updateGoal, deleteGoal }) {
   return (
     <View style={styles.goalItem}>
       <TextInput
+        testID='title-input'
         autoFocus={localTitle=='New Goal'}
         style={styles.goalText}
         placeholder="Enter goal"
@@ -51,6 +52,7 @@ export default function GoalItem({ item, updateGoal, deleteGoal }) {
         }}
       />
       <TextInput
+        testID='hours-input'
         style={styles.hoursInput}
         placeholder="0"
         keyboardType="numeric"
@@ -61,7 +63,7 @@ export default function GoalItem({ item, updateGoal, deleteGoal }) {
           setHoursFocused(false);
         }}
       />
-      <Pressable onPress={() => deleteGoal(item.id)} style={styles.deleteButton}>
+      <Pressable testID='delete-button' onPress={() => deleteGoal(item.id)} style={styles.deleteButton}>
         <Text style={styles.deleteButtonText}>❌</Text>
       </Pressable>
     </View>

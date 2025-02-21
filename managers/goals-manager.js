@@ -1,40 +1,45 @@
 import { getGoalsFromRepo, saveGoalsToRepo } from '../repositories/goals-repository';
+import { Goal } from '../domain/Goal';
 
 export const fetchGoals = async () => {
-    let goals = await getGoalsFromRepo();
-
-    // Remove any goals without titles
-    const filteredGoals = goals.filter(goal => goal.title.trim() !== '');
-
-    // If any goals were removed, update AsyncStorage
-    if (filteredGoals.length !== goals.length) {
-        await saveGoalsToRepo(filteredGoals);
-    }
-    return filteredGoals;
+    return await getGoalsFromRepo();
 };
 
 export const addGoal = async (title, hoursPerWeek) => {
     const existingGoals = await getGoalsFromRepo();
-  
-    if (title.trim() === '') return existingGoals; // Prevent adding empty goals
-  
-    const newGoal = { id: Date.now().toString(), title, hoursPerWeek };
-    const updatedGoals = [...existingGoals, newGoal];
-
-    await saveGoalsToRepo(updatedGoals);
-    return updatedGoals;
+    
+    try {
+        const newGoal = new Goal({
+            id: Date.now().toString(),
+            title,
+            hoursPerWeek
+        });
+        
+        const updatedGoals = [...existingGoals, newGoal];
+        await saveGoalsToRepo(updatedGoals);
+        return updatedGoals;
+    } catch (error) {
+        console.error('Failed to create goal:', error);
+        return existingGoals;
+    }
 };
 
 export const updateGoalData = async (goalId, newTitle, newHours) => {
     const goals = await getGoalsFromRepo();
-    const updatedGoals = goals.map(goal =>
-        goal.id === goalId ? { ...goal, title: newTitle.trim(), hoursPerWeek: newHours } : goal
-    );
-
-    const finalGoals = updatedGoals.filter(goal => goal.title !== '');
-
-    await saveGoalsToRepo(finalGoals);
-    return finalGoals;
+    
+    try {
+        const updatedGoals = goals.map(goal => 
+            goal.id === goalId 
+                ? new Goal({ id: goal.id, title: newTitle, hoursPerWeek: newHours })
+                : goal
+        );
+        
+        await saveGoalsToRepo(updatedGoals);
+        return updatedGoals;
+    } catch (error) {
+        console.error('Failed to update goal:', error);
+        return goals;
+    }
 };
 
 export const deleteGoal = async (goalId) => {

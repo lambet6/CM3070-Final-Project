@@ -1,23 +1,47 @@
-/your-app
-│── /screens            # UI Components (View Layer)
-│   │── TasksScreen.js
-│   │── CalendarScreen.js
+/FirstImplementation
+├── /screens                    # Screen Components
+│   ├── TaskScreen.js          # Task management interface
+│   ├── CalendarScreen.js      # Calendar and scheduling
+│   ├── WellbeingScreen.js     # Mood tracking and charts
+│   └── GoalsScreen.js         # Goals tracking interface
 │
-│── /managers           # Business Logic (Controller Layer)
-│   │── task-manager.js
-│   │── calendar-manager.js
+├── /components                # Reusable UI Components
+│   ├── TaskModal.js          # Task creation/editing modal
+│   ├── GoalModal.js          # Goal creation/editing modal
+│   ├── MoodChart.js          # Wellbeing visualization
+│   └── CalendarView.js       # Custom calendar component
 │
-│── /repositories       # Data Layer (Model Layer)
-│   │── task-repository.js
-│   │── calendar-repository.js
+├── /store                    # State Management (Zustand)
+│   ├── taskStore.js         # Task state and actions
+│   ├── wellbeingStore.js    # Mood tracking state
+│   ├── calendarStore.js     # Calendar event state
+│   └── goalStore.js         # Goals state management
 │
-│── /components         # Reusable Components (Modals, Buttons)
-│   │── TaskModal.js
+├── /managers                 # Business Logic Layer
+│   ├── task-manager.js      # Task operations
+│   ├── calendar-manager.js  # Calendar operations
+│   ├── wellbeing-manager.js # Mood tracking logic
+│   └── goal-manager.js      # Goal tracking logic
 │
-│── /store (optional)   # Global State Management (Zustand/Redux)
-│   │── taskStore.js
+├── /repositories            # Data Persistence Layer
+│   ├── task-repository.js  # Task storage operations
+│   ├── calendar-repository.js
+│   ├── wellbeing-repository.js
+│   └── goal-repository.js
 │
-│── /utils              # Helper Functions (Date Utilities)
-│   │── dateUtils.js
+├── /utils                   # Helper Functions
+│   ├── dateUtils.js        # Date manipulation
+│   └── constants.js        # App constants
 │
-│── App.js
+├── /__tests__              # Test Files
+│   ├── /unit
+│   │   ├── /tasks
+│   │   ├── /calendar
+│   │   ├── /wellbeing
+│   │   └── /goals
+│   └── /integration
+│
+├── App.js                  # Main app component
+├── package.json           # Dependencies
+├── babel.config.js        # Babel configuration
+└── jest.config.js         # Test configuration
