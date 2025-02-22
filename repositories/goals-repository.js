@@ -3,12 +3,19 @@ import { Goal } from '../domain/Goal';
 
 export const GOALS_KEY = '@myapp_goals';
 
+/**
+ * Retrieves goals from the repository stored in AsyncStorage.
+ * 
+ * @async
+ * @function getGoalsFromRepo
+ * @returns {Promise<Goal[]>} A promise that resolves to an array of Goal objects.
+ * @throws Will log an error to the console if there is an issue fetching or parsing the goals.
+ */
 export const getGoalsFromRepo = async () => {
     try {
         const storedGoals = await AsyncStorage.getItem(GOALS_KEY);
         const parsedGoals = storedGoals ? JSON.parse(storedGoals) : [];
         
-        // Map and filter out invalid goals
         return parsedGoals
             .map(goalData => {
                 try {
@@ -24,9 +31,15 @@ export const getGoalsFromRepo = async () => {
     }
 };
 
+/**
+ * Saves an array of goals to the repository.
+ *
+ * @param {Goal[]} goals - The array of Goal objects to be saved.
+ * @returns {Promise<void>} A promise that resolves when the goals have been saved.
+ * @throws Will log an error to the console if there is an error saving the goals.
+ */
 export const saveGoalsToRepo = async (goals) => {
     try {
-        // Convert Goal instances to plain objects for storage
         const goalData = goals.map(goal => ({
             id: goal.id,
             title: goal.title,

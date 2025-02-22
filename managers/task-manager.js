@@ -1,59 +1,24 @@
 import { getTasksFromRepo, saveTasksToRepo } from '../repositories/task-repository';
 import { Task } from '../domain/Task';
 
-// Create a new domain object
-export function createTask(title, priority, dueDate) {
-  return new Task({
-    id: Date.now().toString(),  // or use uuid
-    title,
-    priority,
-    dueDate,    
-    completed: false,
-  });
-}
-
-export function editTask(task, newTitle, newPriority, newDueDate) {
-  task.title = newTitle;
-  task.priority = newPriority;
-  task.dueDate = new Date(newDueDate);
-  return task;
-}
-
-// Group tasks by priority and sort by date
-export function groupAndSortTasks(tasks) {
-  const high = tasks.filter((t) => t.priority === 'High');
-  const medium = tasks.filter((t) => t.priority === 'Medium');
-  const low = tasks.filter((t) => t.priority === 'Low');
-
-  // Custom sort function for tasks
-  const sortTasks = (tasks) => {
-    return tasks.sort((a, b) => {
-      // First sort by completion status
-      if (a.completed !== b.completed) {
-        return a.completed ? 1 : -1;  // Incomplete tasks come first
-      }
-      // Then sort by due date
-      return a.dueDate - b.dueDate;
-    });
-  };
-
-  // Apply sorting to each priority group
-  return {
-    high: sortTasks(high),
-    medium: sortTasks(medium),
-    low: sortTasks(low)
-  };
-}
-
-// Fetch Tasks
+/**
+ * Fetches all tasks and groups them by priority.
+ * @returns {Promise<Object>} A promise that resolves to an object containing grouped and sorted tasks.
+ */
 export async function getTasks() {
-  const tasks = await getTasksFromRepo(); // returns Task[] domain objects
+  const tasks = await getTasksFromRepo(); 
   return groupAndSortTasks(tasks);
 }
 
-// Add New Task
+/**
+ * Creates a new task.
+ * @param {string} title - The title of the task.
+ * @param {string} priority - The priority of the task (High, Medium, Low).
+ * @param {Date} dueDate - The due date of the task.
+ * @returns {Promise<Object>} A promise that resolves to an object containing grouped and sorted tasks.
+ */
 export async function createNewTask(title, priority, dueDate) {
-  const tasks = await getTasksFromRepo(); // domain objects
+  const tasks = await getTasksFromRepo();
   const newTask = createTask(title, priority, dueDate);
   tasks.push(newTask);
 
@@ -61,7 +26,14 @@ export async function createNewTask(title, priority, dueDate) {
   return groupAndSortTasks(tasks);
 }
 
-// Edit Task
+/**
+ * Edits an existing task.
+ * @param {string} taskId - The ID of the task to edit.
+ * @param {string} newTitle - The new title of the task.
+ * @param {string} newPriority - The new priority of the task.
+ * @param {Date} newDueDate - The new due date of the task.
+ * @returns {Promise<Object>} A promise that resolves to an object containing grouped and sorted tasks.
+ */
 export async function editExistingTask(taskId, newTitle, newPriority, newDueDate) {
   const tasks = await getTasksFromRepo();
   const updatedTasks = tasks.map((t) => {
@@ -75,16 +47,59 @@ export async function editExistingTask(taskId, newTitle, newPriority, newDueDate
   return groupAndSortTasks(updatedTasks);
 }
 
+/**
+ * Toggles the completion status of a task.
+ * @param {string} taskId - The ID of the task to toggle.
+ * @returns {Promise<Object>} A promise that resolves to an object containing grouped and sorted tasks.
+ */
 export async function toggleTaskCompletion(taskId) {
   const tasks = await getTasksFromRepo();
 
   const updatedTasks = tasks.map((t) => {
     if (t.id === taskId) {
-      t.toggleCompletion(); // domain method on Task
+      t.toggleCompletion(); 
     }
     return t;
   });
 
   await saveTasksToRepo(updatedTasks);
   return groupAndSortTasks(updatedTasks);
+}
+
+function createTask(title, priority, dueDate) {
+  return new Task({
+    id: Date.now().toString(),  
+    title,
+    priority,
+    dueDate,    
+    completed: false,
+  });
+}
+
+function editTask(task, newTitle, newPriority, newDueDate) {
+  task.title = newTitle;
+  task.priority = newPriority;
+  task.dueDate = new Date(newDueDate);
+  return task;
+}
+
+function groupAndSortTasks(tasks) {
+  const high = tasks.filter((t) => t.priority === 'High');
+  const medium = tasks.filter((t) => t.priority === 'Medium');
+  const low = tasks.filter((t) => t.priority === 'Low');
+
+  const sortTasks = (tasks) => {
+    return tasks.sort((a, b) => {
+      if (a.completed !== b.completed) {
+        return a.completed ? 1 : -1; 
+      }
+      return a.dueDate - b.dueDate;
+    });
+  };
+
+  return {
+    high: sortTasks(high),
+    medium: sortTasks(medium),
+    low: sortTasks(low)
+  };
 }

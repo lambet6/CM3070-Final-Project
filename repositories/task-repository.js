@@ -3,15 +3,21 @@ import { Task } from '../domain/Task';
 
 export const TASKS_KEY = '@myapp_tasks';
 
+/**
+ * Retrieves tasks from the repository stored in AsyncStorage.
+ *
+ * @async
+ * @function getTasksFromRepo
+ * @returns {Promise<Task[]>} A promise that resolves to an array of Task objects.
+ * @throws Will log an error to the console and return an empty array if there is an issue retrieving or parsing the tasks.
+ */
 export async function getTasksFromRepo() {
   try {
     const raw = await AsyncStorage.getItem(TASKS_KEY);
     if (!raw) {
-      // No tasks saved yet
       return [];
     }
 
-    // Parse JSON array, then map each item to a Task domain object
     const parsed = JSON.parse(raw);
     return parsed.map((obj) => new Task(obj));
   } catch (error) {
@@ -20,10 +26,15 @@ export async function getTasksFromRepo() {
   }
 }
 
+/**
+ * Saves an array of tasks to the repository.
+ *
+ * @param {Task[]} tasks - The array of task objects to be saved.
+ * @returns {Promise<void>} A promise that resolves when the tasks have been saved.
+ * @throws Will log an error to the console if there is an error saving the tasks.
+ */
 export async function saveTasksToRepo(tasks) {
   try {
-    // tasks is an array of Task domain objects;
-    // convert them back to plain JSON for saving
     const plainTasks = tasks.map((task) => ({
       id: task.id,
       title: task.title,

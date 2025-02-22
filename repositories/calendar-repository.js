@@ -2,6 +2,14 @@ import * as Calendar from 'expo-calendar';
 import { Platform } from 'react-native';
 import { CalendarEvent } from '../domain/CalendarEvent';
 
+/**
+ * Retrieves stored calendar events within a specified date range.
+ *
+ * @param {Date} startDate - The start date of the range to retrieve events.
+ * @param {Date} endDate - The end date of the range to retrieve events.
+ * @returns {Promise<CalendarEvent[]>} A promise that resolves to an array of CalendarEvent objects.
+ * @throws {Error} If calendar permissions are not granted or an error occurs during retrieval.
+ */
 export async function getStoredCalendarEvents(startDate, endDate) {
     try {
         const { status } = await Calendar.requestCalendarPermissionsAsync();
@@ -26,6 +34,13 @@ export async function getStoredCalendarEvents(startDate, endDate) {
     }
 }
 
+/**
+ * Adds a calendar event to the default calendar.
+ *
+ * @param {CalendarEvent} event - The event to add.
+ * @returns {Promise<CalendarEvent>} A promise that resolves to the created CalendarEvent.
+ * @throws {Error} If calendar permissions are not granted or no default calendar is found.
+ */
 export async function addCalendarEvent(event) {
     try {
         const { status } = await Calendar.requestCalendarPermissionsAsync();
@@ -52,6 +67,7 @@ export async function addCalendarEvent(event) {
         throw error;
     }
 }
+
 
 async function getDefaultCalendarId() {
   if (Platform.OS === 'ios') {

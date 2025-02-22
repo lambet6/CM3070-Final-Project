@@ -223,7 +223,7 @@ For instance, in `jest.config.js`:
 
 We follow **modern React Native** best practices for comments:
 
-1. **High-level** JSDoc-style comments on managers and domain classes that are complex or contain significant logic. For example:
+1. **High-level** JSDoc-style comments on any function that is part of the module's public API (i.e. exported). For example:
 
         /**
          * A manager function to create and persist a new task

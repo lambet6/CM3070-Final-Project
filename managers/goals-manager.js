@@ -1,10 +1,20 @@
 import { getGoalsFromRepo, saveGoalsToRepo } from '../repositories/goals-repository';
 import { Goal } from '../domain/Goal';
 
+/**
+ * Fetches all goals from the repository.
+ * @returns {Promise<Array>} A promise that resolves to an array of goals.
+ */
 export const fetchGoals = async () => {
     return await getGoalsFromRepo();
 };
 
+/**
+ * Adds a new goal.
+ * @param {string} title - The title of the goal.
+ * @param {number} hoursPerWeek - The number of hours per week dedicated to the goal.
+ * @returns {Promise<Array>} A promise that resolves to an updated array of goals.
+ */
 export const addGoal = async (title, hoursPerWeek) => {
     const existingGoals = await getGoalsFromRepo();
     
@@ -24,6 +34,13 @@ export const addGoal = async (title, hoursPerWeek) => {
     }
 };
 
+/**
+ * Updates an existing goal.
+ * @param {string} goalId - The ID of the goal to update.
+ * @param {string} newTitle - The new title of the goal.
+ * @param {number} newHours - The new number of hours per week dedicated to the goal.
+ * @returns {Promise<Array>} A promise that resolves to an updated array of goals.
+ */
 export const updateGoalData = async (goalId, newTitle, newHours) => {
     const goals = await getGoalsFromRepo();
     
@@ -42,6 +59,11 @@ export const updateGoalData = async (goalId, newTitle, newHours) => {
     }
 };
 
+/**
+ * Deletes a goal.
+ * @param {string} goalId - The ID of the goal to delete.
+ * @returns {Promise<Array>} A promise that resolves to an updated array of goals.
+ */
 export const deleteGoal = async (goalId) => {
     const goals = await getGoalsFromRepo();
     const updatedGoals = goals.filter(goal => goal.id !== goalId);

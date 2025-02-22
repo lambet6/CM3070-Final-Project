@@ -1,4 +1,3 @@
-// /store/taskStore.js
 import { create } from 'zustand';
 import {
   getTasks,
@@ -8,6 +7,33 @@ import {
 } from '../managers/task-manager';
 import { isSameDay, isWithinInterval, startOfWeek, endOfWeek } from 'date-fns';
 
+/**
+ * @typedef {import('../domain/Task').Task} Task
+ */
+
+/**
+ * @typedef {Object} TasksByPriority
+ * @property {Task[]} high - High priority tasks
+ * @property {Task[]} medium - Medium priority tasks
+ * @property {Task[]} low - Low priority tasks
+ */
+
+/**
+ * Store for managing tasks state.
+ * @typedef {Object} TaskStore
+ * @property {TasksByPriority} tasks - Tasks grouped by priority
+ * @property {() => Promise<void>} loadTasks - Loads all tasks
+ * @property {(title: string, priority: string, dueDate: Date) => Promise<void>} addTask - Creates and adds a new task
+ * @property {(taskId: string, title: string, priority: string, dueDate: Date) => Promise<void>} editTask - Updates an existing task
+ * @property {(taskId: string) => Promise<void>} toggleCompleteTask - Toggles completion status of a task
+ * @property {() => Task[]} getTodayTasks - Gets tasks due today
+ * @property {() => Task[]} getWeekTasks - Gets tasks due this week
+ */
+
+/**
+ * Creates a store for managing tasks.
+ * @type {import('zustand').UseBoundStore<TaskStore>}
+ */
 export const useTaskStore = create((set, get) => ({
   tasks: { high: [], medium: [], low: [] },
 
