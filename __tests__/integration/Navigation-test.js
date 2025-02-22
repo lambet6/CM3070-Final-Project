@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { render, fireEvent, screen } from '@testing-library/react-native';
-import { RootNavigator } from '../../RootNavigator';
+import { RootNavigator } from '../../navigation/RootNavigator';
 
 // Mock MaterialCommunityIcons
 jest.mock('@expo/vector-icons/MaterialCommunityIcons', () => 'MaterialCommunityIcons');

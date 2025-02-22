@@ -1,47 +1,71 @@
 /FirstImplementation
-├── /screens                    # Screen Components
-│   ├── TaskScreen.js          # Task management interface
-│   ├── CalendarScreen.js      # Calendar and scheduling
-│   ├── WellbeingScreen.js     # Mood tracking and charts
-│   └── GoalsScreen.js         # Goals tracking interface
+├── /screens                    # UI Screens
+│   ├── TaskScreen.js
+│   ├── CalendarScreen.js 
+│   ├── WellbeingScreen.js
+│   └── GoalsScreen.js
 │
-├── /components                # Reusable UI Components
-│   ├── TaskModal.js          # Task creation/editing modal
-│   ├── GoalModal.js          # Goal creation/editing modal
-│   ├── MoodChart.js          # Wellbeing visualization
-│   └── CalendarView.js       # Custom calendar component
+├── /components                # Reusable Components
+│   ├── TaskModal.js
+│   ├── GoalModal.js
+│   ├── MoodChart.js
+│   └── CalendarView.js
 │
-├── /store                    # State Management (Zustand)
-│   ├── taskStore.js         # Task state and actions
-│   ├── wellbeingStore.js    # Mood tracking state
-│   ├── calendarStore.js     # Calendar event state
-│   └── goalStore.js         # Goals state management
+├── /navigation               # Navigation Setup
+│   └── RootNavigator.js     # Tab navigation configuration
 │
-├── /managers                 # Business Logic Layer
-│   ├── task-manager.js      # Task operations
-│   ├── calendar-manager.js  # Calendar operations
-│   ├── wellbeing-manager.js # Mood tracking logic
-│   └── goal-manager.js      # Goal tracking logic
+├── /store                    # Zustand State Management
+│   ├── taskStore.js
+│   ├── wellbeingStore.js
+│   ├── calendarStore.js
+│   └── goalStore.js
 │
-├── /repositories            # Data Persistence Layer
-│   ├── task-repository.js  # Task storage operations
+├── /managers                 # Business Logic
+│   ├── task-manager.js
+│   ├── calendar-manager.js
+│   ├── wellbeing-manager.js
+│   └── goal-manager.js
+│
+├── /repositories            # Data Layer
+│   ├── task-repository.js
 │   ├── calendar-repository.js
 │   ├── wellbeing-repository.js
 │   └── goal-repository.js
 │
-├── /utils                   # Helper Functions
-│   ├── dateUtils.js        # Date manipulation
-│   └── constants.js        # App constants
+├── /domain                  # Domain Models
+│   ├── Task.js
+│   ├── CalendarEvent.js
+│   ├── Goal.js
+│   └── MoodEntry.js
 │
-├── /__tests__              # Test Files
+├── /__tests__              # Tests
 │   ├── /unit
 │   │   ├── /tasks
+│   │   │   ├── task-manager-test.js
+│   │   │   ├── taskStore-test.js
+│   │   │   ├── taskScreen-test.js
+│   │   │   └── task-repository-test.js
 │   │   ├── /calendar
+│   │   │   ├── calendar-manager-test.js
+│   │   │   ├── calendarStore-test.js
+│   │   │   ├── calendarScreen-test.js
+│   │   │   └── calendar-repository-test.js
 │   │   ├── /wellbeing
+│   │   │   ├── wellbeing-manager-test.js
+│   │   │   ├── wellbeingStore-test.js
+│   │   │   ├── wellbeingScreen-test.js
+│   │   │   └── wellbeing-repository-test.js
 │   │   └── /goals
+│   │       ├── goals-manager-test.js
+│   │       ├── goalsStore-test.js
+│   │       ├── goalsScreen-test.js
+│   │       └── goals-repository-test.js
 │   └── /integration
+│       └── Navigation-test.js
 │
-├── App.js                  # Main app component
+├── App.js                  # Root Component
+├── index.js               # Entry Point
 ├── package.json           # Dependencies
-├── babel.config.js        # Babel configuration
-└── jest.config.js         # Test configuration
+├── babel.config.js        # Babel Config
+├── jest.config.js         # Test Config
+└── README.md             # Documentation

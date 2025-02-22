@@ -2,10 +2,10 @@ import React from 'react';
 import { View, Text } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import TasksScreen from './screens/TaskScreen';
-import CalendarScreen from './screens/CalendarScreen';
-import GoalsScreen from './screens/GoalsScreen';
-import WellbeingScreen from './screens/WellbeingScreen';
+import TasksScreen from '../screens/TaskScreen';
+import CalendarScreen from '../screens/CalendarScreen';
+import GoalsScreen from '../screens/GoalsScreen';
+import WellbeingScreen from '../screens/WellbeingScreen';
 
 const Tab = createBottomTabNavigator();
 
