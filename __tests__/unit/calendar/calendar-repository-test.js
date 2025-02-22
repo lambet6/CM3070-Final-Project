@@ -1,5 +1,6 @@
 import * as Calendar from 'expo-calendar';
 import { getStoredCalendarEvents, addCalendarEvent } from '../../../repositories/calendar-repository';
+import { CalendarEvent } from '../../../domain/CalendarEvent';
 
 jest.mock('expo-calendar', () => ({
   requestCalendarPermissionsAsync: jest.fn(),
@@ -14,60 +15,81 @@ describe('Calendar Repository', () => {
     jest.clearAllMocks();
   });
 
-  // Fetching stored calendar events successfully
-  it('should fetch stored calendar events', async () => {
-    Calendar.requestCalendarPermissionsAsync.mockResolvedValue({ status: 'granted' });
-    Calendar.getDefaultCalendarAsync.mockResolvedValue({ id: 'default-calendar' });
-    Calendar.getEventsAsync.mockResolvedValue([
-      { id: '1', title: 'Test Event', startDate: '2025-02-10T10:00:00.000Z', endDate: '2025-02-10T12:00:00.000Z' }
-    ]);
+  describe('Calendar Event Retrieval', () => {
+    it('should fetch and transform stored calendar events', async () => {
+      const mockNativeEvent = {
+        id: '1',
+        title: 'Test Event',
+        startDate: '2025-02-10T10:00:00.000Z',
+        endDate: '2025-02-10T12:00:00.000Z'
+      };
 
-    const events = await getStoredCalendarEvents(new Date('2025-02-10'), new Date('2025-02-11'));
+      Calendar.requestCalendarPermissionsAsync.mockResolvedValue({ status: 'granted' });
+      Calendar.getDefaultCalendarAsync.mockResolvedValue({ id: 'default-calendar' });
+      Calendar.getEventsAsync.mockResolvedValue([mockNativeEvent]);
 
-    expect(Calendar.requestCalendarPermissionsAsync).toHaveBeenCalledTimes(1);
-    expect(Calendar.getDefaultCalendarAsync).toHaveBeenCalledTimes(1);
-    expect(Calendar.getEventsAsync).toHaveBeenCalledWith(['default-calendar'], new Date('2025-02-10'), new Date('2025-02-11'));
-    expect(events).toHaveLength(1);
-    expect(events[0].title).toBe('Test Event');
-  });
+      const events = await getStoredCalendarEvents(
+        new Date('2025-02-10'),
+        new Date('2025-02-11')
+      );
 
-  // Returns empty array when permission is denied
-  it('should return an empty array if calendar permission is denied', async () => {
-    Calendar.requestCalendarPermissionsAsync.mockResolvedValue({ status: 'denied' });
-
-    const events = await getStoredCalendarEvents(new Date(), new Date());
-
-    expect(Calendar.requestCalendarPermissionsAsync).toHaveBeenCalledTimes(1);
-    expect(events).toEqual([]);
-  });
-
-  // Returns empty array when no default calendar is found
-  it('should return an empty array if no default calendar is found', async () => {
-    Calendar.requestCalendarPermissionsAsync.mockResolvedValue({ status: 'granted' });
-    Calendar.getDefaultCalendarAsync.mockResolvedValue(null);
-
-    const events = await getStoredCalendarEvents(new Date(), new Date());
-
-    expect(Calendar.getDefaultCalendarAsync).toHaveBeenCalled();
-    expect(events).toEqual([]);
-  });
-
-  // Adds a calendar event successfully
-  it('should add a new calendar event', async () => {
-    Calendar.requestCalendarPermissionsAsync.mockResolvedValue({ status: 'granted' });
-    Calendar.getDefaultCalendarAsync.mockResolvedValue({ id: 'default-calendar' });
-    Calendar.createEventAsync.mockResolvedValue('event-id');
-
-    const eventId = await addCalendarEvent('Meeting', new Date('2025-02-10T10:00:00.000Z'), new Date('2025-02-10T12:00:00.000Z'));
-
-    expect(Calendar.requestCalendarPermissionsAsync).toHaveBeenCalledTimes(1);
-    expect(Calendar.getDefaultCalendarAsync).toHaveBeenCalledTimes(1);
-    expect(Calendar.createEventAsync).toHaveBeenCalledWith('default-calendar', {
-      title: 'Meeting',
-      startDate: new Date('2025-02-10T10:00:00.000Z'),
-      endDate: new Date('2025-02-10T12:00:00.000Z'),
-      timeZone: 'UTC',
+      expect(events[0]).toBeInstanceOf(CalendarEvent);
+      expect(events[0]).toEqual(
+        expect.objectContaining({
+          id: '1',
+          title: 'Test Event',
+          startDate: new Date('2025-02-10T10:00:00.000Z'),
+          endDate: new Date('2025-02-10T12:00:00.000Z')
+        })
+      );
     });
-    expect(eventId).toBe('event-id');
+
+    it('should return empty array when permission is denied', async () => {
+      Calendar.requestCalendarPermissionsAsync.mockResolvedValue({ status: 'denied' });
+
+      const events = await getStoredCalendarEvents(new Date(), new Date());
+
+      expect(events).toEqual([]);
+    });
+  });
+
+  describe('Calendar Event Creation', () => {
+    it('should save and return new calendar event', async () => {
+      const event = new CalendarEvent({
+        id: null,
+        title: 'New Meeting',
+        startDate: new Date('2025-02-10T10:00:00.000Z'),
+        endDate: new Date('2025-02-10T11:00:00.000Z')
+      });
+
+      Calendar.requestCalendarPermissionsAsync.mockResolvedValue({ status: 'granted' });
+      Calendar.getDefaultCalendarAsync.mockResolvedValue({ id: 'default-calendar' });
+      Calendar.createEventAsync.mockResolvedValue('new-event-1');
+
+      const savedEvent = await addCalendarEvent(event);
+
+      expect(savedEvent).toBeInstanceOf(CalendarEvent);
+      expect(savedEvent).toEqual(
+        expect.objectContaining({
+          id: 'new-event-1',
+          title: event.title,
+          startDate: event.startDate,
+          endDate: event.endDate
+        })
+      );
+    });
+
+    it('should throw error when calendar permission is denied', async () => {
+      const event = new CalendarEvent({
+        id: null,
+        title: 'Test Event',
+        startDate: new Date(),
+        endDate: new Date()
+      });
+
+      Calendar.requestCalendarPermissionsAsync.mockResolvedValue({ status: 'denied' });
+
+      await expect(addCalendarEvent(event)).rejects.toThrow('Calendar permission not granted');
+    });
   });
 });

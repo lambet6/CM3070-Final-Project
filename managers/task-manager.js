@@ -25,13 +25,24 @@ export function groupAndSortTasks(tasks) {
   const medium = tasks.filter((t) => t.priority === 'Medium');
   const low = tasks.filter((t) => t.priority === 'Low');
 
-  // Sort by dueDate
-  const sortByDate = (a, b) => a.dueDate - b.dueDate;
-  high.sort(sortByDate);
-  medium.sort(sortByDate);
-  low.sort(sortByDate);
+  // Custom sort function for tasks
+  const sortTasks = (tasks) => {
+    return tasks.sort((a, b) => {
+      // First sort by completion status
+      if (a.completed !== b.completed) {
+        return a.completed ? 1 : -1;  // Incomplete tasks come first
+      }
+      // Then sort by due date
+      return a.dueDate - b.dueDate;
+    });
+  };
 
-  return { high, medium, low };
+  // Apply sorting to each priority group
+  return {
+    high: sortTasks(high),
+    medium: sortTasks(medium),
+    low: sortTasks(low)
+  };
 }
 
 // Fetch Tasks

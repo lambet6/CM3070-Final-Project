@@ -1,45 +1,56 @@
 import * as Calendar from 'expo-calendar';
 import { Platform } from 'react-native';
+import { CalendarEvent } from '../domain/CalendarEvent';
 
 export async function getStoredCalendarEvents(startDate, endDate) {
     try {
-      const { status } = await Calendar.requestCalendarPermissionsAsync();
-      if (status !== 'granted') throw new Error('Calendar permission not granted');
-  
-      const defaultCalendarId = await getDefaultCalendarId();
-      if (!defaultCalendarId) {
-        console.warn('No default calendar found, returning empty events');
-        return [];
-      }
-      console.log(defaultCalendarId)
-      const events = await Calendar.getEventsAsync([defaultCalendarId], startDate, endDate);
-      console.log(events.map(a => a.title));
-      console.log('tick');
-      return events;
+        const { status } = await Calendar.requestCalendarPermissionsAsync();
+        if (status !== 'granted') throw new Error('Calendar permission not granted');
+    
+        const defaultCalendarId = await getDefaultCalendarId();
+        if (!defaultCalendarId) {
+            console.warn('No default calendar found, returning empty events');
+            return [];
+        }
+
+        const events = await Calendar.getEventsAsync([defaultCalendarId], startDate, endDate);
+        return events.map(event => new CalendarEvent({
+            id: event.id,
+            title: event.title,
+            startDate: new Date(event.startDate),
+            endDate: new Date(event.endDate)
+        }));
     } catch (error) {
-      console.warn('Error retrieving calendar events:', error);
-      return [];
+        console.warn('Error retrieving calendar events:', error);
+        return [];
     }
-  }
-  
+}
 
-export async function addCalendarEvent(title, startDate, endDate) {
-  try {
-    const { status } = await Calendar.requestCalendarPermissionsAsync();
-    if (status !== 'granted') throw new Error('Calendar permission not granted');
+export async function addCalendarEvent(event) {
+    try {
+        const { status } = await Calendar.requestCalendarPermissionsAsync();
+        if (status !== 'granted') throw new Error('Calendar permission not granted');
 
-    const defaultCalendarId = await getDefaultCalendarId();
-    if (!defaultCalendarId) throw new Error('No default calendar found');
+        const defaultCalendarId = await getDefaultCalendarId();
+        if (!defaultCalendarId) throw new Error('No default calendar found');
 
-    return await Calendar.createEventAsync(defaultCalendarId, {
-      title,
-      startDate,
-      endDate,
-      timeZone: 'UTC',
-    });
-  } catch (error) {
-    console.error('Error adding calendar event:', error);
-  }
+        const eventId = await Calendar.createEventAsync(defaultCalendarId, {
+            title: event.title,
+            startDate: event.startDate,
+            endDate: event.endDate,
+            timeZone: 'UTC',
+        });
+
+        return new CalendarEvent({
+            id: eventId,
+            title: event.title,
+            startDate: event.startDate,
+            endDate: event.endDate
+        });
+    } catch (error) {
+        console.error('Error adding calendar event:', error);
+        throw error;
+    }
 }
 
 async function getDefaultCalendarId() {

@@ -70,6 +70,7 @@ export default function WellbeingScreen() {
       {shouldShowChart ? (
         <View testID="mood-chart">
           <LineChart
+            testID="mood-line-chart"
             data={{
               labels: finalLabels.map((label, index) => formatDate(label, index, finalLabels)),
               datasets: [

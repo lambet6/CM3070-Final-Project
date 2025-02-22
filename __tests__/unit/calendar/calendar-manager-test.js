@@ -1,5 +1,6 @@
-import { getWeeklyCalendarEvents, createNewCalendarEvent } from '../../../managers/calendar-manager';
+import { getWeeklyCalendarEvents, createNewCalendarEvent, createCalendarEvent } from '../../../managers/calendar-manager';
 import { getStoredCalendarEvents, addCalendarEvent } from '../../../repositories/calendar-repository';
+import { CalendarEvent } from '../../../domain/CalendarEvent';
 import { startOfWeek, endOfWeek } from 'date-fns';
 
 jest.mock('../../../repositories/calendar-repository', () => ({
@@ -8,49 +9,91 @@ jest.mock('../../../repositories/calendar-repository', () => ({
 }));
 
 describe('Calendar Manager', () => {
+  const MOCK_DATE = new Date('2025-02-12T00:00:00.000Z');
+
   beforeEach(() => {
     jest.clearAllMocks();
+    // Mock the current date
+    jest.spyOn(global, 'Date').mockImplementation(() => MOCK_DATE);
   });
 
-  // Fetching weekly calendar events successfully
-  it('should fetch weekly calendar events from the repository', async () => {
-    const mockEvents = [
-      { id: '1', title: 'Meeting', startDate: '2025-02-12T10:00:00.000Z', endDate: '2025-02-12T12:00:00.000Z' },
-      { id: '2', title: 'Lunch', startDate: '2025-02-14T13:00:00.000Z', endDate: '2025-02-14T14:00:00.000Z' },
-    ];
-
-    getStoredCalendarEvents.mockResolvedValue(mockEvents);
-
-    const events = await getWeeklyCalendarEvents();
-
-    expect(getStoredCalendarEvents).toHaveBeenCalledWith(
-      startOfWeek(new Date(), { weekStartsOn: 1 }),
-      endOfWeek(new Date(), { weekStartsOn: 1 })
-    );
-    expect(events).toEqual(mockEvents);
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
-  // Returns empty array when repository throws an error
-  it('should return an empty array if an error occurs while fetching weekly calendar events', async () => {
-    getStoredCalendarEvents.mockRejectedValue(new Error('Database failure'));
+  describe('Calendar Event Creation', () => {
+    it('should create a calendar event with correct properties', () => {
+      const title = 'Team Meeting';
+      const startDate = new Date('2025-02-12T10:00:00.000Z');
+      const endDate = new Date('2025-02-12T11:00:00.000Z');
 
-    const events = await getWeeklyCalendarEvents();
+      const event = createCalendarEvent(title, startDate, endDate);
 
-    expect(getStoredCalendarEvents).toHaveBeenCalledTimes(1);
-    expect(events).toEqual([]);
+      expect(event).toBeInstanceOf(CalendarEvent);
+      expect(event.title).toBe(title);
+      expect(event.startDate).toEqual(startDate);
+      expect(event.endDate).toEqual(endDate);
+      expect(event.id).toBeNull();
+    });
+
+    it('should create and save a new calendar event', async () => {
+      const title = 'Team Meeting';
+      const startDate = new Date('2025-02-12T10:00:00.000Z');
+      const endDate = new Date('2025-02-12T11:00:00.000Z');
+
+      const mockSavedEvent = new CalendarEvent({
+        id: 'event-1',
+        title,
+        startDate,
+        endDate
+      });
+
+      addCalendarEvent.mockResolvedValue(mockSavedEvent);
+
+      const result = await createNewCalendarEvent(title, startDate, endDate);
+
+      expect(result).toEqual(mockSavedEvent);
+      expect(addCalendarEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title,
+          startDate,
+          endDate
+        })
+      );
+    });
   });
 
-  // Adds a new calendar event successfully
-  it('should add a new calendar event', async () => {
-    addCalendarEvent.mockResolvedValue('event-id');
+  describe('Calendar Event Retrieval', () => {
+    it('should fetch weekly calendar events from repository', async () => {
+      const mockEvents = [
+        new CalendarEvent({ 
+          id: '1', 
+          title: 'Meeting', 
+          startDate: new Date('2025-02-12T10:00:00.000Z'),
+          endDate: new Date('2025-02-12T11:00:00.000Z')
+        })
+      ];
 
-    const eventId = await createNewCalendarEvent('Meeting', new Date('2025-02-12T10:00:00.000Z'), new Date('2025-02-12T12:00:00.000Z'));
+      getStoredCalendarEvents.mockResolvedValue(mockEvents);
 
-    expect(addCalendarEvent).toHaveBeenCalledWith(
-      'Meeting',
-      new Date('2025-02-12T10:00:00.000Z'),
-      new Date('2025-02-12T12:00:00.000Z')
-    );
-    expect(eventId).toBe('event-id');
+      const events = await getWeeklyCalendarEvents();
+
+      const expectedStartDate = startOfWeek(MOCK_DATE, { weekStartsOn: 1 });
+      const expectedEndDate = endOfWeek(MOCK_DATE, { weekStartsOn: 1 });
+
+      expect(getStoredCalendarEvents).toHaveBeenCalledWith(
+        expectedStartDate,
+        expectedEndDate
+      );
+      expect(events).toEqual(mockEvents);
+    });
+
+    it('should return empty array when repository throws an error', async () => {
+      getStoredCalendarEvents.mockRejectedValue(new Error('Network error'));
+
+      const events = await getWeeklyCalendarEvents();
+
+      expect(events).toEqual([]);
+    });
   });
 });
