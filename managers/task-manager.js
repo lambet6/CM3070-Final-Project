@@ -2,8 +2,15 @@ import { getTasksFromRepo, saveTasksToRepo } from '../repositories/task-reposito
 import { Task } from '../domain/Task';
 
 /**
+ * @typedef {Object} GroupedTasks
+ * @property {Task[]} high - Array of high priority tasks
+ * @property {Task[]} medium - Array of medium priority tasks
+ * @property {Task[]} low - Array of low priority tasks
+ */
+
+/**
  * Fetches all tasks and groups them by priority.
- * @returns {Promise<Object>} A promise that resolves to an object containing grouped and sorted tasks.
+ * @returns {Promise<GroupedTasks>} A promise that resolves to tasks grouped by priority.
  */
 export async function getTasks() {
   const tasks = await getTasksFromRepo();
@@ -15,7 +22,7 @@ export async function getTasks() {
  * @param {string} title - The title of the task.
  * @param {string} priority - The priority of the task (High, Medium, Low).
  * @param {Date} dueDate - The due date of the task.
- * @returns {Promise<Object>} A promise that resolves to an object containing grouped and sorted tasks.
+ * @returns {Promise<GroupedTasks>} A promise that resolves to tasks grouped by priority
  */
 export async function createNewTask(title, priority, dueDate) {
   const tasks = await getTasksFromRepo();
@@ -32,7 +39,7 @@ export async function createNewTask(title, priority, dueDate) {
  * @param {string} newTitle - The new title of the task.
  * @param {string} newPriority - The new priority of the task.
  * @param {Date} newDueDate - The new due date of the task.
- * @returns {Promise<Object>} A promise that resolves to an object containing grouped and sorted tasks.
+ * @returns {Promise<GroupedTasks>} A promise that resolves to tasks grouped by priority
  */
 export async function editExistingTask(taskId, newTitle, newPriority, newDueDate) {
   const tasks = await getTasksFromRepo();
@@ -50,7 +57,7 @@ export async function editExistingTask(taskId, newTitle, newPriority, newDueDate
 /**
  * Toggles the completion status of a task.
  * @param {string} taskId - The ID of the task to toggle.
- * @returns {Promise<Object>} A promise that resolves to an object containing grouped and sorted tasks.
+ * @returns {Promise<GroupedTasks>} A promise that resolves to tasks grouped by priority
  */
 export async function toggleTaskCompletion(taskId) {
   const tasks = await getTasksFromRepo();

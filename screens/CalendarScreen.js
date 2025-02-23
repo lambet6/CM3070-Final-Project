@@ -1,5 +1,5 @@
 /*global setInterval, clearInterval*/
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 // setInterval and clearInterval are global, no import necessary
 import { useCalendarStore } from '../store/calendarStore';
@@ -12,35 +12,34 @@ export default function CalendarScreen() {
   const { events, loadCalendarEvents } = useCalendarStore();
   const { getTodayTasks, getWeekTasks, addTask, toggleCompleteTask } = useTaskStore();
 
+  // Move date calculations outside effect
+  const today = useRef(new Date()).current;
+  const weekStart = useRef(startOfWeek(today, { weekStartsOn: 1 })).current;
+  const weekEnd = useRef(endOfWeek(today, { weekStartsOn: 1 })).current;
+  const weekDays = useRef(eachDayOfInterval({ start: weekStart, end: weekEnd })).current;
+
   const [isModalVisible, setModalVisible] = useState(false);
   const [taskTitle, setTaskTitle] = useState('');
   const [taskPriority, setTaskPriority] = useState('Medium');
-  const [taskDueDate, setTaskDueDate] = useState(new Date());
-  const [today] = useState(new Date());
-  const [currentWeek, setCurrentWeek] = useState([]);
-  // Removed intervalRef and setToday
+  const [taskDueDate, setTaskDueDate] = useState(today);
+  const [currentWeek, setCurrentWeek] = useState(weekDays);
+
+  // Initial setup effect
+  useEffect(() => {
+    setCurrentWeek(weekDays);
+  }, []); // Empty deps since weekDays is stable
 
   useFocusEffect(
     React.useCallback(() => {
-      console.log('📅 Calendar Screen is focused!');
-
-      const start = startOfWeek(new Date(), { weekStartsOn: 1 });
-      const end = endOfWeek(new Date(), { weekStartsOn: 1 });
-      const days = eachDayOfInterval({ start, end });
-      setCurrentWeek(days);
-
-      loadCalendarEvents(); // Load events immediately
+      loadCalendarEvents();
 
       const interval = setInterval(() => {
-        console.log('🔄 Polling: Checking for new events...');
+        console.log('🔄 Checking for new events...');
         loadCalendarEvents();
-      }, 3000);
+      }, 5000);
 
-      return () => {
-        console.log('❌ Stopping polling.');
-        clearInterval(interval);
-      };
-    }, [loadCalendarEvents]), // Added loadCalendarEvents as dependency
+      return () => clearInterval(interval);
+    }, [loadCalendarEvents]),
   );
 
   // Get pre-filtered tasks from Zustand store
@@ -55,7 +54,7 @@ export default function CalendarScreen() {
         {currentWeek.map((day, index) => {
           const isToday = day.toDateString() === today.toDateString();
           const dayEvents = events.filter(
-            (event) => new Date(event.startDate).toDateString() === day.toDateString(),
+            (event) => event.startDate.toDateString() === day.toDateString(),
           );
           const dayTasks = weekTasks.filter(
             (task) => new Date(task.dueDate).toDateString() === day.toDateString(),

@@ -36,14 +36,31 @@ describe('Calendar Repository', () => {
       const events = await getStoredCalendarEvents(new Date('2025-02-10'), new Date('2025-02-11'));
 
       expect(events[0]).toBeInstanceOf(CalendarEvent);
-      expect(events[0]).toEqual(
-        expect.objectContaining({
-          id: '1',
-          title: 'Test Event',
-          startDate: new Date('2025-02-10T10:00:00.000Z'),
-          endDate: new Date('2025-02-10T12:00:00.000Z'),
-        }),
-      );
+      expect(events[0].startDate).toBeInstanceOf(Date);
+      expect(events[0].endDate).toBeInstanceOf(Date);
+      expect(events[0].toJSON()).toEqual({
+        id: '1',
+        title: 'Test Event',
+        startDate: '2025-02-10T10:00:00.000Z',
+        endDate: '2025-02-10T12:00:00.000Z',
+      });
+    });
+
+    it('should handle invalid dates gracefully', async () => {
+      const mockNativeEvent = {
+        id: '1',
+        title: 'Test Event',
+        startDate: 'invalid-date',
+        endDate: '2025-02-10T12:00:00.000Z',
+      };
+
+      Calendar.requestCalendarPermissionsAsync.mockResolvedValue({ status: 'granted' });
+      Calendar.getDefaultCalendarAsync.mockResolvedValue({ id: 'default-calendar' });
+      Calendar.getEventsAsync.mockResolvedValue([mockNativeEvent]);
+
+      await expect(
+        getStoredCalendarEvents(new Date('2025-02-10'), new Date('2025-02-11')),
+      ).resolves.toEqual([]);
     });
 
     it('should return empty array when permission is denied', async () => {
@@ -58,7 +75,7 @@ describe('Calendar Repository', () => {
   describe('Calendar Event Creation', () => {
     it('should save and return new calendar event', async () => {
       const event = new CalendarEvent({
-        id: null,
+        id: 'temp', // Changed from null to 'temp'
         title: 'New Meeting',
         startDate: new Date('2025-02-10T10:00:00.000Z'),
         endDate: new Date('2025-02-10T11:00:00.000Z'),
@@ -71,19 +88,44 @@ describe('Calendar Repository', () => {
       const savedEvent = await addCalendarEvent(event);
 
       expect(savedEvent).toBeInstanceOf(CalendarEvent);
-      expect(savedEvent).toEqual(
-        expect.objectContaining({
-          id: 'new-event-1',
-          title: event.title,
-          startDate: event.startDate,
-          endDate: event.endDate,
-        }),
+      expect(savedEvent.toJSON()).toEqual({
+        id: 'new-event-1',
+        title: 'New Meeting',
+        startDate: '2025-02-10T10:00:00.000Z',
+        endDate: '2025-02-10T11:00:00.000Z',
+      });
+    });
+
+    it('should throw error when dates are invalid', async () => {
+      await expect(
+        () =>
+          new CalendarEvent({
+            id: 'temp',
+            title: 'New Meeting',
+            startDate: 'invalid-date',
+            endDate: new Date('2025-02-10T11:00:00.000Z'),
+          }),
+      ).toThrow('Invalid start date');
+    });
+
+    it('should validate dates before saving event', async () => {
+      // Create event with valid dates first
+      const validEvent = new CalendarEvent({
+        id: 'temp',
+        title: 'New Meeting',
+        startDate: new Date('2025-02-10T10:00:00.000Z'),
+        endDate: new Date('2025-02-10T11:00:00.000Z'),
+      });
+
+      // Then try to update end date to invalid value
+      expect(() => validEvent.setEndDate(new Date('2025-02-10T09:00:00.000Z'))).toThrow(
+        'End date cannot be before start date',
       );
     });
 
     it('should throw error when calendar permission is denied', async () => {
       const event = new CalendarEvent({
-        id: null,
+        id: 'temp',
         title: 'Test Event',
         startDate: new Date(),
         endDate: new Date(),

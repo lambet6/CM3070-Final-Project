@@ -75,8 +75,8 @@ export const useTaskStore = create((set, get) => ({
   getWeekTasks: () => {
     const { tasks } = get();
     const today = new Date();
-    const weekStart = startOfWeek(today);
-    const weekEnd = endOfWeek(today);
+    const weekStart = startOfWeek(today, { weekStartsOn: 1 });
+    const weekEnd = endOfWeek(today, { weekStartsOn: 1 });
     const allTasks = [...tasks.high, ...tasks.medium, ...tasks.low];
 
     return allTasks.filter((task) => {

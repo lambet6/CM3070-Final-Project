@@ -1,3 +1,5 @@
+import { isSameDay, parseISO } from 'date-fns';
+
 export class Mood {
   constructor({ mood, date }) {
     if (!mood) throw new Error('Mood value cannot be null');
@@ -15,7 +17,11 @@ export class Mood {
   }
 
   setDate(date) {
-    this.date = date instanceof Date ? date : new Date(date);
+    const parsedDate = date instanceof Date ? date : parseISO(date);
+    if (isNaN(parsedDate.getTime())) {
+      throw new Error('Invalid date');
+    }
+    this.date = parsedDate;
   }
 
   getMoodValue(mood) {
@@ -30,7 +36,15 @@ export class Mood {
   }
 
   isToday() {
-    const today = new Date().toISOString().split('T')[0];
-    return this.date.toISOString().split('T')[0] === today;
+    return isSameDay(this.date, new Date());
+  }
+
+  toJSON() {
+    // This method is automatically called by JSON.stringify
+    // It ensures proper serialization of the date when saving to storage
+    return {
+      mood: this.mood,
+      date: this.date.toISOString(),
+    };
   }
 }

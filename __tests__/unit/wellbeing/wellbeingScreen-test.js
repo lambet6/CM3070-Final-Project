@@ -2,7 +2,10 @@
 import { describe, it, beforeEach, expect } from '@jest/globals';
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
+import { addDays } from 'date-fns';
 import WellbeingScreen from '../../../screens/WellbeingScreen';
+import { Mood } from '../../../domain/Mood';
+import { isSameDay } from 'date-fns';
 
 // Mock the chart component
 let lastChartProps = null;
@@ -58,7 +61,7 @@ describe('WellbeingScreen', () => {
       let storeState = {
         moodData: [],
         addMood: () => {
-          storeState.moodData = [{ date: new Date().toISOString(), mood: 'Happy' }];
+          storeState.moodData = [new Mood({ mood: 'Happy', date: new Date() })];
         },
         loadMoodData: jest.fn(),
         getLast14DaysMoodData: () => ({ labels: [], data: [] }),
@@ -77,10 +80,8 @@ describe('WellbeingScreen', () => {
     });
 
     it('highlights selected mood for today', () => {
-      const today = new Date().toISOString().split('T')[0];
-
       jest.spyOn(require('../../../store/wellbeingStore'), 'useWellbeingStore').mockReturnValue({
-        moodData: [{ date: today, mood: 'Happy' }],
+        moodData: [new Mood({ mood: 'Happy', date: new Date() })],
         addMood: jest.fn(),
         loadMoodData: jest.fn(),
         getLast14DaysMoodData: () => ({ labels: [], data: [] }),
@@ -96,7 +97,7 @@ describe('WellbeingScreen', () => {
   describe('Chart Display', () => {
     it('displays mood chart when mood data exists', () => {
       jest.spyOn(require('../../../store/wellbeingStore'), 'useWellbeingStore').mockReturnValue({
-        moodData: [{ mood: 'Happy', moodValue: 4, date: new Date().toISOString() }],
+        moodData: [new Mood({ mood: 'Happy', date: new Date() })],
         addMood: jest.fn(),
         loadMoodData: jest.fn(),
         getLast14DaysMoodData: () => ({ labels: ['2024-01-01'], data: [4] }),
@@ -107,7 +108,8 @@ describe('WellbeingScreen', () => {
     });
 
     it('correctly displays mood data across multiple days', () => {
-      const mockDates = ['2024-01-01', '2024-01-02', '2024-01-03', '2024-01-04'];
+      const startDate = new Date('2024-01-01');
+      const mockDates = Array.from({ length: 4 }, (_, i) => addDays(startDate, i));
 
       let moodDataStore = [];
       const mockStore = {
@@ -116,8 +118,8 @@ describe('WellbeingScreen', () => {
         },
         addMood: (mood) => {
           moodDataStore = [
-            ...moodDataStore.filter((m) => !m.date.startsWith(currentMockDate)),
-            { date: currentMockDate + 'T00:00:00.000Z', mood },
+            ...moodDataStore.filter((m) => !isSameDay(m.date, new Date(currentMockDate))),
+            new Mood({ mood, date: currentMockDate }),
           ];
         },
         loadMoodData: jest.fn(),
@@ -133,14 +135,14 @@ describe('WellbeingScreen', () => {
           return {
             labels: mockDates,
             data: mockDates.map((date) => {
-              const entry = moodDataStore.find((m) => m.date.startsWith(date));
+              const entry = moodDataStore.find((m) => isSameDay(m.date, date));
               return entry ? moodToValue[entry.mood] : 0;
             }),
           };
         },
       };
 
-      let currentMockDate = mockDates[0];
+      let currentMockDate = mockDates[0].toISOString();
       jest
         .spyOn(require('../../../store/wellbeingStore'), 'useWellbeingStore')
         .mockImplementation(() => mockStore);
@@ -165,7 +167,7 @@ describe('WellbeingScreen', () => {
 
       expect(lastChartProps).toBeTruthy();
       expect(lastChartProps.data).toEqual({
-        labels: ['1st Jan', '2nd', '4th'],
+        labels: ['1 Jan', '2', '4'],
         datasets: [
           {
             data: [2, 5, 3],

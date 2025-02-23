@@ -25,4 +25,12 @@ export class Goal {
   hasValidHours() {
     return this.hoursPerWeek >= 0 && this.hoursPerWeek <= 168; // Max hours in a week
   }
+
+  toJSON() {
+    return {
+      id: this.id,
+      title: this.title,
+      hoursPerWeek: this.hoursPerWeek,
+    };
+  }
 }

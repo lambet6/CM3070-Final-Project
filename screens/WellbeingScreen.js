@@ -5,6 +5,7 @@ import { LineChart } from 'react-native-chart-kit';
 import { Dimensions } from 'react-native';
 import { moodValues } from '../utilities/constants';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { format } from 'date-fns';
 
 export default function WellbeingScreen() {
   const { moodData, addMood, loadMoodData, getLast14DaysMoodData } = useWellbeingStore();
@@ -17,31 +18,12 @@ export default function WellbeingScreen() {
     addMood(mood);
   };
 
-  const today = new Date().toISOString().split('T')[0];
-  const todayMood = moodData.find((entry) => entry.date.split('T')[0] === today)?.mood;
+  const todayMood = moodData.find((entry) => entry.isToday())?.mood;
 
-  const getOrdinalSuffix = (day) => {
-    if (day > 3 && day < 21) return 'th';
-    switch (day % 10) {
-      case 1:
-        return 'st';
-      case 2:
-        return 'nd';
-      case 3:
-        return 'rd';
-      default:
-        return 'th';
-    }
-  };
+  const formatDate = (date, index, labels) => {
+    const isFirstEntryOfMonth = index === 0 || format(labels[index - 1], 'M') !== format(date, 'M');
 
-  const formatDate = (dateString, index, labels) => {
-    const date = new Date(dateString);
-    const day = date.getDate();
-    const month = date.toLocaleString('default', { month: 'short' });
-    const suffix = getOrdinalSuffix(day);
-    const isFirstEntryOfMonth =
-      index === 0 || new Date(labels[index - 1]).getMonth() !== date.getMonth();
-    return isFirstEntryOfMonth ? `${day}${suffix} ${month}` : `${day}${suffix}`;
+    return isFirstEntryOfMonth ? format(date, 'd MMM') : format(date, 'd');
   };
 
   const { labels, data } = getLast14DaysMoodData();

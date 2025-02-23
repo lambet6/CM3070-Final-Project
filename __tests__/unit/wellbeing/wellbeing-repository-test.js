@@ -1,6 +1,7 @@
 /*global jest*/
 import { describe, it, beforeEach, expect } from '@jest/globals';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { isSameDay } from 'date-fns';
 import {
   getMoodDataFromRepo,
   updateMoodForToday,
@@ -20,13 +21,15 @@ describe('wellbeing-repository', () => {
   });
 
   it('getMoodDataFromRepo returns array of Mood objects', async () => {
-    const sampleData = [{ mood: 'Happy', date: '2024-01-01T00:00:00.000Z' }];
+    const testDate = new Date('2024-01-01T00:00:00.000Z');
+    const sampleData = [{ mood: 'Happy', date: testDate.toISOString() }];
     await AsyncStorage.setItem(MOOD_DATA_KEY, JSON.stringify(sampleData));
 
     const data = await getMoodDataFromRepo();
     expect(data[0]).toBeInstanceOf(Mood);
     expect(data[0].mood).toBe('Happy');
     expect(data[0].moodValue).toBe(4);
+    expect(isSameDay(data[0].date, testDate)).toBe(true);
   });
 
   it('updateMoodForToday replaces existing mood for today', async () => {
@@ -43,8 +46,12 @@ describe('wellbeing-repository', () => {
 
     const storedData = await getMoodDataFromRepo();
     expect(storedData).toHaveLength(2);
-    expect(storedData.find((m) => m.isToday()).mood).toBe('Happy');
-    expect(storedData.find((m) => !m.isToday()).mood).toBe('Neutral');
+
+    const todayEntry = storedData.find((m) => m.isToday());
+    const yesterdayEntry = storedData.find((m) => !m.isToday());
+
+    expect(todayEntry.mood).toBe('Happy');
+    expect(yesterdayEntry.mood).toBe('Neutral');
   });
 
   it('throws error for invalid mood value', async () => {

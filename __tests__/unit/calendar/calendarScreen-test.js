@@ -1,11 +1,12 @@
 /*global jest*/
-import { describe, it, beforeEach, expect } from '@jest/globals';
+import { describe, it, beforeEach, afterEach, expect } from '@jest/globals';
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { useCalendarStore } from '../../../store/calendarStore';
 import { useTaskStore } from '../../../store/taskStore';
 import CalendarScreen from '../../../screens/CalendarScreen';
+import { CalendarEvent } from '../../../domain/CalendarEvent';
 
 jest.mock('../../../store/calendarStore', () => ({
   useCalendarStore: jest.fn(),
@@ -16,8 +17,29 @@ jest.mock('../../../store/taskStore', () => ({
 }));
 
 describe('CalendarScreen', () => {
+  const MOCK_DATE = new Date('2025-02-12T00:00:00.000Z');
+  const MOCK_TIMESTAMP = MOCK_DATE.getTime();
+
   beforeEach(() => {
     jest.clearAllMocks();
+    // Create a class that extends Date
+    const MockDate = class extends Date {
+      constructor(...args) {
+        if (args.length === 0) {
+          super(MOCK_TIMESTAMP);
+        } else {
+          super(...args);
+        }
+      }
+      static now() {
+        return MOCK_TIMESTAMP;
+      }
+    };
+    global.Date = MockDate;
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
   describe('Screen Rendering', () => {
@@ -43,8 +65,16 @@ describe('CalendarScreen', () => {
     });
 
     it('renders tasks and events correctly in the weekly view', () => {
+      const eventDate = new Date('2025-02-12T10:00:00.000Z');
+      const event = new CalendarEvent({
+        id: '1',
+        title: 'Meeting',
+        startDate: eventDate,
+        endDate: new Date('2025-02-12T11:00:00.000Z'),
+      });
+
       useCalendarStore.mockReturnValue({
-        events: [{ id: '1', title: 'Meeting', startDate: new Date() }],
+        events: [event],
         loadCalendarEvents: jest.fn(),
       });
 
@@ -52,7 +82,7 @@ describe('CalendarScreen', () => {
         getTodayTasks: jest.fn().mockReturnValue([]),
         getWeekTasks: jest
           .fn()
-          .mockReturnValue([{ id: '2', title: 'Project Task', dueDate: new Date() }]),
+          .mockReturnValue([{ id: '2', title: 'Project Task', dueDate: eventDate }]),
         addTask: jest.fn(),
         toggleCompleteTask: jest.fn(),
       });
@@ -206,9 +236,13 @@ describe('CalendarScreen', () => {
       fireEvent.changeText(getByTestId('input-title'), 'New Task');
       fireEvent.press(getByTestId('modal-save-button'));
 
-      // Update mock return value for new state
+      // Update mock return value with proper date object
       mockGetTodayTasks.mockReturnValue([
-        { id: '100', title: 'New Task', dueDate: '2025-02-12T10:00:00.000Z' },
+        {
+          id: '100',
+          title: 'New Task',
+          dueDate: new Date('2025-02-12T10:00:00.000Z'),
+        },
       ]);
 
       // Rerender to reflect store update

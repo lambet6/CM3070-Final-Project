@@ -4,7 +4,7 @@ import { CalendarEvent } from '../domain/CalendarEvent';
 
 /**
  * Fetches calendar events for the current week.
- * @returns {Promise<Array>} A promise that resolves to an array of calendar events.
+ * @returns {Promise<CalendarEvent[]>} A promise that resolves to an array of calendar events.
  */
 export async function getWeeklyCalendarEvents() {
   try {
@@ -20,20 +20,17 @@ export async function getWeeklyCalendarEvents() {
 /**
  * Creates a new calendar event.
  * @param {string} title - The title of the event.
- * @param {Date} startDate - The start date of the event.
- * @param {Date} endDate - The end date of the event.
+ * @param {Date|string} startDate - The start date of the event.
+ * @param {Date|string} endDate - The end date of the event.
  * @returns {Promise<CalendarEvent>} A promise that resolves to the newly created CalendarEvent object.
  */
 export async function createNewCalendarEvent(title, startDate, endDate) {
-  const event = createCalendarEvent(title, startDate, endDate);
-  return await addCalendarEvent(event);
-}
-
-function createCalendarEvent(title, startDate, endDate) {
-  return new CalendarEvent({
-    id: null, // ID will be assigned by the calendar provider
-    title,
-    startDate,
-    endDate,
-  });
+  return await addCalendarEvent(
+    new CalendarEvent({
+      id: 'temp',
+      title,
+      startDate,
+      endDate,
+    }),
+  );
 }

@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Mood } from '../domain/Mood';
+import { parseISO } from 'date-fns';
 
 export const MOOD_DATA_KEY = 'MOOD_DATA';
 
@@ -15,7 +16,13 @@ export const getMoodDataFromRepo = async () => {
   try {
     const data = await AsyncStorage.getItem(MOOD_DATA_KEY);
     const parsedData = data ? JSON.parse(data) : [];
-    return parsedData.map((moodData) => new Mood(moodData));
+    return parsedData.map((moodData) => {
+      // Ensure date is properly parsed from ISO string
+      return new Mood({
+        mood: moodData.mood,
+        date: parseISO(moodData.date),
+      });
+    });
   } catch (error) {
     console.error('Error fetching mood data:', error);
     return [];

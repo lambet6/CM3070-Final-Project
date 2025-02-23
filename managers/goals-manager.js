@@ -3,7 +3,7 @@ import { Goal } from '../domain/Goal';
 
 /**
  * Fetches all goals from the repository.
- * @returns {Promise<Array>} A promise that resolves to an array of goals.
+ * @returns {Promise<Goal[]>} A promise that resolves to an array of goals.
  */
 export const fetchGoals = async () => {
   return await getGoalsFromRepo();

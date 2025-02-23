@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { getMoodData, saveMood } from '../managers/wellbeing-manager';
+import { subDays, startOfDay, isSameDay } from 'date-fns';
 
 /**
  * @typedef {import('../domain/Mood').Mood} Mood
@@ -33,24 +34,23 @@ export const useWellbeingStore = create((set) => ({
   addMood: async (mood) => {
     const newMoodData = await saveMood(mood);
     set((state) => {
-      const today = new Date().toISOString().split('T')[0];
-      const updatedMoodData = state.moodData.filter((entry) => entry.date.split('T')[0] !== today);
-      updatedMoodData.push(newMoodData);
-      return { moodData: updatedMoodData };
+      const filteredMoodData = state.moodData.filter((entry) => !entry.isToday());
+      return { moodData: [...filteredMoodData, newMoodData] };
     });
   },
   getLast14DaysMoodData: () => {
     const moodData = useWellbeingStore.getState().moodData;
-    const last14Days = Array.from({ length: 14 }, (_, i) => {
-      const date = new Date();
-      date.setDate(date.getDate() - (13 - i));
-      return date.toISOString().split('T')[0];
-    });
+    const today = startOfDay(new Date());
+    const last14Days = Array.from({ length: 14 }, (_, i) => subDays(today, 13 - i));
+
     const fullData = last14Days.map((date) => {
-      const entry = moodData.find((entry) => entry.date.split('T')[0] === date);
+      const entry = moodData.find((entry) => isSameDay(entry.date, date));
       return { date, moodValue: entry ? entry.moodValue : 0 };
     });
 
-    return { labels: last14Days, data: fullData.map((item) => item.moodValue) };
+    return {
+      labels: fullData.map((item) => item.date),
+      data: fullData.map((item) => item.moodValue),
+    };
   },
 }));

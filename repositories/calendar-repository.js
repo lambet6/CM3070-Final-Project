@@ -52,18 +52,27 @@ export async function addCalendarEvent(event) {
     const defaultCalendarId = await getDefaultCalendarId();
     if (!defaultCalendarId) throw new Error('No default calendar found');
 
-    const eventId = await Calendar.createEventAsync(defaultCalendarId, {
+    // Create new event with validated dates
+    const newEvent = new CalendarEvent({
+      id: 'temp', // Temporary ID that will be replaced
       title: event.title,
       startDate: event.startDate,
       endDate: event.endDate,
+    });
+
+    const eventId = await Calendar.createEventAsync(defaultCalendarId, {
+      title: newEvent.title,
+      startDate: newEvent.startDate,
+      endDate: newEvent.endDate,
       timeZone: 'UTC',
     });
 
+    // Return new event with real ID
     return new CalendarEvent({
       id: eventId,
-      title: event.title,
-      startDate: event.startDate,
-      endDate: event.endDate,
+      title: newEvent.title,
+      startDate: newEvent.startDate,
+      endDate: newEvent.endDate,
     });
   } catch (error) {
     console.error('Error adding calendar event:', error);

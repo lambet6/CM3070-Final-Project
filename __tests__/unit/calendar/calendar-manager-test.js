@@ -18,11 +18,24 @@ jest.mock('../../../repositories/calendar-repository', () => ({
 
 describe('Calendar Manager', () => {
   const MOCK_DATE = new Date('2025-02-12T00:00:00.000Z');
+  const MOCK_TIMESTAMP = MOCK_DATE.getTime();
 
   beforeEach(() => {
     jest.clearAllMocks();
-    // Mock the current date
-    jest.spyOn(global, 'Date').mockImplementation(() => MOCK_DATE);
+    // Create a class that extends Date
+    const MockDate = class extends Date {
+      constructor(...args) {
+        if (args.length === 0) {
+          super(MOCK_TIMESTAMP);
+        } else {
+          super(...args);
+        }
+      }
+      static now() {
+        return MOCK_TIMESTAMP;
+      }
+    };
+    global.Date = MockDate;
   });
 
   afterEach(() => {
@@ -49,6 +62,7 @@ describe('Calendar Manager', () => {
       expect(result).toEqual(mockSavedEvent);
       expect(addCalendarEvent).toHaveBeenCalledWith(
         expect.objectContaining({
+          id: 'temp',
           title,
           startDate,
           endDate,
@@ -72,8 +86,8 @@ describe('Calendar Manager', () => {
 
       const events = await getWeeklyCalendarEvents();
 
-      const expectedStartDate = startOfWeek(MOCK_DATE, { weekStartsOn: 1 });
-      const expectedEndDate = endOfWeek(MOCK_DATE, { weekStartsOn: 1 });
+      const expectedStartDate = startOfWeek(new Date(MOCK_DATE), { weekStartsOn: 1 });
+      const expectedEndDate = endOfWeek(new Date(MOCK_DATE), { weekStartsOn: 1 });
 
       expect(getStoredCalendarEvents).toHaveBeenCalledWith(expectedStartDate, expectedEndDate);
       expect(events).toEqual(mockEvents);
