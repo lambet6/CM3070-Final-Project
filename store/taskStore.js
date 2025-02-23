@@ -36,25 +36,38 @@ import { isSameDay, isWithinInterval, startOfWeek, endOfWeek } from 'date-fns';
  */
 export const useTaskStore = create((set, get) => ({
   tasks: { high: [], medium: [], low: [] },
+  error: null,
 
   loadTasks: async () => {
     try {
       const fetchedTasks = await getTasks();
-      set({ tasks: fetchedTasks });
+      set({ tasks: fetchedTasks, error: null });
     } catch (error) {
       console.error('Failed to load tasks:', error);
-      set({ tasks: { high: [], medium: [], low: [] } });
+      set({ tasks: { high: [], medium: [], low: [] }, error: 'Failed to load tasks' });
     }
   },
 
   addTask: async (title, priority, dueDate) => {
-    const updatedTasks = await createNewTask(title, priority, dueDate);
-    set({ tasks: updatedTasks });
+    try {
+      const updatedTasks = await createNewTask(title, priority, dueDate);
+      set({ tasks: updatedTasks, error: null });
+    } catch (error) {
+      console.error('Failed to add task:', error);
+      set({ error: error.message });
+      throw error; // Re-throw to let UI handle it
+    }
   },
 
   editTask: async (taskId, title, priority, dueDate) => {
-    const updatedTasks = await editExistingTask(taskId, title, priority, dueDate);
-    set({ tasks: updatedTasks });
+    try {
+      const updatedTasks = await editExistingTask(taskId, title, priority, dueDate);
+      set({ tasks: updatedTasks, error: null });
+    } catch (error) {
+      console.error('Failed to edit task:', error);
+      set({ error: error.message });
+      throw error;
+    }
   },
 
   toggleCompleteTask: async (taskId) => {

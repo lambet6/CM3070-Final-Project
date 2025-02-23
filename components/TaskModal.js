@@ -15,6 +15,22 @@ export default function TaskModal({
   setTaskDueDate,
 }) {
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [titleError, setTitleError] = useState('');
+
+  const validateForm = () => {
+    if (!taskTitle?.trim()) {
+      setTitleError('Title is required');
+      return false;
+    }
+    setTitleError('');
+    return true;
+  };
+
+  const handleSave = () => {
+    if (validateForm()) {
+      onSave();
+    }
+  };
 
   const onDateChange = (event, selectedDate) => {
     setShowDatePicker(false);
@@ -39,11 +55,15 @@ export default function TaskModal({
           <View style={styles.inputArea}>
             <TextInput
               testID="input-title"
-              style={styles.inputText}
+              style={[styles.inputText, titleError && styles.inputError]}
               placeholder="Task Title"
               value={taskTitle}
-              onChangeText={setTaskTitle}
+              onChangeText={(text) => {
+                setTaskTitle(text);
+                setTitleError('');
+              }}
             />
+            {titleError ? <Text style={styles.errorText}>{titleError}</Text> : null}
           </View>
 
           {/* Priority Picker */}
@@ -75,7 +95,7 @@ export default function TaskModal({
           )}
 
           <View style={styles.buttonRow}>
-            <Button testID="modal-save-button" title="Save" onPress={onSave} />
+            <Button testID="modal-save-button" title="Save" onPress={handleSave} />
             <Button testID="modal-cancel-button" title="Cancel" onPress={onClose} />
           </View>
         </View>
@@ -128,5 +148,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 8,
+  },
+  inputError: {
+    borderColor: 'red',
+  },
+  errorText: {
+    color: 'red',
+    fontSize: 12,
+    marginTop: 4,
   },
 });

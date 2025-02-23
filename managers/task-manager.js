@@ -25,12 +25,26 @@ export async function getTasks() {
  * @returns {Promise<GroupedTasks>} A promise that resolves to tasks grouped by priority
  */
 export async function createNewTask(title, priority, dueDate) {
-  const tasks = await getTasksFromRepo();
-  const newTask = createTask(title, priority, dueDate);
-  tasks.push(newTask);
+  if (!title?.trim()) {
+    throw new Error('Task title is required');
+  }
+  if (!['Low', 'Medium', 'High'].includes(priority)) {
+    throw new Error('Invalid priority value');
+  }
+  if (!(dueDate instanceof Date) || isNaN(dueDate.getTime())) {
+    throw new Error('Valid due date is required');
+  }
 
-  await saveTasksToRepo(tasks);
-  return groupAndSortTasks(tasks);
+  try {
+    const tasks = await getTasksFromRepo();
+    const newTask = createTask(title, priority, dueDate);
+    tasks.push(newTask);
+
+    await saveTasksToRepo(tasks);
+    return groupAndSortTasks(tasks);
+  } catch (error) {
+    throw new Error(`Failed to create task: ${error.message}`);
+  }
 }
 
 /**
@@ -42,16 +56,38 @@ export async function createNewTask(title, priority, dueDate) {
  * @returns {Promise<GroupedTasks>} A promise that resolves to tasks grouped by priority
  */
 export async function editExistingTask(taskId, newTitle, newPriority, newDueDate) {
-  const tasks = await getTasksFromRepo();
-  const updatedTasks = tasks.map((t) => {
-    if (t.id === taskId) {
-      return editTask(t, newTitle, newPriority, newDueDate);
-    }
-    return t;
-  });
+  if (!taskId) {
+    throw new Error('Task ID is required');
+  }
+  if (!newTitle?.trim()) {
+    throw new Error('Task title is required');
+  }
+  if (!['Low', 'Medium', 'High'].includes(newPriority)) {
+    throw new Error('Invalid priority value');
+  }
+  if (!(newDueDate instanceof Date) || isNaN(newDueDate.getTime())) {
+    throw new Error('Valid due date is required');
+  }
 
-  await saveTasksToRepo(updatedTasks);
-  return groupAndSortTasks(updatedTasks);
+  try {
+    const tasks = await getTasksFromRepo();
+    const taskToUpdate = tasks.find((t) => t.id === taskId);
+    if (!taskToUpdate) {
+      throw new Error('Task not found');
+    }
+
+    const updatedTasks = tasks.map((t) => {
+      if (t.id === taskId) {
+        return editTask(t, newTitle, newPriority, newDueDate);
+      }
+      return t;
+    });
+
+    await saveTasksToRepo(updatedTasks);
+    return groupAndSortTasks(updatedTasks);
+  } catch (error) {
+    throw new Error(`Failed to edit task: ${error.message}`);
+  }
 }
 
 /**

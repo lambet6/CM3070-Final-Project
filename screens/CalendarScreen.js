@@ -27,7 +27,7 @@ export default function CalendarScreen() {
   // Initial setup effect
   useEffect(() => {
     setCurrentWeek(weekDays);
-  }, []); // Empty deps since weekDays is stable
+  }, [weekDays]);
 
   useFocusEffect(
     React.useCallback(() => {

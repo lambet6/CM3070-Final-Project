@@ -10,6 +10,7 @@ export default function TasksScreen() {
   const [taskPriority, setTaskPriority] = useState('Medium');
   const [taskDueDate, setTaskDueDate] = useState(new Date());
   const [editingTaskId, setEditingTaskId] = useState(null);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     loadTasks(); // Fetch tasks on mount
@@ -17,13 +18,18 @@ export default function TasksScreen() {
 
   // Handle adding or editing a task
   const handleSaveTask = async () => {
-    if (editingTaskId) {
-      await editTask(editingTaskId, taskTitle, taskPriority, taskDueDate);
-    } else {
-      await addTask(taskTitle, taskPriority, taskDueDate);
+    try {
+      setError(null);
+      if (editingTaskId) {
+        await editTask(editingTaskId, taskTitle, taskPriority, taskDueDate);
+      } else {
+        await addTask(taskTitle, taskPriority, taskDueDate);
+      }
+      setModalVisible(false);
+      resetTaskForm();
+    } catch (error) {
+      setError(error.message);
     }
-    setModalVisible(false);
-    resetTaskForm();
   };
 
   // Open modal for adding a new task
@@ -62,6 +68,7 @@ export default function TasksScreen() {
 
   return (
     <View testID="tasks-screen" style={styles.container}>
+      {error && <Text style={styles.errorMessage}>{error}</Text>}
       {/* High Priority Tasks */}
       <Text style={styles.priorityHeader}>High Priority</Text>
       <FlatList
@@ -149,5 +156,10 @@ const styles = StyleSheet.create({
   fabText: {
     color: '#fff',
     fontSize: 30,
+  },
+  errorMessage: {
+    color: 'red',
+    padding: 10,
+    marginBottom: 10,
   },
 });
