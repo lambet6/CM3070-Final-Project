@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Task } from '../domain/Task'; 
+import { Task } from '../domain/Task';
 
 export const TASKS_KEY = '@myapp_tasks';
 

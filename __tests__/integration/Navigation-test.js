@@ -1,3 +1,5 @@
+/*global jest*/
+import { describe, expect, beforeAll, afterAll, it } from '@jest/globals';
 import * as React from 'react';
 import { render, fireEvent, screen } from '@testing-library/react-native';
 import { RootNavigator } from '../../navigation/RootNavigator';
@@ -9,19 +11,19 @@ jest.mock('@expo/vector-icons/MaterialCommunityIcons', () => 'MaterialCommunityI
 jest.mock('../../store/calendarStore', () => ({
   useCalendarStore: jest.fn(() => ({
     events: [],
-    loadCalendarEvents: jest.fn() // Ensure this function exists in tests
-  }))
+    loadCalendarEvents: jest.fn(), // Ensure this function exists in tests
+  })),
 }));
 
 jest.mock('../../store/taskStore', () => ({
   useTaskStore: jest.fn(() => ({
-    tasks: { high: [], medium: [], low: [] }, 
+    tasks: { high: [], medium: [], low: [] },
     loadTasks: jest.fn(() => []),
     addTask: jest.fn(() => []),
     editTask: jest.fn(() => []),
     getTodayTasks: jest.fn(() => []),
-    getWeekTasks: jest.fn(() => [])
-  }))
+    getWeekTasks: jest.fn(() => []),
+  })),
 }));
 
 jest.mock('../../store/goalsStore', () => ({
@@ -30,8 +32,8 @@ jest.mock('../../store/goalsStore', () => ({
     loadGoals: jest.fn(),
     addNewGoal: jest.fn(),
     updateGoal: jest.fn(),
-    deleteGoal: jest.fn()
-  }))
+    deleteGoal: jest.fn(),
+  })),
 }));
 
 // Add wellbeingStore mock
@@ -40,20 +42,20 @@ jest.mock('../../store/wellbeingStore', () => ({
     moodData: [],
     loadMoodData: jest.fn(),
     addMood: jest.fn(),
-    getLast14DaysMoodData: jest.fn(() => ({ labels: [], data: [] }))
-  }))
+    getLast14DaysMoodData: jest.fn(() => ({ labels: [], data: [] })),
+  })),
 }));
 
 describe('Navigation tests', () => {
   beforeAll(() => {
-    jest.useFakeTimers(); 
+    jest.useFakeTimers();
   });
 
   afterAll(() => {
     jest.useRealTimers();
   });
 
-  test('shows calendar screen when Calendar tab is pressed', async () => {
+  it('shows calendar screen when Calendar tab is pressed', async () => {
     render(<RootNavigator />);
 
     fireEvent.press(screen.getByTestId('calendar-tab'));
@@ -62,7 +64,7 @@ describe('Navigation tests', () => {
     expect(calendarScreen).toBeOnTheScreen();
   });
 
-  test('shows goals screen when Goals tab is pressed', async () => {
+  it('shows goals screen when Goals tab is pressed', async () => {
     render(<RootNavigator />);
 
     fireEvent.press(screen.getByTestId('goals-tab'));
@@ -71,7 +73,7 @@ describe('Navigation tests', () => {
     expect(goalsScreen).toBeOnTheScreen();
   });
 
-  test('shows wellbeing screen when Wellbeing tab is pressed', async () => {
+  it('shows wellbeing screen when Wellbeing tab is pressed', async () => {
     render(<RootNavigator />);
 
     fireEvent.press(screen.getByTestId('wellbeing-tab'));
@@ -80,7 +82,7 @@ describe('Navigation tests', () => {
     expect(wellbeingScreen).toBeOnTheScreen();
   });
 
-  test('navigates through all screens correctly', async () => {
+  it('navigates through all screens correctly', async () => {
     render(<RootNavigator />);
 
     // The initial screen is tasks

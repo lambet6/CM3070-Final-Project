@@ -1,5 +1,10 @@
+/*global jest*/
+import { describe, it, beforeEach, expect } from '@jest/globals';
 import * as Calendar from 'expo-calendar';
-import { getStoredCalendarEvents, addCalendarEvent } from '../../../repositories/calendar-repository';
+import {
+  getStoredCalendarEvents,
+  addCalendarEvent,
+} from '../../../repositories/calendar-repository';
 import { CalendarEvent } from '../../../domain/CalendarEvent';
 
 jest.mock('expo-calendar', () => ({
@@ -21,17 +26,14 @@ describe('Calendar Repository', () => {
         id: '1',
         title: 'Test Event',
         startDate: '2025-02-10T10:00:00.000Z',
-        endDate: '2025-02-10T12:00:00.000Z'
+        endDate: '2025-02-10T12:00:00.000Z',
       };
 
       Calendar.requestCalendarPermissionsAsync.mockResolvedValue({ status: 'granted' });
       Calendar.getDefaultCalendarAsync.mockResolvedValue({ id: 'default-calendar' });
       Calendar.getEventsAsync.mockResolvedValue([mockNativeEvent]);
 
-      const events = await getStoredCalendarEvents(
-        new Date('2025-02-10'),
-        new Date('2025-02-11')
-      );
+      const events = await getStoredCalendarEvents(new Date('2025-02-10'), new Date('2025-02-11'));
 
       expect(events[0]).toBeInstanceOf(CalendarEvent);
       expect(events[0]).toEqual(
@@ -39,8 +41,8 @@ describe('Calendar Repository', () => {
           id: '1',
           title: 'Test Event',
           startDate: new Date('2025-02-10T10:00:00.000Z'),
-          endDate: new Date('2025-02-10T12:00:00.000Z')
-        })
+          endDate: new Date('2025-02-10T12:00:00.000Z'),
+        }),
       );
     });
 
@@ -59,7 +61,7 @@ describe('Calendar Repository', () => {
         id: null,
         title: 'New Meeting',
         startDate: new Date('2025-02-10T10:00:00.000Z'),
-        endDate: new Date('2025-02-10T11:00:00.000Z')
+        endDate: new Date('2025-02-10T11:00:00.000Z'),
       });
 
       Calendar.requestCalendarPermissionsAsync.mockResolvedValue({ status: 'granted' });
@@ -74,8 +76,8 @@ describe('Calendar Repository', () => {
           id: 'new-event-1',
           title: event.title,
           startDate: event.startDate,
-          endDate: event.endDate
-        })
+          endDate: event.endDate,
+        }),
       );
     });
 
@@ -84,7 +86,7 @@ describe('Calendar Repository', () => {
         id: null,
         title: 'Test Event',
         startDate: new Date(),
-        endDate: new Date()
+        endDate: new Date(),
       });
 
       Calendar.requestCalendarPermissionsAsync.mockResolvedValue({ status: 'denied' });

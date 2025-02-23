@@ -1,16 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  FlatList,
-  TouchableOpacity,
-  StyleSheet
-} from 'react-native';
-import { useTaskStore } from '../store/taskStore';  // Zustand for state management
+import { View, Text, FlatList, TouchableOpacity, StyleSheet } from 'react-native';
+import { useTaskStore } from '../store/taskStore'; // Zustand for state management
 import TaskModal from '../components/TaskModal';
 
 export default function TasksScreen() {
-  const { tasks, loadTasks, addTask, editTask, toggleCompleteTask } = useTaskStore();  // Global task store
+  const { tasks, loadTasks, addTask, editTask, toggleCompleteTask } = useTaskStore(); // Global task store
   const [isModalVisible, setModalVisible] = useState(false);
   const [taskTitle, setTaskTitle] = useState('');
   const [taskPriority, setTaskPriority] = useState('Medium');
@@ -18,8 +12,8 @@ export default function TasksScreen() {
   const [editingTaskId, setEditingTaskId] = useState(null);
 
   useEffect(() => {
-    loadTasks();  // Fetch tasks on mount
-  }, []);
+    loadTasks(); // Fetch tasks on mount
+  }, [loadTasks]);
 
   // Handle adding or editing a task
   const handleSaveTask = async () => {
@@ -59,27 +53,38 @@ export default function TasksScreen() {
     <TouchableOpacity
       style={[styles.taskItem, task.completed && styles.completedTask]}
       onLongPress={() => openEditModal(task)}
-      onPress={() => toggleCompleteTask(task.id)}
-    >
+      onPress={() => toggleCompleteTask(task.id)}>
       <Text style={[styles.taskText, task.completed && styles.strikethrough]}>
-        {task.title} — {task.dueDate.toDateString()} 
+        {task.title} — {task.dueDate.toDateString()}
       </Text>
     </TouchableOpacity>
   );
-  
+
   return (
     <View testID="tasks-screen" style={styles.container}>
       {/* High Priority Tasks */}
       <Text style={styles.priorityHeader}>High Priority</Text>
-      <FlatList data={tasks.high} keyExtractor={(item) => item.id} renderItem={({ item }) => renderTaskItem(item)} />
+      <FlatList
+        data={tasks.high}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => renderTaskItem(item)}
+      />
 
       {/* Medium Priority Tasks */}
       <Text style={styles.priorityHeader}>Medium Priority</Text>
-      <FlatList data={tasks.medium} keyExtractor={(item) => item.id} renderItem={({ item }) => renderTaskItem(item)} />
+      <FlatList
+        data={tasks.medium}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => renderTaskItem(item)}
+      />
 
       {/* Low Priority Tasks */}
       <Text style={styles.priorityHeader}>Low Priority</Text>
-      <FlatList data={tasks.low} keyExtractor={(item) => item.id} renderItem={({ item }) => renderTaskItem(item)} />
+      <FlatList
+        data={tasks.low}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => renderTaskItem(item)}
+      />
 
       {/* Floating Add Button */}
       <TouchableOpacity testID="fab-add-task" style={styles.fab} onPress={openAddModal}>
@@ -146,4 +151,3 @@ const styles = StyleSheet.create({
     fontSize: 30,
   },
 });
-

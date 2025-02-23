@@ -6,7 +6,7 @@ import { Task } from '../domain/Task';
  * @returns {Promise<Object>} A promise that resolves to an object containing grouped and sorted tasks.
  */
 export async function getTasks() {
-  const tasks = await getTasksFromRepo(); 
+  const tasks = await getTasksFromRepo();
   return groupAndSortTasks(tasks);
 }
 
@@ -57,7 +57,7 @@ export async function toggleTaskCompletion(taskId) {
 
   const updatedTasks = tasks.map((t) => {
     if (t.id === taskId) {
-      t.toggleCompletion(); 
+      t.toggleCompletion();
     }
     return t;
   });
@@ -68,10 +68,10 @@ export async function toggleTaskCompletion(taskId) {
 
 function createTask(title, priority, dueDate) {
   return new Task({
-    id: Date.now().toString(),  
+    id: Date.now().toString(),
     title,
     priority,
-    dueDate,    
+    dueDate,
     completed: false,
   });
 }
@@ -91,7 +91,7 @@ function groupAndSortTasks(tasks) {
   const sortTasks = (tasks) => {
     return tasks.sort((a, b) => {
       if (a.completed !== b.completed) {
-        return a.completed ? 1 : -1; 
+        return a.completed ? 1 : -1;
       }
       return a.dueDate - b.dueDate;
     });
@@ -100,6 +100,6 @@ function groupAndSortTasks(tasks) {
   return {
     high: sortTasks(high),
     medium: sortTasks(medium),
-    low: sortTasks(low)
+    low: sortTasks(low),
   };
 }

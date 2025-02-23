@@ -1,11 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  TextInput,
-  Pressable,
-  StyleSheet,
-  Text,
-} from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, TextInput, Pressable, StyleSheet, Text } from 'react-native';
 
 export default function GoalItem({ item, updateGoal, deleteGoal }) {
   const [localTitle, setLocalTitle] = useState(item.title);
@@ -15,44 +9,43 @@ export default function GoalItem({ item, updateGoal, deleteGoal }) {
   const [titleFocused, setTitleFocused] = useState(true);
   const [hoursFocused, setHoursFocused] = useState(false);
 
-  const handleUpdate = () => {
+  const handleUpdate = useCallback(() => {
     const finalTitle = localTitle.trim();
     updateGoal(item.id, finalTitle, localHours);
     setLocalTitle(finalTitle);
-  };
+  }, [item.id, localTitle, localHours, updateGoal]);
 
-  // Whenever titleFocused or hoursFocused changes, check if both are false
   useEffect(() => {
     if (!titleFocused && !hoursFocused) {
       handleUpdate();
     }
-  }, [titleFocused, hoursFocused]);
+  }, [titleFocused, hoursFocused, handleUpdate]);
 
   const handleTitle = () => {
-    if (localTitle == 'New Goal') {
-        setLocalTitle('')
+    if (localTitle === 'New Goal') {
+      setLocalTitle('');
     }
-  }
+  };
 
   return (
     <View style={styles.goalItem}>
       <TextInput
-        testID='title-input'
-        autoFocus={localTitle=='New Goal'}
+        testID="title-input"
+        autoFocus={localTitle === 'New Goal'}
         style={styles.goalText}
         placeholder="Enter goal"
         value={localTitle}
         onChangeText={setLocalTitle}
         onFocus={() => {
-            setTitleFocused(true)
-            handleTitle();
+          setTitleFocused(true);
+          handleTitle();
         }}
         onBlur={() => {
           setTitleFocused(false);
         }}
       />
       <TextInput
-        testID='hours-input'
+        testID="hours-input"
         style={styles.hoursInput}
         placeholder="0"
         keyboardType="numeric"
@@ -63,7 +56,10 @@ export default function GoalItem({ item, updateGoal, deleteGoal }) {
           setHoursFocused(false);
         }}
       />
-      <Pressable testID='delete-button' onPress={() => deleteGoal(item.id)} style={styles.deleteButton}>
+      <Pressable
+        testID="delete-button"
+        onPress={() => deleteGoal(item.id)}
+        style={styles.deleteButton}>
         <Text style={styles.deleteButtonText}>❌</Text>
       </Pressable>
     </View>
@@ -75,22 +71,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 8,
-    borderBottomWidth: 1
+    borderBottomWidth: 1,
   },
   goalText: {
     flex: 1,
     fontSize: 16,
     borderBottomWidth: 1,
-    paddingHorizontal: 4
+    paddingHorizontal: 4,
   },
   hoursInput: {
     width: 50,
     textAlign: 'center',
     fontSize: 16,
-    borderBottomWidth: 1
+    borderBottomWidth: 1,
   },
   deleteButton: {
     marginLeft: 8,
-    padding: 8
-  }
+    padding: 8,
+  },
 });

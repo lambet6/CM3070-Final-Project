@@ -1,13 +1,5 @@
 import { useState } from 'react';
-import {
-  View,
-  Text,
-  Button,
-  Modal,
-  Pressable,
-  TextInput,
-  StyleSheet
-} from 'react-native';
+import { View, Text, Button, Modal, Pressable, TextInput, StyleSheet } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
@@ -20,7 +12,7 @@ export default function TaskModal({
   taskPriority,
   setTaskPriority,
   taskDueDate,
-  setTaskDueDate
+  setTaskDueDate,
 }) {
   const [showDatePicker, setShowDatePicker] = useState(false);
 
@@ -37,13 +29,10 @@ export default function TaskModal({
       visible={visible}
       transparent={true}
       animationType="slide"
-      onRequestClose={onClose}
-    >
+      onRequestClose={onClose}>
       <View style={styles.modalBackdrop}>
         <View style={styles.modalContent}>
-          <Text style={styles.modalTitle}>
-            {taskTitle ? 'Edit Task' : 'Add Task'}
-          </Text>
+          <Text style={styles.modalTitle}>{taskTitle ? 'Edit Task' : 'Add Task'}</Text>
 
           {/* Title */}
           <Text style={styles.label}>Title:</Text>
@@ -63,8 +52,7 @@ export default function TaskModal({
             <Picker
               testID="picker-priority"
               selectedValue={taskPriority}
-              onValueChange={setTaskPriority}
-            >
+              onValueChange={setTaskPriority}>
               <Picker.Item label="Low" value="Low" />
               <Picker.Item label="Medium" value="Medium" />
               <Picker.Item label="High" value="High" />
@@ -101,23 +89,23 @@ const styles = StyleSheet.create({
   modalBackdrop: {
     flex: 1,
     justifyContent: 'center',
-    backgroundColor: 'rgba(0,0,0,0.4)'
+    backgroundColor: 'rgba(0,0,0,0.4)',
   },
   modalContent: {
     margin: 24,
     backgroundColor: '#fff',
     padding: 16,
-    borderRadius: 8
+    borderRadius: 8,
   },
   modalTitle: {
     fontSize: 20,
     marginBottom: 8,
-    fontWeight: 'bold'
+    fontWeight: 'bold',
   },
   label: {
     marginTop: 10,
     marginBottom: 4,
-    fontWeight: 'bold'
+    fontWeight: 'bold',
   },
   inputArea: {
     borderWidth: 1,
@@ -125,21 +113,20 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 8,
     borderRadius: 4,
-    marginBottom: 10
+    marginBottom: 10,
   },
   pickerContainer: {
     borderWidth: 1,
     borderColor: '#ccc',
     borderRadius: 4,
-    marginBottom: 10
+    marginBottom: 10,
   },
   inputText: {
-    fontSize: 16
+    fontSize: 16,
   },
   buttonRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 8
-  }
+    marginTop: 8,
+  },
 });
-

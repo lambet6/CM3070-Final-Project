@@ -1,4 +1,11 @@
-import { getTasks, createNewTask, editExistingTask, toggleTaskCompletion } from '../../../managers/task-manager';
+/*global jest*/
+import { describe, it, beforeEach, afterEach, expect } from '@jest/globals';
+import {
+  getTasks,
+  createNewTask,
+  editExistingTask,
+  toggleTaskCompletion,
+} from '../../../managers/task-manager';
 import { getTasksFromRepo, saveTasksToRepo } from '../../../repositories/task-repository';
 import { Task } from '../../../domain/Task';
 
@@ -9,7 +16,7 @@ jest.mock('../../../repositories/task-repository', () => ({
 
 describe('Task Manager', () => {
   const MOCK_TIMESTAMP = 1234567890;
-  
+
   beforeEach(() => {
     jest.clearAllMocks();
     jest.spyOn(global.Date, 'now').mockImplementation(() => MOCK_TIMESTAMP);
@@ -21,13 +28,15 @@ describe('Task Manager', () => {
 
   describe('Task Creation', () => {
     it('should create and save a new task', async () => {
-      const mockTasks = [new Task({
-        id: '1',
-        title: 'Existing Task',
-        priority: 'Low',
-        dueDate: new Date('2025-01-01'),
-        completed: false
-      })];
+      const mockTasks = [
+        new Task({
+          id: '1',
+          title: 'Existing Task',
+          priority: 'Low',
+          dueDate: new Date('2025-01-01'),
+          completed: false,
+        }),
+      ];
 
       getTasksFromRepo.mockResolvedValue(mockTasks);
 
@@ -37,14 +46,16 @@ describe('Task Manager', () => {
 
       await createNewTask(newTitle, newPriority, newDueDate);
 
-      expect(saveTasksToRepo).toHaveBeenCalledWith(expect.arrayContaining([
-        expect.objectContaining({
-          title: newTitle,
-          priority: newPriority,
-          dueDate: newDueDate,
-          completed: false
-        })
-      ]));
+      expect(saveTasksToRepo).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({
+            title: newTitle,
+            priority: newPriority,
+            dueDate: newDueDate,
+            completed: false,
+          }),
+        ]),
+      );
     });
   });
 
@@ -56,8 +67,8 @@ describe('Task Manager', () => {
           title: 'Task to Edit',
           priority: 'Low',
           dueDate: new Date('2025-01-01'),
-          completed: false
-        })
+          completed: false,
+        }),
       ];
 
       getTasksFromRepo.mockResolvedValue(mockTasks);
@@ -68,14 +79,16 @@ describe('Task Manager', () => {
 
       await editExistingTask('1', updatedTitle, updatedPriority, updatedDueDate);
 
-      expect(saveTasksToRepo).toHaveBeenCalledWith(expect.arrayContaining([
-        expect.objectContaining({
-          id: '1',
-          title: updatedTitle,
-          priority: updatedPriority,
-          dueDate: updatedDueDate
-        })
-      ]));
+      expect(saveTasksToRepo).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({
+            id: '1',
+            title: updatedTitle,
+            priority: updatedPriority,
+            dueDate: updatedDueDate,
+          }),
+        ]),
+      );
     });
   });
 
@@ -87,27 +100,29 @@ describe('Task Manager', () => {
           title: 'Task',
           priority: 'High',
           dueDate: new Date('2025-01-01'),
-          completed: false
-        })
+          completed: false,
+        }),
       ];
 
       getTasksFromRepo.mockResolvedValue(mockTasks);
 
       await toggleTaskCompletion('1');
 
-      expect(saveTasksToRepo).toHaveBeenCalledWith(expect.arrayContaining([
-        expect.objectContaining({
-          id: '1',
-          completed: true
-        })
-      ]));
+      expect(saveTasksToRepo).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({
+            id: '1',
+            completed: true,
+          }),
+        ]),
+      );
     });
 
     it('should return empty task groups when no tasks are found', async () => {
       getTasksFromRepo.mockResolvedValue([]);
-    
+
       const groupedTasks = await getTasks();
-    
+
       expect(getTasksFromRepo).toHaveBeenCalledTimes(1);
       expect(groupedTasks).toEqual({ high: [], medium: [], low: [] });
     });

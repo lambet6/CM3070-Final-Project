@@ -3,7 +3,7 @@ import {
   getTasks,
   createNewTask,
   editExistingTask,
-  toggleTaskCompletion
+  toggleTaskCompletion,
 } from '../managers/task-manager';
 import { isSameDay, isWithinInterval, startOfWeek, endOfWeek } from 'date-fns';
 
@@ -66,7 +66,7 @@ export const useTaskStore = create((set, get) => ({
     const { tasks } = get();
     const today = new Date();
     const allTasks = [...tasks.high, ...tasks.medium, ...tasks.low];
-    return allTasks.filter(task => {
+    return allTasks.filter((task) => {
       const taskDate = new Date(task.dueDate);
       return isSameDay(taskDate, today);
     });
@@ -78,8 +78,8 @@ export const useTaskStore = create((set, get) => ({
     const weekStart = startOfWeek(today);
     const weekEnd = endOfWeek(today);
     const allTasks = [...tasks.high, ...tasks.medium, ...tasks.low];
-    
-    return allTasks.filter(task => {
+
+    return allTasks.filter((task) => {
       const taskDate = new Date(task.dueDate);
       return isWithinInterval(taskDate, { start: weekStart, end: weekEnd });
     });

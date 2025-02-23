@@ -1,5 +1,13 @@
-import { getWeeklyCalendarEvents, createNewCalendarEvent } from '../../../managers/calendar-manager';
-import { getStoredCalendarEvents, addCalendarEvent } from '../../../repositories/calendar-repository';
+/*global jest*/
+import { describe, it, beforeEach, afterEach, expect } from '@jest/globals';
+import {
+  getWeeklyCalendarEvents,
+  createNewCalendarEvent,
+} from '../../../managers/calendar-manager';
+import {
+  getStoredCalendarEvents,
+  addCalendarEvent,
+} from '../../../repositories/calendar-repository';
 import { CalendarEvent } from '../../../domain/CalendarEvent';
 import { startOfWeek, endOfWeek } from 'date-fns';
 
@@ -31,7 +39,7 @@ describe('Calendar Manager', () => {
         id: 'event-1',
         title,
         startDate,
-        endDate
+        endDate,
       });
 
       addCalendarEvent.mockResolvedValue(mockSavedEvent);
@@ -43,8 +51,8 @@ describe('Calendar Manager', () => {
         expect.objectContaining({
           title,
           startDate,
-          endDate
-        })
+          endDate,
+        }),
       );
     });
   });
@@ -52,12 +60,12 @@ describe('Calendar Manager', () => {
   describe('Calendar Event Retrieval', () => {
     it('should fetch weekly calendar events from repository', async () => {
       const mockEvents = [
-        new CalendarEvent({ 
-          id: '1', 
-          title: 'Meeting', 
+        new CalendarEvent({
+          id: '1',
+          title: 'Meeting',
           startDate: new Date('2025-02-12T10:00:00.000Z'),
-          endDate: new Date('2025-02-12T11:00:00.000Z')
-        })
+          endDate: new Date('2025-02-12T11:00:00.000Z'),
+        }),
       ];
 
       getStoredCalendarEvents.mockResolvedValue(mockEvents);
@@ -67,10 +75,7 @@ describe('Calendar Manager', () => {
       const expectedStartDate = startOfWeek(MOCK_DATE, { weekStartsOn: 1 });
       const expectedEndDate = endOfWeek(MOCK_DATE, { weekStartsOn: 1 });
 
-      expect(getStoredCalendarEvents).toHaveBeenCalledWith(
-        expectedStartDate,
-        expectedEndDate
-      );
+      expect(getStoredCalendarEvents).toHaveBeenCalledWith(expectedStartDate, expectedEndDate);
       expect(events).toEqual(mockEvents);
     });
 

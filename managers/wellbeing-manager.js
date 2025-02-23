@@ -15,11 +15,10 @@ export const getMoodData = async () => {
  * @returns {Promise<Mood>} A promise that resolves to the newly created Mood object.
  */
 export const saveMood = async (moodValue) => {
-  const newMood = new Mood({ 
+  const newMood = new Mood({
     mood: moodValue,
-    date: new Date()
+    date: new Date(),
   });
   await updateMoodForToday(newMood);
   return newMood;
 };
-

@@ -17,10 +17,9 @@ import { getWeeklyCalendarEvents } from '../managers/calendar-manager';
  * @type {import('zustand').UseBoundStore<CalendarStore>}
  */
 export const useCalendarStore = create((set) => ({
-    events: [],
-    loadCalendarEvents: async () => {
-        const events = await getWeeklyCalendarEvents();
-        set({ events });
-    }
+  events: [],
+  loadCalendarEvents: async () => {
+    const events = await getWeeklyCalendarEvents();
+    set({ events });
+  },
 }));
-

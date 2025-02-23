@@ -7,14 +7,14 @@ import { CalendarEvent } from '../domain/CalendarEvent';
  * @returns {Promise<Array>} A promise that resolves to an array of calendar events.
  */
 export async function getWeeklyCalendarEvents() {
-    try {
-        const startDate = startOfWeek(new Date(), { weekStartsOn: 1 });
-        const endDate = endOfWeek(new Date(), { weekStartsOn: 1 });
-        return await getStoredCalendarEvents(startDate, endDate);
-    } catch (err) {
-        console.warn('Error getting weekly calendar data:', err);
-        return [];
-    }
+  try {
+    const startDate = startOfWeek(new Date(), { weekStartsOn: 1 });
+    const endDate = endOfWeek(new Date(), { weekStartsOn: 1 });
+    return await getStoredCalendarEvents(startDate, endDate);
+  } catch (err) {
+    console.warn('Error getting weekly calendar data:', err);
+    return [];
+  }
 }
 
 /**
@@ -25,15 +25,15 @@ export async function getWeeklyCalendarEvents() {
  * @returns {Promise<CalendarEvent>} A promise that resolves to the newly created CalendarEvent object.
  */
 export async function createNewCalendarEvent(title, startDate, endDate) {
-    const event = createCalendarEvent(title, startDate, endDate);
-    return await addCalendarEvent(event);
+  const event = createCalendarEvent(title, startDate, endDate);
+  return await addCalendarEvent(event);
 }
 
 function createCalendarEvent(title, startDate, endDate) {
-    return new CalendarEvent({
-        id: null, // ID will be assigned by the calendar provider
-        title,
-        startDate,
-        endDate
-    });
+  return new CalendarEvent({
+    id: null, // ID will be assigned by the calendar provider
+    title,
+    startDate,
+    endDate,
+  });
 }

@@ -1,8 +1,14 @@
+/*global jest*/
+import { describe, it, beforeEach, afterEach, expect } from '@jest/globals';
 import { act, renderHook } from '@testing-library/react-native';
 import { useTaskStore } from '../../../store/taskStore';
-import { getTasks, createNewTask, editExistingTask, toggleTaskCompletion } from '../../../managers/task-manager';
+import {
+  getTasks,
+  createNewTask,
+  editExistingTask,
+  toggleTaskCompletion,
+} from '../../../managers/task-manager';
 import { Task } from '../../../domain/Task';
-import { startOfWeek, endOfWeek } from 'date-fns';
 
 jest.mock('../../../managers/task-manager');
 
@@ -11,25 +17,25 @@ describe('TaskStore', () => {
   const mockTomorrow = new Date('2024-02-16T12:00:00.000Z');
   const mockNextWeek = new Date('2024-02-22T12:00:00.000Z');
 
-  const mockTask1 = new Task({ 
-    id: '1', 
-    title: 'Test Task 1', 
-    priority: 'High', 
-    dueDate: mockDate 
-  });
-  
-  const mockTask2 = new Task({ 
-    id: '2', 
-    title: 'Test Task 2', 
-    priority: 'Medium', 
-    dueDate: mockTomorrow 
+  const mockTask1 = new Task({
+    id: '1',
+    title: 'Test Task 1',
+    priority: 'High',
+    dueDate: mockDate,
   });
 
-  const mockTask3 = new Task({ 
-    id: '3', 
-    title: 'Test Task 3', 
-    priority: 'Low', 
-    dueDate: mockNextWeek 
+  const mockTask2 = new Task({
+    id: '2',
+    title: 'Test Task 2',
+    priority: 'Medium',
+    dueDate: mockTomorrow,
+  });
+
+  const mockTask3 = new Task({
+    id: '3',
+    title: 'Test Task 3',
+    priority: 'Low',
+    dueDate: mockNextWeek,
   });
 
   beforeEach(() => {
@@ -53,7 +59,7 @@ describe('TaskStore', () => {
       const mockTasks = {
         high: [mockTask1],
         medium: [mockTask2],
-        low: [mockTask3]
+        low: [mockTask3],
       };
       getTasks.mockResolvedValueOnce(mockTasks);
 
@@ -87,7 +93,7 @@ describe('TaskStore', () => {
       const mockUpdatedTasks = {
         high: [mockTask1],
         medium: [],
-        low: []
+        low: [],
       };
       createNewTask.mockResolvedValueOnce(mockUpdatedTasks);
 
@@ -104,7 +110,7 @@ describe('TaskStore', () => {
       const mockUpdatedTasks = {
         high: [{ ...mockTask1, title: 'Updated Task' }],
         medium: [],
-        low: []
+        low: [],
       };
       editExistingTask.mockResolvedValueOnce(mockUpdatedTasks);
 
@@ -121,7 +127,7 @@ describe('TaskStore', () => {
       const mockUpdatedTasks = {
         high: [{ ...mockTask1, completed: true }],
         medium: [],
-        low: []
+        low: [],
       };
       toggleTaskCompletion.mockResolvedValueOnce(mockUpdatedTasks);
 
@@ -156,12 +162,12 @@ describe('TaskStore', () => {
 
     it('should return tasks due today', () => {
       const { result } = renderHook(() => useTaskStore());
-      
+
       act(() => {
         result.current.tasks = {
           high: [mockTask1],
           medium: [mockTask2],
-          low: [mockTask3]
+          low: [mockTask3],
         };
       });
 
@@ -172,20 +178,20 @@ describe('TaskStore', () => {
 
     it('should return tasks due this week', () => {
       const { result } = renderHook(() => useTaskStore());
-      const weekStart = startOfWeek(mockDate);
-      const weekEnd = endOfWeek(mockDate);
-      
+
       act(() => {
         result.current.tasks = {
           high: [mockTask1],
           medium: [mockTask2],
-          low: [mockTask3]
+          low: [mockTask3],
         };
       });
 
       const weekTasks = result.current.getWeekTasks();
       expect(weekTasks).toHaveLength(2);
-      expect(weekTasks.map(t => t.id)).toEqual(expect.arrayContaining([mockTask1.id, mockTask2.id]));
+      expect(weekTasks.map((t) => t.id)).toEqual(
+        expect.arrayContaining([mockTask1.id, mockTask2.id]),
+      );
     });
   });
 });

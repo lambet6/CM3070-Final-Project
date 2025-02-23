@@ -11,22 +11,26 @@ export default function WellbeingScreen() {
 
   useEffect(() => {
     loadMoodData();
-  }, []);
+  }, [loadMoodData]);
 
   const handleMoodPress = (mood) => {
     addMood(mood);
   };
 
   const today = new Date().toISOString().split('T')[0];
-  const todayMood = moodData.find(entry => entry.date.split('T')[0] === today)?.mood;
+  const todayMood = moodData.find((entry) => entry.date.split('T')[0] === today)?.mood;
 
   const getOrdinalSuffix = (day) => {
     if (day > 3 && day < 21) return 'th';
     switch (day % 10) {
-      case 1: return 'st';
-      case 2: return 'nd';
-      case 3: return 'rd';
-      default: return 'th';
+      case 1:
+        return 'st';
+      case 2:
+        return 'nd';
+      case 3:
+        return 'rd';
+      default:
+        return 'th';
     }
   };
 
@@ -35,35 +39,41 @@ export default function WellbeingScreen() {
     const day = date.getDate();
     const month = date.toLocaleString('default', { month: 'short' });
     const suffix = getOrdinalSuffix(day);
-    const isFirstEntryOfMonth = index === 0 || new Date(labels[index - 1]).getMonth() !== date.getMonth();
+    const isFirstEntryOfMonth =
+      index === 0 || new Date(labels[index - 1]).getMonth() !== date.getMonth();
     return isFirstEntryOfMonth ? `${day}${suffix} ${month}` : `${day}${suffix}`;
   };
 
   const { labels, data } = getLast14DaysMoodData();
-  
+
   // Filter out days with zero moodValue
   const filtered = labels
     .map((label, index) => ({ label, value: data[index] }))
-    .filter(item => item.value > 0);
-  const finalLabels = filtered.map(item => item.label);
-  const finalData = filtered.map(item => item.value);
-  
+    .filter((item) => item.value > 0);
+  const finalLabels = filtered.map((item) => item.label);
+  const finalData = filtered.map((item) => item.value);
+
   const shouldShowChart = finalData.length > 0;
-  
+
   return (
     <View testID="wellbeing-screen" style={styles.container}>
-      <Text testID="wellbeing-title" style={styles.title}>Track your mood and tasks completed over time</Text>
-      <Text testID="mood-prompt" style={styles.subtitle}>How are you feeling today?</Text>
+      <Text testID="wellbeing-title" style={styles.title}>
+        Track your mood and tasks completed over time
+      </Text>
+      <Text testID="mood-prompt" style={styles.subtitle}>
+        How are you feeling today?
+      </Text>
       <View testID="mood-buttons-container" style={styles.moodContainer}>
         {Object.values(moodValues).map((mood, index) => (
           <TouchableOpacity
             key={index}
             testID={`mood-button-${mood[0].toLowerCase()}`}
             onPress={() => handleMoodPress(mood[0])}
-            style={todayMood === mood[0] ? styles.selectedMoodButton : styles.moodButton}
-          >
+            style={todayMood === mood[0] ? styles.selectedMoodButton : styles.moodButton}>
             <MaterialCommunityIcons name={mood[1]} size={44} color="black" />
-            <Text testID={`mood-text-${mood[0].toLowerCase()}`} style={styles.moodText}>{mood[0]}</Text>
+            <Text testID={`mood-text-${mood[0].toLowerCase()}`} style={styles.moodText}>
+              {mood[0]}
+            </Text>
           </TouchableOpacity>
         ))}
       </View>
@@ -132,7 +142,7 @@ const styles = StyleSheet.create({
     marginVertical: 16,
   },
   moodButton: {
-    flex:1,
+    flex: 1,
     alignSelf: 'center',
     alignItems: 'center',
     margin: 3,
@@ -141,7 +151,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ddd',
   },
   selectedMoodButton: {
-    flex:1,
+    flex: 1,
     alignSelf: 'center',
     alignItems: 'center',
     margin: 3,

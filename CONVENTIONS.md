@@ -119,7 +119,7 @@ Our canonical folder structure is:
 ### General
 - **Indentation**: **2 spaces**.
 - **Semicolons**: **Always** use semicolons.
-- **Quotes**: **Double quotes** by default.
+- **Quotes**: **Single quotes** by default.
 
 ### Lint Setup
 - Use **ESLint** with React Native + React Hooks recommended configs.
@@ -127,27 +127,24 @@ Our canonical folder structure is:
 
 For example, `.eslintrc.js` could look like:
 
-    module.exports = {
-      extends: [
-        "plugin:react/recommended",
-        "plugin:react-hooks/recommended",
-        "eslint:recommended"
-      ],
-      rules: {
-        // Add or override rules as needed
-      }
-    };
+  module.exports = {
+    extends: ['expo', 'prettier'],
+    plugins: ['prettier'],
+    rules: {
+      'prettier/prettier': 'error',
+    },
+    ignorePatterns: ['/dist/*'],
+  };
 
 And a `.prettierrc` might contain:
 
-    {
-      "singleQuote": false,
-      "tabWidth": 2,
-      "useTabs": false,
-      "printWidth": 100,
-      "trailingComma": "es5",
-      "semi": true
-    }
+  {
+    "printWidth": 100,
+    "tabWidth": 2,
+    "singleQuote": true,
+    "bracketSameLine": true,
+    "endOfLine":"auto"
+  }
 
 ### Inline Styles
 - Prefer `StyleSheet.create` for styling React Native components rather than heavy inline styles.

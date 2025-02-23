@@ -20,26 +20,26 @@ import { fetchGoals, addGoal, updateGoalData, deleteGoal } from '../managers/goa
  * @type {import('zustand').UseBoundStore<GoalsStore>}
  */
 export const useGoalsStore = create((set) => ({
-    goals: [],
-    
-    loadGoals: async () => {
-        const fetchedGoals = await fetchGoals();
-        set({ goals: fetchedGoals });
-    },
+  goals: [],
 
-    addNewGoal: async (title, hours) => {
-        const updatedGoals = await addGoal(title, hours);
-        console.log(updatedGoals.length);
-        set({ goals: updatedGoals });
-    },
+  loadGoals: async () => {
+    const fetchedGoals = await fetchGoals();
+    set({ goals: fetchedGoals });
+  },
 
-    updateGoal: async (goalId, newTitle, newHours) => {
-        const updatedGoals = await updateGoalData(goalId, newTitle, newHours);
-        set({ goals: updatedGoals });
-    },
+  addNewGoal: async (title, hours) => {
+    const updatedGoals = await addGoal(title, hours);
+    console.log(updatedGoals.length);
+    set({ goals: updatedGoals });
+  },
 
-    deleteGoal: async (goalId) => {
-        const updatedGoals = await deleteGoal(goalId);
-        set({ goals: updatedGoals });
-    }
+  updateGoal: async (goalId, newTitle, newHours) => {
+    const updatedGoals = await updateGoalData(goalId, newTitle, newHours);
+    set({ goals: updatedGoals });
+  },
+
+  deleteGoal: async (goalId) => {
+    const updatedGoals = await deleteGoal(goalId);
+    set({ goals: updatedGoals });
+  },
 }));
