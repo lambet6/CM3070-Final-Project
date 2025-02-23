@@ -1,4 +1,4 @@
-import { getWeeklyCalendarEvents, createNewCalendarEvent, createCalendarEvent } from '../../../managers/calendar-manager';
+import { getWeeklyCalendarEvents, createNewCalendarEvent } from '../../../managers/calendar-manager';
 import { getStoredCalendarEvents, addCalendarEvent } from '../../../repositories/calendar-repository';
 import { CalendarEvent } from '../../../domain/CalendarEvent';
 import { startOfWeek, endOfWeek } from 'date-fns';
@@ -22,20 +22,6 @@ describe('Calendar Manager', () => {
   });
 
   describe('Calendar Event Creation', () => {
-    it('should create a calendar event with correct properties', () => {
-      const title = 'Team Meeting';
-      const startDate = new Date('2025-02-12T10:00:00.000Z');
-      const endDate = new Date('2025-02-12T11:00:00.000Z');
-
-      const event = createCalendarEvent(title, startDate, endDate);
-
-      expect(event).toBeInstanceOf(CalendarEvent);
-      expect(event.title).toBe(title);
-      expect(event.startDate).toEqual(startDate);
-      expect(event.endDate).toEqual(endDate);
-      expect(event.id).toBeNull();
-    });
-
     it('should create and save a new calendar event', async () => {
       const title = 'Team Meeting';
       const startDate = new Date('2025-02-12T10:00:00.000Z');

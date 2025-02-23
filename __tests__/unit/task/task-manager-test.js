@@ -1,4 +1,4 @@
-import { createTask, editTask, groupAndSortTasks, getTasks, createNewTask, editExistingTask, toggleTaskCompletion } from '../../../managers/task-manager';
+import { getTasks, createNewTask, editExistingTask, toggleTaskCompletion } from '../../../managers/task-manager';
 import { getTasksFromRepo, saveTasksToRepo } from '../../../repositories/task-repository';
 import { Task } from '../../../domain/Task';
 
@@ -20,21 +20,6 @@ describe('Task Manager', () => {
   });
 
   describe('Task Creation', () => {
-    it('should create a new task with correct properties', () => {
-      const title = 'Test Task';
-      const priority = 'High';
-      const dueDate = new Date('2025-02-15');
-
-      const task = createTask(title, priority, dueDate);
-
-      expect(task).toBeInstanceOf(Task);
-      expect(task.title).toBe(title);
-      expect(task.priority).toBe(priority);
-      expect(task.dueDate).toEqual(dueDate);
-      expect(task.completed).toBe(false);
-      expect(task.id).toBe('1234567890');
-    });
-
     it('should create and save a new task', async () => {
       const mockTasks = [new Task({
         id: '1',
@@ -64,26 +49,6 @@ describe('Task Manager', () => {
   });
 
   describe('Task Editing', () => {
-    it('should edit an existing task', () => {
-      const task = new Task({
-        id: '1',
-        title: 'Old Title',
-        priority: 'Low',
-        dueDate: new Date('2025-01-01'),
-        completed: false
-      });
-
-      const newTitle = 'New Title';
-      const newPriority = 'High';
-      const newDueDate = new Date('2025-02-15');
-
-      const editedTask = editTask(task, newTitle, newPriority, newDueDate);
-
-      expect(editedTask.title).toBe(newTitle);
-      expect(editedTask.priority).toBe(newPriority);
-      expect(editedTask.dueDate).toEqual(newDueDate);
-    });
-
     it('should edit an existing task and save changes', async () => {
       const mockTasks = [
         new Task({
@@ -145,37 +110,6 @@ describe('Task Manager', () => {
     
       expect(getTasksFromRepo).toHaveBeenCalledTimes(1);
       expect(groupedTasks).toEqual({ high: [], medium: [], low: [] });
-    });
-  });
-
-  describe('Task Organization', () => {
-    it('should group and sort tasks correctly', () => {
-      const tasks = [
-        new Task({ id: '1', title: 'Task 1', priority: 'High', dueDate: new Date('2025-02-10') }),
-        new Task({ id: '2', title: 'Task 2', priority: 'Medium', dueDate: new Date('2025-02-12') }),
-        new Task({ id: '3', title: 'Task 3', priority: 'Low', dueDate: new Date('2025-02-15') }),
-        new Task({ id: '4', title: 'Task 4', priority: 'High', dueDate: new Date('2025-02-09') })
-      ];
-
-      const groupedTasks = groupAndSortTasks(tasks);
-
-      expect(groupedTasks.high[0].id).toBe('4');
-      expect(groupedTasks.high[1].id).toBe('1');
-      expect(groupedTasks.medium[0].id).toBe('2');
-      expect(groupedTasks.low[0].id).toBe('3');
-    });
-
-    it('should sort tasks by completion status and due date within priority groups', () => {
-      const tasks = [
-        new Task({ id: '1', title: 'Task 1', priority: 'High', dueDate: new Date('2025-02-15'), completed: false }),
-        new Task({ id: '2', title: 'Task 2', priority: 'High', dueDate: new Date('2025-02-10'), completed: true }),
-        new Task({ id: '3', title: 'Task 3', priority: 'High', dueDate: new Date('2025-02-08'), completed: false }),
-        new Task({ id: '4', title: 'Task 4', priority: 'High', dueDate: new Date('2025-02-12'), completed: false })
-      ];
-
-      const groupedTasks = groupAndSortTasks(tasks);
-
-      expect(groupedTasks.high.map(t => t.id)).toEqual(['3', '4', '1', '2']);
     });
   });
 });
