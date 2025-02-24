@@ -63,16 +63,34 @@ export default function GoalsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, backgroundColor: '#fff' },
-  header: { fontSize: 18, fontWeight: 'bold', textAlign: 'center', marginBottom: 6 },
-  subHeader: { fontSize: 14, textAlign: 'center', marginBottom: 10, color: '#666' },
+  container: {
+    flex: 1,
+    padding: 16,
+    backgroundColor: '#fff',
+  },
+  header: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 6,
+  },
+  subHeader: {
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 10,
+    color: '#666',
+  },
   tableHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingVertical: 8,
     borderBottomWidth: 1,
   },
-  columnHeader: { fontWeight: 'bold', flex: 1, textAlign: 'center' },
+  columnHeader: {
+    fontWeight: 'bold',
+    flex: 1,
+    textAlign: 'center',
+  },
   addButton: {
     padding: 12,
     backgroundColor: '#007AFF',
@@ -80,7 +98,18 @@ const styles = StyleSheet.create({
     marginVertical: 10,
     borderRadius: 5,
   },
-  addButtonText: { color: 'white', fontWeight: 'bold' },
-  errorText: { color: 'red', textAlign: 'center', marginVertical: 5 },
-  loadingText: { color: '#666', textAlign: 'center', marginVertical: 5 },
+  addButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+  },
+  errorText: {
+    color: 'red',
+    textAlign: 'center',
+    marginVertical: 5,
+  },
+  loadingText: {
+    color: '#666',
+    textAlign: 'center',
+    marginVertical: 5,
+  },
 });

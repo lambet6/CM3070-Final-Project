@@ -95,10 +95,26 @@ export default function WellbeingScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 8 },
-  title: { fontSize: 18, fontWeight: 'bold', textAlign: 'center', marginVertical: 16 },
-  subtitle: { fontSize: 16, textAlign: 'center', marginVertical: 8 },
-  moodContainer: { flexDirection: 'row', justifyContent: 'space-around', marginVertical: 16 },
+  container: {
+    flex: 1,
+    padding: 8,
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginVertical: 16,
+  },
+  subtitle: {
+    ontSize: 16,
+    textAlign: 'center',
+    marginVertical: 8,
+  },
+  moodContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginVertical: 16,
+  },
   moodButton: {
     flex: 1,
     alignItems: 'center',
@@ -115,7 +131,17 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     backgroundColor: '#ffa726',
   },
-  moodText: { fontSize: 12 },
-  errorText: { color: 'red', textAlign: 'center', marginVertical: 5 },
-  loadingText: { color: '#666', textAlign: 'center', marginVertical: 5 },
+  moodText: {
+    fontSize: 12,
+  },
+  errorText: {
+    color: 'red',
+    textAlign: 'center',
+    marginVertical: 5,
+  },
+  loadingText: {
+    color: '#666',
+    textAlign: 'center',
+    marginVertical: 5,
+  },
 });
