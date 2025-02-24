@@ -3,28 +3,45 @@ import { Task } from '../domain/Task';
 
 /**
  * @typedef {Object} GroupedTasks
- * @property {Task[]} high - Array of high priority tasks
- * @property {Task[]} medium - Array of medium priority tasks
- * @property {Task[]} low - Array of low priority tasks
+ * @property {Task[]} high
+ * @property {Task[]} medium
+ * @property {Task[]} low
  */
 
 /**
- * Fetches all tasks and groups them by priority.
- * @returns {Promise<GroupedTasks>} A promise that resolves to tasks grouped by priority.
+ * Groups and sorts tasks by priority.
+ * @param {Task[]} tasks
+ * @returns {GroupedTasks}
  */
-export async function getTasks() {
-  const tasks = await getTasksFromRepo();
-  return groupAndSortTasks(tasks);
+function groupAndSortTasks(tasks) {
+  const high = tasks.filter((t) => t.priority === 'High');
+  const medium = tasks.filter((t) => t.priority === 'Medium');
+  const low = tasks.filter((t) => t.priority === 'Low');
+
+  const sortTasks = (tasks) =>
+    tasks.sort((a, b) => {
+      if (a.completed !== b.completed) {
+        return a.completed ? 1 : -1;
+      }
+      return a.dueDate - b.dueDate;
+    });
+
+  return {
+    high: sortTasks(high),
+    medium: sortTasks(medium),
+    low: sortTasks(low),
+  };
 }
 
 /**
- * Creates a new task.
- * @param {string} title - The title of the task.
- * @param {string} priority - The priority of the task (High, Medium, Low).
- * @param {Date} dueDate - The due date of the task.
- * @returns {Promise<GroupedTasks>} A promise that resolves to tasks grouped by priority
+ * Creates a new Task instance and persists it.
+ * @param {string} title
+ * @param {string} priority
+ * @param {Date} dueDate
+ * @returns {Promise<GroupedTasks>}
  */
 export async function createNewTask(title, priority, dueDate) {
+  // Pre-validation for clear error messages (manager-level)
   if (!title?.trim()) {
     throw new Error('Task title is required');
   }
@@ -39,7 +56,6 @@ export async function createNewTask(title, priority, dueDate) {
     const tasks = await getTasksFromRepo();
     const newTask = createTask(title, priority, dueDate);
     tasks.push(newTask);
-
     await saveTasksToRepo(tasks);
     return groupAndSortTasks(tasks);
   } catch (error) {
@@ -48,12 +64,12 @@ export async function createNewTask(title, priority, dueDate) {
 }
 
 /**
- * Edits an existing task.
- * @param {string} taskId - The ID of the task to edit.
- * @param {string} newTitle - The new title of the task.
- * @param {string} newPriority - The new priority of the task.
- * @param {Date} newDueDate - The new due date of the task.
- * @returns {Promise<GroupedTasks>} A promise that resolves to tasks grouped by priority
+ * Edits an existing task and persists the change.
+ * @param {string} taskId
+ * @param {string} newTitle
+ * @param {string} newPriority
+ * @param {Date} newDueDate
+ * @returns {Promise<GroupedTasks>}
  */
 export async function editExistingTask(taskId, newTitle, newPriority, newDueDate) {
   if (!taskId) {
@@ -75,14 +91,10 @@ export async function editExistingTask(taskId, newTitle, newPriority, newDueDate
     if (!taskToUpdate) {
       throw new Error('Task not found');
     }
-
-    const updatedTasks = tasks.map((t) => {
-      if (t.id === taskId) {
-        return editTask(t, newTitle, newPriority, newDueDate);
-      }
-      return t;
-    });
-
+    // Update the specific task; relying on editTask to update the domain instance.
+    const updatedTasks = tasks.map((t) =>
+      t.id === taskId ? editTask(t, newTitle, newPriority, newDueDate) : t,
+    );
     await saveTasksToRepo(updatedTasks);
     return groupAndSortTasks(updatedTasks);
   } catch (error) {
@@ -91,24 +103,33 @@ export async function editExistingTask(taskId, newTitle, newPriority, newDueDate
 }
 
 /**
- * Toggles the completion status of a task.
- * @param {string} taskId - The ID of the task to toggle.
- * @returns {Promise<GroupedTasks>} A promise that resolves to tasks grouped by priority
+ * Toggles the completion status of a task and persists the change.
+ * @param {string} taskId
+ * @returns {Promise<GroupedTasks>}
  */
 export async function toggleTaskCompletion(taskId) {
-  const tasks = await getTasksFromRepo();
-
-  const updatedTasks = tasks.map((t) => {
-    if (t.id === taskId) {
-      t.toggleCompletion();
-    }
-    return t;
-  });
-
-  await saveTasksToRepo(updatedTasks);
-  return groupAndSortTasks(updatedTasks);
+  try {
+    const tasks = await getTasksFromRepo();
+    const updatedTasks = tasks.map((t) => {
+      if (t.id === taskId) {
+        t.toggleCompletion();
+      }
+      return t;
+    });
+    await saveTasksToRepo(updatedTasks);
+    return groupAndSortTasks(updatedTasks);
+  } catch (error) {
+    throw new Error(`Failed to toggle task completion: ${error.message}`);
+  }
 }
 
+/**
+ * Helper to create a new Task instance.
+ * @param {string} title
+ * @param {string} priority
+ * @param {Date} dueDate
+ * @returns {Task}
+ */
 function createTask(title, priority, dueDate) {
   return new Task({
     id: Date.now().toString(),
@@ -119,30 +140,31 @@ function createTask(title, priority, dueDate) {
   });
 }
 
+/**
+ * Helper to update an existing Task instance.
+ * @param {Task} task
+ * @param {string} newTitle
+ * @param {string} newPriority
+ * @param {Date} newDueDate
+ * @returns {Task}
+ */
 function editTask(task, newTitle, newPriority, newDueDate) {
-  task.title = newTitle;
-  task.priority = newPriority;
-  task.dueDate = new Date(newDueDate);
+  // Let the domain model perform its own validations via setters.
+  task.setTitle(newTitle);
+  task.setPriority(newPriority);
+  task.setDueDate(newDueDate);
   return task;
 }
 
-function groupAndSortTasks(tasks) {
-  const high = tasks.filter((t) => t.priority === 'High');
-  const medium = tasks.filter((t) => t.priority === 'Medium');
-  const low = tasks.filter((t) => t.priority === 'Low');
-
-  const sortTasks = (tasks) => {
-    return tasks.sort((a, b) => {
-      if (a.completed !== b.completed) {
-        return a.completed ? 1 : -1;
-      }
-      return a.dueDate - b.dueDate;
-    });
-  };
-
-  return {
-    high: sortTasks(high),
-    medium: sortTasks(medium),
-    low: sortTasks(low),
-  };
+/**
+ * Fetches all tasks, groups, and sorts them.
+ * @returns {Promise<GroupedTasks>}
+ */
+export async function getTasks() {
+  try {
+    const tasks = await getTasksFromRepo();
+    return groupAndSortTasks(tasks);
+  } catch (error) {
+    throw new Error(`Failed to fetch tasks: ${error.message}`);
+  }
 }

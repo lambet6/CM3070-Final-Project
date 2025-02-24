@@ -14,8 +14,8 @@ jest.mock('../../../managers/wellbeing-manager', () => ({
 
 describe('wellbeingStore', () => {
   beforeEach(() => {
-    useWellbeingStore.setState({ moodData: [] });
-    jest.resetAllMocks();
+    useWellbeingStore.setState({ moodData: [], error: null, isLoading: false });
+    jest.clearAllMocks();
   });
 
   it('loads mood data and updates state', async () => {
@@ -52,5 +52,16 @@ describe('wellbeingStore', () => {
     expect(labels).toHaveLength(14);
     expect(data).toHaveLength(14);
     expect(data.every((value) => value === 0)).toBeTruthy();
+  });
+
+  it('should handle errors', async () => {
+    getMoodData.mockRejectedValue(new Error('Failed to load'));
+
+    await act(async () => {
+      await useWellbeingStore.getState().loadMoodData();
+    });
+
+    expect(useWellbeingStore.getState().error).toBe('Failed to load');
+    expect(useWellbeingStore.getState().moodData).toEqual([]);
   });
 });

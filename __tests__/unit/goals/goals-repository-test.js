@@ -61,20 +61,14 @@ describe('goals-repository', () => {
     expect(goals[0].id).toBe('2');
   });
 
-  it('getGoalsFromRepo handles errors and returns empty array', async () => {
-    jest.spyOn(AsyncStorage, 'getItem').mockRejectedValue(new Error('test error'));
-    const goals = await getGoalsFromRepo();
-    expect(goals).toEqual([]);
-  });
+  it('should throw error when storage operations fail', async () => {
+    // Test fetch failure
+    jest.spyOn(AsyncStorage, 'getItem').mockRejectedValue(new Error('Storage error'));
+    await expect(getGoalsFromRepo()).rejects.toThrow('Failed to fetch goals: Storage error');
 
-  it('saveGoalsToRepo handles errors gracefully', async () => {
-    const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
-    jest.spyOn(AsyncStorage, 'setItem').mockRejectedValue(new Error('test error'));
-
+    // Test save failure
+    jest.spyOn(AsyncStorage, 'setItem').mockRejectedValue(new Error('Storage error'));
     const goal = new Goal({ id: '1', title: 'Test Goal', hoursPerWeek: 5 });
-    await saveGoalsToRepo([goal]);
-
-    expect(consoleSpy).toHaveBeenCalled();
-    consoleSpy.mockRestore();
+    await expect(saveGoalsToRepo([goal])).rejects.toThrow('Failed to save goals: Storage error');
   });
 });

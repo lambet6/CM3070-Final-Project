@@ -56,4 +56,47 @@ describe('goalsStore', () => {
     });
     expect(useGoalsStore.getState().goals).toEqual([]);
   });
+
+  it('should set error state when loading fails', async () => {
+    fetchGoals.mockRejectedValue(new Error('Failed to load'));
+
+    await act(async () => {
+      await useGoalsStore.getState().loadGoals();
+    });
+
+    expect(useGoalsStore.getState().error).toBe('Failed to load');
+    expect(useGoalsStore.getState().goals).toEqual([]);
+  });
+
+  it('should set error state when adding goal fails', async () => {
+    addGoal.mockRejectedValue(new Error('Invalid goal'));
+
+    await act(async () => {
+      try {
+        await useGoalsStore.getState().addNewGoal('', 0);
+      } catch (error) {
+        // Expected error
+      }
+    });
+
+    expect(useGoalsStore.getState().error).toBe('Invalid goal');
+  });
+
+  it('should maintain current goals when update fails', async () => {
+    const existing = { id: '1', title: 'Old Goal', hoursPerWeek: 2 };
+    useGoalsStore.setState({ goals: [existing] });
+
+    updateGoalData.mockRejectedValue(new Error('Update failed'));
+
+    await act(async () => {
+      try {
+        await useGoalsStore.getState().updateGoal('1', '', 3);
+      } catch (error) {
+        // Expected error
+      }
+    });
+
+    expect(useGoalsStore.getState().goals).toEqual([existing]);
+    expect(useGoalsStore.getState().error).toBe('Update failed');
+  });
 });

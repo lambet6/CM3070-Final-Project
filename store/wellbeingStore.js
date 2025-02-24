@@ -3,43 +3,46 @@ import { getMoodData, saveMood } from '../managers/wellbeing-manager';
 import { subDays, startOfDay, isSameDay } from 'date-fns';
 
 /**
- * @typedef {import('../domain/Mood').Mood} Mood
- */
-
-/**
- * @typedef {Object} MoodChartData
- * @property {string[]} labels - Array of date labels
- * @property {number[]} data - Array of mood values corresponding to labels
- */
-
-/**
  * Store for managing wellbeing/mood state.
- * @typedef {Object} WellbeingStore
- * @property {Mood[]} moodData - Array of mood entries
- * @property {() => Promise<void>} loadMoodData - Loads all mood entries
- * @property {(mood: string) => Promise<void>} addMood - Adds or updates mood for current day
- * @property {() => MoodChartData} getLast14DaysMoodData - Gets mood data for the last 14 days
  */
-
-/**
- * Creates a store for managing wellbeing/mood data.
- * @type {import('zustand').UseBoundStore<WellbeingStore>}
- */
-export const useWellbeingStore = create((set) => ({
+export const useWellbeingStore = create((set, get) => ({
   moodData: [],
+  error: null,
+  isLoading: false,
+
   loadMoodData: async () => {
-    const data = await getMoodData();
-    set({ moodData: data });
+    set({ isLoading: true, error: null });
+    try {
+      const data = await getMoodData();
+      set({ moodData: data, error: null, isLoading: false });
+    } catch (error) {
+      console.error('Failed to load mood data:', error);
+      set({ moodData: [], error: error.message, isLoading: false });
+    }
   },
-  addMood: async (mood) => {
-    const newMoodData = await saveMood(mood);
-    set((state) => {
-      const filteredMoodData = state.moodData.filter((entry) => !entry.isToday());
-      return { moodData: [...filteredMoodData, newMoodData] };
-    });
+
+  addMood: async (moodValue) => {
+    set({ error: null });
+    try {
+      const newMood = await saveMood(moodValue);
+      // Remove any existing mood for today, then add the new one.
+      set((state) => {
+        const filteredMoodData = state.moodData.filter((entry) => !entry.isToday());
+        return { moodData: [...filteredMoodData, newMood] };
+      });
+    } catch (error) {
+      console.error('Failed to add mood:', error);
+      set({ error: error.message });
+      throw error;
+    }
   },
+
+  /**
+   * Returns mood chart data for the last 14 days.
+   * @returns {{labels: string[], data: number[]}}
+   */
   getLast14DaysMoodData: () => {
-    const moodData = useWellbeingStore.getState().moodData;
+    const moodData = get().moodData;
     const today = startOfDay(new Date());
     const last14Days = Array.from({ length: 14 }, (_, i) => subDays(today, 13 - i));
 
@@ -49,7 +52,7 @@ export const useWellbeingStore = create((set) => ({
     });
 
     return {
-      labels: fullData.map((item) => item.date),
+      labels: fullData.map((item) => item.date.toISOString().slice(0, 10)),
       data: fullData.map((item) => item.moodValue),
     };
   },

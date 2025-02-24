@@ -4,12 +4,10 @@ import { Task } from '../domain/Task';
 export const TASKS_KEY = '@myapp_tasks';
 
 /**
- * Retrieves tasks from the repository stored in AsyncStorage.
- *
+ * Retrieves tasks from AsyncStorage and converts them to Task instances.
  * @async
- * @function getTasksFromRepo
- * @returns {Promise<Task[]>} A promise that resolves to an array of Task objects.
- * @throws Will log an error to the console and return an empty array if there is an issue retrieving or parsing the tasks.
+ * @returns {Promise<Task[]>}
+ * @throws An error if retrieval or parsing fails.
  */
 export async function getTasksFromRepo() {
   try {
@@ -17,21 +15,20 @@ export async function getTasksFromRepo() {
     if (!raw) {
       return [];
     }
-
     const parsed = JSON.parse(raw);
     return parsed.map((obj) => new Task(obj));
   } catch (error) {
     console.error('Error loading tasks:', error);
-    return [];
+    // Propagate the error so the manager can handle it.
+    throw new Error('Error loading tasks from repository');
   }
 }
 
 /**
- * Saves an array of tasks to the repository.
- *
- * @param {Task[]} tasks - The array of task objects to be saved.
- * @returns {Promise<void>} A promise that resolves when the tasks have been saved.
- * @throws Will log an error to the console if there is an error saving the tasks.
+ * Saves an array of Task instances to AsyncStorage.
+ * @param {Task[]} tasks
+ * @returns {Promise<void>}
+ * @throws An error if saving fails.
  */
 export async function saveTasksToRepo(tasks) {
   try {
@@ -42,9 +39,9 @@ export async function saveTasksToRepo(tasks) {
       dueDate: task.dueDate.toISOString(),
       completed: task.completed,
     }));
-
     await AsyncStorage.setItem(TASKS_KEY, JSON.stringify(plainTasks));
   } catch (error) {
     console.error('Error saving tasks:', error);
+    throw new Error('Error saving tasks to repository');
   }
 }

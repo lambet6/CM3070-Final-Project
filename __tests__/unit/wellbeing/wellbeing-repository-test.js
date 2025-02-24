@@ -6,6 +6,7 @@ import {
   getMoodDataFromRepo,
   updateMoodForToday,
   MOOD_DATA_KEY,
+  saveMoodToRepo,
 } from '../../../repositories/wellbeing-repository';
 import { Mood } from '../../../domain/Mood';
 
@@ -54,9 +55,14 @@ describe('wellbeing-repository', () => {
     expect(yesterdayEntry.mood).toBe('Neutral');
   });
 
-  it('throws error for invalid mood value', async () => {
-    await expect(async () => {
-      await updateMoodForToday(new Mood({ mood: 'Invalid', date: new Date() }));
-    }).rejects.toThrow('Invalid mood value');
+  it('should handle getItem storage errors', async () => {
+    jest.spyOn(AsyncStorage, 'getItem').mockRejectedValue(new Error('Storage error'));
+    await expect(getMoodDataFromRepo()).rejects.toThrow('Failed to fetch mood data: Storage error');
+  });
+
+  it('should handle setItem storage errors', async () => {
+    const mood = new Mood({ mood: 'Happy', date: new Date() });
+    jest.spyOn(AsyncStorage, 'setItem').mockRejectedValue(new Error('Storage error'));
+    await expect(saveMoodToRepo(mood)).rejects.toThrow();
   });
 });

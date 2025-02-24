@@ -69,6 +69,28 @@ describe('Calendar Manager', () => {
         }),
       );
     });
+
+    it('should throw error for invalid date parameters', async () => {
+      const title = 'Team Meeting';
+      const startDate = 'invalid-date';
+      const endDate = new Date('2025-02-12T11:00:00.000Z');
+
+      await expect(createNewCalendarEvent(title, startDate, endDate)).rejects.toThrow(
+        'Failed to create calendar event: Invalid start date',
+      );
+    });
+
+    it('should throw error when repository fails', async () => {
+      const title = 'Team Meeting';
+      const startDate = new Date('2025-02-12T10:00:00.000Z');
+      const endDate = new Date('2025-02-12T11:00:00.000Z');
+
+      addCalendarEvent.mockRejectedValue(new Error('Calendar permission not granted'));
+
+      await expect(createNewCalendarEvent(title, startDate, endDate)).rejects.toThrow(
+        'Failed to create calendar event: Calendar permission not granted',
+      );
+    });
   });
 
   describe('Calendar Event Retrieval', () => {
@@ -93,12 +115,37 @@ describe('Calendar Manager', () => {
       expect(events).toEqual(mockEvents);
     });
 
-    it('should return empty array when repository throws an error', async () => {
+    it('should throw error when repository fails', async () => {
+      getStoredCalendarEvents.mockRejectedValue(new Error('Calendar permission not granted'));
+
+      await expect(getWeeklyCalendarEvents()).rejects.toThrow(
+        'Failed to get weekly calendar events: Calendar permission not granted',
+      );
+    });
+
+    it('should throw error when repository fails with network error', async () => {
       getStoredCalendarEvents.mockRejectedValue(new Error('Network error'));
 
-      const events = await getWeeklyCalendarEvents();
+      await expect(getWeeklyCalendarEvents()).rejects.toThrow(
+        'Failed to get weekly calendar events: Network error',
+      );
+    });
 
-      expect(events).toEqual([]);
+    it('should pass correct date range to repository', async () => {
+      getStoredCalendarEvents.mockResolvedValue([]);
+
+      await getWeeklyCalendarEvents();
+
+      const expectedStartDate = startOfWeek(MOCK_DATE, { weekStartsOn: 1 });
+      const expectedEndDate = endOfWeek(MOCK_DATE, { weekStartsOn: 1 });
+
+      expect(getStoredCalendarEvents).toHaveBeenCalledWith(expect.any(Date), expect.any(Date));
+      expect(getStoredCalendarEvents.mock.calls[0][0].toISOString()).toBe(
+        expectedStartDate.toISOString(),
+      );
+      expect(getStoredCalendarEvents.mock.calls[0][1].toISOString()).toBe(
+        expectedEndDate.toISOString(),
+      );
     });
   });
 });

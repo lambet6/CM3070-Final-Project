@@ -1,7 +1,6 @@
 /*global setInterval, clearInterval*/
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
-// setInterval and clearInterval are global, no import necessary
 import { useCalendarStore } from '../store/calendarStore';
 import { useTaskStore } from '../store/taskStore';
 import TaskModal from '../components/TaskModal';
@@ -12,7 +11,7 @@ export default function CalendarScreen() {
   const { events, loadCalendarEvents } = useCalendarStore();
   const { getTodayTasks, getWeekTasks, addTask, toggleCompleteTask } = useTaskStore();
 
-  // Move date calculations outside effect
+  // Calculate current date and week boundaries
   const today = useRef(new Date()).current;
   const weekStart = useRef(startOfWeek(today, { weekStartsOn: 1 })).current;
   const weekEnd = useRef(endOfWeek(today, { weekStartsOn: 1 })).current;
@@ -24,7 +23,6 @@ export default function CalendarScreen() {
   const [taskDueDate, setTaskDueDate] = useState(today);
   const [currentWeek, setCurrentWeek] = useState(weekDays);
 
-  // Initial setup effect
   useEffect(() => {
     setCurrentWeek(weekDays);
   }, [weekDays]);
@@ -32,17 +30,14 @@ export default function CalendarScreen() {
   useFocusEffect(
     React.useCallback(() => {
       loadCalendarEvents();
-
       const interval = setInterval(() => {
         console.log('🔄 Checking for new events...');
         loadCalendarEvents();
       }, 5000);
-
       return () => clearInterval(interval);
     }, [loadCalendarEvents]),
   );
 
-  // Get pre-filtered tasks from Zustand store
   const todayTasks = getTodayTasks();
   const weekTasks = getWeekTasks();
 
@@ -101,8 +96,7 @@ export default function CalendarScreen() {
               <TouchableOpacity
                 key={index}
                 style={[styles.timelineItem, task.completed && styles.completedTask]}
-                onPress={() => toggleCompleteTask(task.id)} // ✅ Toggle completion on tap
-              >
+                onPress={() => toggleCompleteTask(task.id)}>
                 <Text style={[styles.timelineText, task.completed && styles.strikethrough]}>
                   {task.title}
                 </Text>
@@ -211,7 +205,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   completedTask: {
-    backgroundColor: '#d3d3d3', // Light gray for completed tasks
+    backgroundColor: '#d3d3d3',
   },
   strikethrough: {
     textDecorationLine: 'line-through',

@@ -4,23 +4,32 @@ import { CalendarEvent } from '../domain/CalendarEvent';
 
 /**
  * Retrieves stored calendar events within a specified date range.
- *
- * @param {Date} startDate - The start date of the range to retrieve events.
- * @param {Date} endDate - The end date of the range to retrieve events.
- * @returns {Promise<CalendarEvent[]>} A promise that resolves to an array of CalendarEvent objects.
- * @throws {Error} If calendar permissions are not granted or an error occurs during retrieval.
+ * @param {Date} startDate
+ * @param {Date} endDate
+ * @returns {Promise<CalendarEvent[]>}
+ * @throws {Error} with context if retrieval fails.
  */
 export async function getStoredCalendarEvents(startDate, endDate) {
-  try {
-    const { status } = await Calendar.requestCalendarPermissionsAsync();
-    if (status !== 'granted') throw new Error('Calendar permission not granted');
+  if (!(startDate instanceof Date) || isNaN(startDate.getTime())) {
+    throw new Error('Invalid start date');
+  }
+  if (!(endDate instanceof Date) || isNaN(endDate.getTime())) {
+    throw new Error('Invalid end date');
+  }
+  if (endDate < startDate) {
+    throw new Error('End date cannot be before start date');
+  }
 
+  const { status } = await Calendar.requestCalendarPermissionsAsync();
+  if (status !== 'granted') {
+    throw new Error('Calendar permission not granted');
+  }
+
+  try {
     const defaultCalendarId = await getDefaultCalendarId();
     if (!defaultCalendarId) {
-      console.warn('No default calendar found, returning empty events');
-      return [];
+      throw new Error('No default calendar found');
     }
-
     const events = await Calendar.getEventsAsync([defaultCalendarId], startDate, endDate);
     return events.map(
       (event) =>
@@ -32,17 +41,16 @@ export async function getStoredCalendarEvents(startDate, endDate) {
         }),
     );
   } catch (error) {
-    console.warn('Error retrieving calendar events:', error);
-    return [];
+    console.error('Error retrieving calendar events:', error);
+    throw new Error(`Failed to retrieve calendar events: ${error.message}`);
   }
 }
 
 /**
  * Adds a calendar event to the default calendar.
- *
- * @param {CalendarEvent} event - The event to add.
- * @returns {Promise<CalendarEvent>} A promise that resolves to the created CalendarEvent.
- * @throws {Error} If calendar permissions are not granted or no default calendar is found.
+ * @param {CalendarEvent} event
+ * @returns {Promise<CalendarEvent>}
+ * @throws {Error} with context if creation fails.
  */
 export async function addCalendarEvent(event) {
   try {
@@ -52,9 +60,9 @@ export async function addCalendarEvent(event) {
     const defaultCalendarId = await getDefaultCalendarId();
     if (!defaultCalendarId) throw new Error('No default calendar found');
 
-    // Create new event with validated dates
+    // Create new event using the domain model for validation.
     const newEvent = new CalendarEvent({
-      id: 'temp', // Temporary ID that will be replaced
+      id: 'temp', // Temporary ID
       title: event.title,
       startDate: event.startDate,
       endDate: event.endDate,
@@ -67,7 +75,6 @@ export async function addCalendarEvent(event) {
       timeZone: 'UTC',
     });
 
-    // Return new event with real ID
     return new CalendarEvent({
       id: eventId,
       title: newEvent.title,
@@ -76,17 +83,29 @@ export async function addCalendarEvent(event) {
     });
   } catch (error) {
     console.error('Error adding calendar event:', error);
-    throw error;
+    throw new Error(`Failed to add calendar event: ${error.message}`);
   }
 }
 
 async function getDefaultCalendarId() {
-  if (Platform.OS === 'ios') {
-    const defaultCalendar = await Calendar.getDefaultCalendarAsync();
-    return defaultCalendar?.id || null;
-  } else {
-    const calendars = await Calendar.getCalendarsAsync();
-    const primaryCalendar = calendars.find((cal) => cal.accessLevel === 'owner' && cal.isPrimary);
-    return primaryCalendar ? primaryCalendar.id : calendars[0]?.id || null;
+  try {
+    if (Platform.OS === 'ios') {
+      const defaultCalendar = await Calendar.getDefaultCalendarAsync();
+      if (!defaultCalendar?.id) {
+        throw new Error('No default calendar found on iOS');
+      }
+      return defaultCalendar.id;
+    } else {
+      const calendars = await Calendar.getCalendarsAsync();
+      const primaryCalendar = calendars.find((cal) => cal.accessLevel === 'owner' && cal.isPrimary);
+      const selectedCalendar = primaryCalendar || calendars[0];
+      if (!selectedCalendar?.id) {
+        throw new Error('No suitable calendar found on Android');
+      }
+      return selectedCalendar.id;
+    }
+  } catch (error) {
+    console.error('Error getting default calendar:', error);
+    throw new Error(`Failed to get default calendar: ${error.message}`);
   }
 }

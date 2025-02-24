@@ -2,71 +2,84 @@ import { getGoalsFromRepo, saveGoalsToRepo } from '../repositories/goals-reposit
 import { Goal } from '../domain/Goal';
 
 /**
- * Fetches all goals from the repository.
- * @returns {Promise<Goal[]>} A promise that resolves to an array of goals.
+ * Fetches all goals.
+ * @returns {Promise<Goal[]>}
  */
 export const fetchGoals = async () => {
-  return await getGoalsFromRepo();
+  try {
+    return await getGoalsFromRepo();
+  } catch (error) {
+    throw new Error(`Failed to fetch goals: ${error.message}`);
+  }
 };
 
 /**
  * Adds a new goal.
- * @param {string} title - The title of the goal.
- * @param {number} hoursPerWeek - The number of hours per week dedicated to the goal.
- * @returns {Promise<Array>} A promise that resolves to an updated array of goals.
+ * @param {string} title - The goal title.
+ * @param {number} hoursPerWeek - Hours per week for the goal.
+ * @returns {Promise<Goal[]>} Updated goals array.
  */
 export const addGoal = async (title, hoursPerWeek) => {
-  const existingGoals = await getGoalsFromRepo();
-
   try {
+    if (!title?.trim()) {
+      throw new Error('Goal title is required');
+    }
+    const existingGoals = await getGoalsFromRepo();
     const newGoal = new Goal({
       id: Date.now().toString(),
       title,
       hoursPerWeek,
     });
-
     const updatedGoals = [...existingGoals, newGoal];
     await saveGoalsToRepo(updatedGoals);
     return updatedGoals;
   } catch (error) {
     console.error('Failed to create goal:', error);
-    return existingGoals;
+    throw new Error(`Failed to create goal: ${error.message}`);
   }
 };
 
 /**
  * Updates an existing goal.
- * @param {string} goalId - The ID of the goal to update.
- * @param {string} newTitle - The new title of the goal.
- * @param {number} newHours - The new number of hours per week dedicated to the goal.
- * @returns {Promise<Array>} A promise that resolves to an updated array of goals.
+ * @param {string} goalId - The goal ID.
+ * @param {string} newTitle - The new title.
+ * @param {number} newHours - The new hours per week.
+ * @returns {Promise<Goal[]>} Updated goals array.
  */
 export const updateGoalData = async (goalId, newTitle, newHours) => {
-  const goals = await getGoalsFromRepo();
-
   try {
+    if (!goalId) throw new Error('Goal ID is required');
+    if (!newTitle?.trim()) throw new Error('Goal title is required');
+
+    const goals = await getGoalsFromRepo();
     const updatedGoals = goals.map((goal) =>
       goal.id === goalId
         ? new Goal({ id: goal.id, title: newTitle, hoursPerWeek: newHours })
         : goal,
     );
-
     await saveGoalsToRepo(updatedGoals);
     return updatedGoals;
   } catch (error) {
     console.error('Failed to update goal:', error);
-    return goals;
+    throw new Error(`Failed to update goal: ${error.message}`);
   }
 };
 
 /**
  * Deletes a goal.
- * @param {string} goalId - The ID of the goal to delete.
- * @returns {Promise<Array>} A promise that resolves to an updated array of goals.
+ * @param {string} goalId - The goal ID.
+ * @returns {Promise<Goal[]>} Updated goals array.
  */
 export const deleteGoal = async (goalId) => {
-  const goals = await getGoalsFromRepo();
-  const updatedGoals = goals.filter((goal) => goal.id !== goalId);
-  await saveGoalsToRepo(updatedGoals);
-  return updatedGoals;
+  try {
+    if (!goalId) throw new Error('Goal ID is required');
+
+    const goals = await getGoalsFromRepo();
+    const updatedGoals = goals.filter((goal) => goal.id !== goalId);
+    await saveGoalsToRepo(updatedGoals);
+    return updatedGoals;
+  } catch (error) {
+    console.error('Failed to delete goal:', error);
+    throw new Error(`Failed to delete goal: ${error.message}`);
+  }
 };

@@ -5,37 +5,36 @@ import { parseISO } from 'date-fns';
 export const MOOD_DATA_KEY = 'MOOD_DATA';
 
 /**
- * Retrieves mood data from AsyncStorage and converts it into Mood objects.
- *
- * @async
- * @function getMoodDataFromRepo
- * @returns {Promise<Mood[]>} A promise that resolves to an array of Mood objects.
- * @throws Will log an error to the console if AsyncStorage operations fail.
+ * Retrieves mood data from AsyncStorage and converts it into Mood instances.
+ * @returns {Promise<Mood[]>}
+ * @throws {Error} If fetching or parsing fails.
  */
 export const getMoodDataFromRepo = async () => {
   try {
     const data = await AsyncStorage.getItem(MOOD_DATA_KEY);
     const parsedData = data ? JSON.parse(data) : [];
     return parsedData.map((moodData) => {
-      // Ensure date is properly parsed from ISO string
-      return new Mood({
-        mood: moodData.mood,
-        date: parseISO(moodData.date),
-      });
+      try {
+        return new Mood({
+          mood: moodData.mood,
+          date: parseISO(moodData.date),
+        });
+      } catch (error) {
+        console.error('Error mapping mood data:', error);
+        throw new Error('Invalid mood data format');
+      }
     });
   } catch (error) {
     console.error('Error fetching mood data:', error);
-    return [];
+    throw new Error('Failed to fetch mood data: ' + error.message);
   }
 };
 
 /**
- * Saves a mood entry to the repository by appending it to existing mood data in AsyncStorage.
- *
+ * Saves a mood entry by appending it to existing mood data.
  * @param {Mood} mood - The mood object to be saved.
- * @returns {Promise<void>} A promise that resolves when the mood is successfully saved.
- * @throws Will log an error to the console if there's an error saving the mood data.
- * @async
+ * @returns {Promise<void>}
+ * @throws {Error} If saving fails.
  */
 export const saveMoodToRepo = async (mood) => {
   try {
@@ -44,18 +43,16 @@ export const saveMoodToRepo = async (mood) => {
     await AsyncStorage.setItem(MOOD_DATA_KEY, JSON.stringify(newData));
   } catch (error) {
     console.error('Error saving mood:', error);
-    throw error;
+    throw new Error('Failed to save mood: ' + error.message);
   }
 };
 
 /**
- * Updates the user's mood for the current day in AsyncStorage.
- * If a mood entry already exists for today, it will be replaced.
- *
- * @param {Mood} mood - The mood object to be stored.
- * @returns {Promise<void>} A promise that resolves when the mood is successfully updated.
- * @throws {Error} If there's an error updating the mood in AsyncStorage.
- * @async
+ * Updates the mood for the current day in AsyncStorage.
+ * Replaces any existing mood entry for today.
+ * @param {Mood} mood - The mood object to update.
+ * @returns {Promise<void>}
+ * @throws {Error} If updating fails.
  */
 export const updateMoodForToday = async (mood) => {
   try {
@@ -65,6 +62,6 @@ export const updateMoodForToday = async (mood) => {
     await AsyncStorage.setItem(MOOD_DATA_KEY, JSON.stringify(updatedData));
   } catch (error) {
     console.error('Error updating mood:', error);
-    throw error;
+    throw new Error('Failed to update mood: ' + error.message);
   }
 };

@@ -1,14 +1,14 @@
 import React, { useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
 import { useWellbeingStore } from '../store/wellbeingStore';
 import { LineChart } from 'react-native-chart-kit';
-import { Dimensions } from 'react-native';
-import { moodValues } from '../utilities/constants';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { format } from 'date-fns';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { moodValues } from '../utilities/constants';
 
 export default function WellbeingScreen() {
-  const { moodData, addMood, loadMoodData, getLast14DaysMoodData } = useWellbeingStore();
+  const { moodData, loadMoodData, addMood, getLast14DaysMoodData, error, isLoading } =
+    useWellbeingStore();
 
   useEffect(() => {
     loadMoodData();
@@ -20,9 +20,9 @@ export default function WellbeingScreen() {
 
   const todayMood = moodData.find((entry) => entry.isToday())?.mood;
 
+  // Format dates for chart labels.
   const formatDate = (date, index, labels) => {
     const isFirstEntryOfMonth = index === 0 || format(labels[index - 1], 'M') !== format(date, 'M');
-
     return isFirstEntryOfMonth ? format(date, 'd MMM') : format(date, 'd');
   };
 
@@ -42,6 +42,8 @@ export default function WellbeingScreen() {
       <Text testID="wellbeing-title" style={styles.title}>
         Track your mood and tasks completed over time
       </Text>
+      {error && <Text style={styles.errorText}>{error}</Text>}
+      {isLoading && <Text style={styles.loadingText}>Loading mood data...</Text>}
       <Text testID="mood-prompt" style={styles.subtitle}>
         How are you feeling today?
       </Text>
@@ -59,73 +61,46 @@ export default function WellbeingScreen() {
           </TouchableOpacity>
         ))}
       </View>
-      {shouldShowChart ? (
+      {shouldShowChart && (
         <View testID="mood-chart">
           <LineChart
             testID="mood-line-chart"
             data={{
-              labels: finalLabels.map((label, index) => formatDate(label, index, finalLabels)),
-              datasets: [
-                {
-                  data: finalData,
-                },
-              ],
+              labels: finalLabels.map((label, index) =>
+                formatDate(new Date(label), index, finalLabels),
+              ),
+              datasets: [{ data: finalData }],
             }}
             width={Dimensions.get('window').width - 16}
             height={220}
             yAxisLabel=""
             yAxisSuffix=""
             yLabelsOffset={5}
-            yAxisInterval={1}
             xLabelsOffset={5}
             verticalLabelRotation={-45}
-            formatYLabel={(value) => moodValues[value][0]}
             chartConfig={{
               backgroundColor: '#e26a00',
               backgroundGradientFrom: '#fb8c00',
               backgroundGradientTo: '#ffa726',
               decimalPlaces: 0,
-              propsForVerticalLabels: {
-                margin: 20,
-              },
+              propsForVerticalLabels: { margin: 20 },
               color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
             }}
-            style={{
-              borderRadius: 16,
-              paddingRight: 75,
-            }}
+            style={{ borderRadius: 16, paddingRight: 75 }}
           />
         </View>
-      ) : null}
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 8,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginVertical: 16,
-  },
-  subtitle: {
-    fontSize: 16,
-    textAlign: 'center',
-    marginVertical: 8,
-  },
-  moodContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    verticalAlign: 'center',
-    marginVertical: 16,
-  },
+  container: { flex: 1, padding: 8 },
+  title: { fontSize: 18, fontWeight: 'bold', textAlign: 'center', marginVertical: 16 },
+  subtitle: { fontSize: 16, textAlign: 'center', marginVertical: 8 },
+  moodContainer: { flexDirection: 'row', justifyContent: 'space-around', marginVertical: 16 },
   moodButton: {
     flex: 1,
-    alignSelf: 'center',
     alignItems: 'center',
     margin: 3,
     padding: 4,
@@ -134,14 +109,13 @@ const styles = StyleSheet.create({
   },
   selectedMoodButton: {
     flex: 1,
-    alignSelf: 'center',
     alignItems: 'center',
     margin: 3,
     padding: 5,
     borderRadius: 5,
     backgroundColor: '#ffa726',
   },
-  moodText: {
-    fontSize: 12,
-  },
+  moodText: { fontSize: 12 },
+  errorText: { color: 'red', textAlign: 'center', marginVertical: 5 },
+  loadingText: { color: '#666', textAlign: 'center', marginVertical: 5 },
 });

@@ -4,40 +4,37 @@ import { Goal } from '../domain/Goal';
 export const GOALS_KEY = '@myapp_goals';
 
 /**
- * Retrieves goals from the repository stored in AsyncStorage.
- *
- * @async
- * @function getGoalsFromRepo
- * @returns {Promise<Goal[]>} A promise that resolves to an array of Goal objects.
- * @throws Will log an error to the console if there is an issue fetching or parsing the goals.
+ * Retrieves goals from AsyncStorage and converts them into Goal instances.
+ * @returns {Promise<Goal[]>}
+ * @throws {Error} If fetching or parsing fails.
  */
 export const getGoalsFromRepo = async () => {
   try {
     const storedGoals = await AsyncStorage.getItem(GOALS_KEY);
-    const parsedGoals = storedGoals ? JSON.parse(storedGoals) : [];
+    if (!storedGoals) return [];
+    const parsedGoals = JSON.parse(storedGoals);
 
     return parsedGoals
       .map((goalData) => {
         try {
           return new Goal(goalData);
         } catch (error) {
-          console.error('Error mapping goals:', error);
+          console.error('Error mapping goal data:', error);
           return null;
         }
       })
       .filter((goal) => goal !== null);
   } catch (error) {
     console.error('Error fetching goals:', error);
-    return [];
+    throw new Error('Failed to fetch goals: ' + error.message);
   }
 };
 
 /**
- * Saves an array of goals to the repository.
- *
- * @param {Goal[]} goals - The array of Goal objects to be saved.
- * @returns {Promise<void>} A promise that resolves when the goals have been saved.
- * @throws Will log an error to the console if there is an error saving the goals.
+ * Saves an array of Goal instances to AsyncStorage.
+ * @param {Goal[]} goals
+ * @returns {Promise<void>}
+ * @throws {Error} If saving fails.
  */
 export const saveGoalsToRepo = async (goals) => {
   try {
@@ -49,5 +46,6 @@ export const saveGoalsToRepo = async (goals) => {
     await AsyncStorage.setItem(GOALS_KEY, JSON.stringify(goalData));
   } catch (error) {
     console.error('Error saving goals:', error);
+    throw new Error('Failed to save goals: ' + error.message);
   }
 };

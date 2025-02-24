@@ -14,7 +14,8 @@ import { useGoalsStore } from '../store/goalsStore';
 import GoalItem from '../components/GoalItem';
 
 export default function GoalsScreen() {
-  const { goals, loadGoals, addNewGoal, updateGoal, deleteGoal } = useGoalsStore();
+  const { goals, error, isLoading, loadGoals, addNewGoal, updateGoal, deleteGoal } =
+    useGoalsStore();
 
   useEffect(() => {
     loadGoals();
@@ -28,7 +29,8 @@ export default function GoalsScreen() {
           Choose up to 7 things important to you and how many hours per week you would like to spend
           on them
         </Text>
-
+        {error && <Text style={styles.errorText}>{error}</Text>}
+        {isLoading && <Text style={styles.loadingText}>Loading goals...</Text>}
         <View style={styles.tableHeader}>
           <Text style={styles.columnHeader}>Goal</Text>
           <Text style={styles.columnHeader}>Hours per week</Text>
@@ -41,7 +43,12 @@ export default function GoalsScreen() {
             keyExtractor={(item) => item.id}
             renderItem={({ item }) =>
               item.id === 'add' ? (
-                <Pressable style={styles.addButton} onPress={() => addNewGoal('New Goal', 0)}>
+                <Pressable
+                  style={styles.addButton}
+                  onPress={() => {
+                    // Here you might prompt the user to enter details.
+                    addNewGoal('New Goal', 0);
+                  }}>
                   <Text style={styles.addButtonText}>➕ Add Goal</Text>
                 </Pressable>
               ) : (
@@ -74,4 +81,6 @@ const styles = StyleSheet.create({
     borderRadius: 5,
   },
   addButtonText: { color: 'white', fontWeight: 'bold' },
+  errorText: { color: 'red', textAlign: 'center', marginVertical: 5 },
+  loadingText: { color: '#666', textAlign: 'center', marginVertical: 5 },
 });

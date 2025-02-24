@@ -3,22 +3,34 @@ import { Mood } from '../domain/Mood';
 
 /**
  * Fetches mood data from the repository.
- * @returns {Promise<Array>} A promise that resolves to an array of mood data.
+ * @returns {Promise<Mood[]>}
+ * @throws {Error} with contextual information if fetching fails.
  */
 export const getMoodData = async () => {
-  return await getMoodDataFromRepo();
+  try {
+    return await getMoodDataFromRepo();
+  } catch (error) {
+    throw new Error(`Failed to fetch mood data: ${error.message}`);
+  }
 };
 
 /**
- * Saves the mood for today.
+ * Saves today's mood.
  * @param {string} moodValue - The mood value to be saved.
- * @returns {Promise<Mood>} A promise that resolves to the newly created Mood object.
+ * @returns {Promise<Mood>} The newly saved Mood object.
+ * @throws {Error} with context if saving fails.
  */
 export const saveMood = async (moodValue) => {
-  const newMood = new Mood({
-    mood: moodValue,
-    date: new Date(),
-  });
-  await updateMoodForToday(newMood);
-  return newMood;
+  try {
+    // Create a new Mood instance; the Mood model will validate the mood value.
+    const newMood = new Mood({
+      mood: moodValue,
+      date: new Date(),
+    });
+    await updateMoodForToday(newMood);
+    return newMood;
+  } catch (error) {
+    console.error('Error saving mood:', error);
+    throw new Error(`Failed to save mood: ${error.message}`);
+  }
 };

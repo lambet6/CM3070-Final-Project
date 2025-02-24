@@ -2,44 +2,60 @@ import { create } from 'zustand';
 import { fetchGoals, addGoal, updateGoalData, deleteGoal } from '../managers/goals-manager';
 
 /**
- * @typedef {import('../domain/Goal').Goal} Goal
- */
-
-/**
  * Store for managing goals state.
- * @typedef {Object} GoalsStore
- * @property {Goal[]} goals - Array of user goals
- * @property {() => Promise<void>} loadGoals - Loads all goals
- * @property {(title: string, hours: number) => Promise<void>} addNewGoal - Creates and adds a new goal
- * @property {(goalId: string, newTitle: string, newHours: number) => Promise<void>} updateGoal - Updates an existing goal
- * @property {(goalId: string) => Promise<void>} deleteGoal - Deletes a goal by ID
- */
-
-/**
- * Creates a store for managing goals.
- * @type {import('zustand').UseBoundStore<GoalsStore>}
  */
 export const useGoalsStore = create((set) => ({
   goals: [],
+  error: null,
+  isLoading: false,
 
   loadGoals: async () => {
-    const fetchedGoals = await fetchGoals();
-    set({ goals: fetchedGoals });
+    set({ isLoading: true, error: null });
+    try {
+      const fetchedGoals = await fetchGoals();
+      set({ goals: fetchedGoals, error: null, isLoading: false });
+    } catch (error) {
+      console.error('Failed to load goals:', error);
+      set({ goals: [], error: error.message, isLoading: false });
+    }
   },
 
   addNewGoal: async (title, hours) => {
-    const updatedGoals = await addGoal(title, hours);
-    console.log(updatedGoals.length);
-    set({ goals: updatedGoals });
+    set({ error: null });
+    try {
+      const updatedGoals = await addGoal(title, hours);
+      set({ goals: updatedGoals, error: null });
+      return updatedGoals;
+    } catch (error) {
+      console.error('Failed to add goal:', error);
+      set({ error: error.message });
+      throw error;
+    }
   },
 
   updateGoal: async (goalId, newTitle, newHours) => {
-    const updatedGoals = await updateGoalData(goalId, newTitle, newHours);
-    set({ goals: updatedGoals });
+    set({ error: null });
+    try {
+      const updatedGoals = await updateGoalData(goalId, newTitle, newHours);
+      set({ goals: updatedGoals, error: null });
+      return updatedGoals;
+    } catch (error) {
+      console.error('Failed to update goal:', error);
+      set({ error: error.message });
+      throw error;
+    }
   },
 
   deleteGoal: async (goalId) => {
-    const updatedGoals = await deleteGoal(goalId);
-    set({ goals: updatedGoals });
+    set({ error: null });
+    try {
+      const updatedGoals = await deleteGoal(goalId);
+      set({ goals: updatedGoals, error: null });
+      return updatedGoals;
+    } catch (error) {
+      console.error('Failed to delete goal:', error);
+      set({ error: error.message });
+      throw error;
+    }
   },
 }));

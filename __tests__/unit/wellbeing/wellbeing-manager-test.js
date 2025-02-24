@@ -1,18 +1,20 @@
 /*global jest*/
 import { describe, it, beforeEach, expect } from '@jest/globals';
-import { getMoodDataFromRepo } from '../../../repositories/wellbeing-repository';
-
 import { getMoodData, saveMood } from '../../../managers/wellbeing-manager';
+import {
+  getMoodDataFromRepo,
+  updateMoodForToday,
+} from '../../../repositories/wellbeing-repository';
 import { Mood } from '../../../domain/Mood';
-// Mock the repository functions used in the manager
+
 jest.mock('../../../repositories/wellbeing-repository', () => ({
   getMoodDataFromRepo: jest.fn(),
-  updateMoodForToday: jest.fn().mockResolvedValue(),
+  updateMoodForToday: jest.fn(),
 }));
 
 describe('wellbeing-manager', () => {
   beforeEach(() => {
-    jest.resetAllMocks();
+    jest.clearAllMocks();
   });
 
   it('getMoodData returns array of Mood objects', async () => {
@@ -25,13 +27,24 @@ describe('wellbeing-manager', () => {
     expect(data[0].moodValue).toBe(4);
   });
 
-  it('saveMood creates and returns new Mood object', async () => {
-    const mood = 'Very happy';
-    const newMoodData = await saveMood(mood);
+  it('saveMood creates and saves new Mood object', async () => {
+    updateMoodForToday.mockResolvedValue();
+    const result = await saveMood('Happy');
 
-    expect(newMoodData).toBeInstanceOf(Mood);
-    expect(newMoodData.mood).toBe(mood);
-    expect(newMoodData.moodValue).toBe(5);
-    expect(newMoodData.date).toBeInstanceOf(Date);
+    expect(result).toBeInstanceOf(Mood);
+    expect(result.mood).toBe('Happy');
+    expect(result.date).toBeInstanceOf(Date);
+    expect(updateMoodForToday).toHaveBeenCalled();
+  });
+
+  it('should throw error for invalid mood value', async () => {
+    await expect(saveMood('INVALID_MOOD')).rejects.toThrow(
+      'Failed to save mood: Invalid mood value',
+    );
+  });
+
+  it('should handle repository errors', async () => {
+    getMoodDataFromRepo.mockRejectedValue(new Error('Storage error'));
+    await expect(getMoodData()).rejects.toThrow('Failed to fetch mood data: Storage error');
   });
 });

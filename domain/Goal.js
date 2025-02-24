@@ -14,7 +14,8 @@ export class Goal {
   }
 
   setHours(hours) {
-    this.hoursPerWeek = Math.max(0, Number(hours) || 0); // Ensure non-negative number
+    // Convert hours to number and ensure non-negative value.
+    this.hoursPerWeek = Math.max(0, Number(hours) || 0);
   }
 
   // Domain-specific validations
@@ -23,7 +24,7 @@ export class Goal {
   }
 
   hasValidHours() {
-    return this.hoursPerWeek >= 0 && this.hoursPerWeek <= 168; // Max hours in a week
+    return this.hoursPerWeek >= 0 && this.hoursPerWeek <= 168; // Max hours in a week.
   }
 
   toJSON() {
