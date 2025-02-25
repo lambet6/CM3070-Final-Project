@@ -63,7 +63,11 @@ export default function TaskModal({
                 setTitleError('');
               }}
             />
-            {titleError ? <Text style={styles.errorText}>{titleError}</Text> : null}
+            {titleError ? (
+              <Text testID="error-message" style={styles.errorText}>
+                {titleError}
+              </Text>
+            ) : null}
           </View>
 
           {/* Priority Picker */}

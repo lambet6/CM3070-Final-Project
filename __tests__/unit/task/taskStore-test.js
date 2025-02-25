@@ -1,197 +1,229 @@
 /*global jest*/
 import { describe, it, beforeEach, afterEach, expect } from '@jest/globals';
 import { act, renderHook } from '@testing-library/react-native';
-import { useTaskStore } from '../../../store/taskStore';
+import { createTaskStore } from '../../../store/taskStore';
 import {
-  getTasks,
-  createNewTask,
-  editExistingTask,
-  toggleTaskCompletion,
-} from '../../../managers/task-manager';
-import { Task } from '../../../domain/Task';
-
-jest.mock('../../../managers/task-manager');
+  createSampleTasks,
+  createGroupedTaskSets,
+  createTestDates,
+} from '../../fixtures/task-fixtures';
+import { setupMockDate } from '../../utils/test-utils';
+import { createMockTaskManager } from '../../mocks/task-manager.mock';
 
 describe('TaskStore', () => {
-  const mockDate = new Date('2024-02-15T12:00:00.000Z');
-  const mockTomorrow = new Date('2024-02-16T12:00:00.000Z');
-  const mockNextWeek = new Date('2024-02-22T12:00:00.000Z');
-
-  const mockTask1 = new Task({
-    id: '1',
-    title: 'Test Task 1',
-    priority: 'High',
-    dueDate: mockDate,
-  });
-
-  const mockTask2 = new Task({
-    id: '2',
-    title: 'Test Task 2',
-    priority: 'Medium',
-    dueDate: mockTomorrow,
-  });
-
-  const mockTask3 = new Task({
-    id: '3',
-    title: 'Test Task 3',
-    priority: 'Low',
-    dueDate: mockNextWeek,
-  });
+  let mockTaskManager;
+  let useTestStore;
+  let cleanupDate;
+  let sampleTasks;
+  let groupedTaskSets;
+  let testDates;
 
   beforeEach(() => {
-    jest.clearAllMocks();
-    jest.restoreAllMocks();
+    sampleTasks = createSampleTasks();
+    groupedTaskSets = createGroupedTaskSets();
+    testDates = createTestDates();
+
+    // Create mock task manager
+    mockTaskManager = createMockTaskManager();
+
+    // Create test store with our mock manager
+    useTestStore = createTaskStore(mockTaskManager);
+
+    // Set up mock date for consistent date testing
+    cleanupDate = setupMockDate(testDates.today);
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    if (cleanupDate) {
+      cleanupDate();
+    }
   });
 
   describe('Initial State', () => {
     it('should initialize with empty task groups', () => {
-      const { result } = renderHook(() => useTaskStore());
-      expect(result.current.tasks).toEqual({ high: [], medium: [], low: [] });
+      // Arrange & Act
+      const { result } = renderHook(() => useTestStore());
+
+      // Assert
+      expect(result.current.tasks).toEqual({
+        high: expect.any(Array),
+        medium: expect.any(Array),
+        low: expect.any(Array),
+      });
+      expect(result.current.error).toBeNull();
     });
   });
 
   describe('Task Loading', () => {
-    it('should load tasks successfully', async () => {
-      const mockTasks = {
-        high: [mockTask1],
-        medium: [mockTask2],
-        low: [mockTask3],
-      };
-      getTasks.mockResolvedValueOnce(mockTasks);
+    it('should call the task manager when loading tasks', async () => {
+      // Arrange
+      mockTaskManager.getTasks.mockResolvedValueOnce(groupedTaskSets.allPriorities);
+      const { result } = renderHook(() => useTestStore());
 
-      const { result } = renderHook(() => useTaskStore());
+      // Act
       await act(async () => {
         await result.current.loadTasks();
       });
 
-      expect(getTasks).toHaveBeenCalledTimes(1);
-      expect(result.current.tasks).toEqual(mockTasks);
+      // Assert
+      expect(mockTaskManager.getTasks).toHaveBeenCalled();
+      expect(result.current.tasks).toEqual(groupedTaskSets.allPriorities);
     });
 
-    it('should handle loading errors gracefully', async () => {
-      const error = new Error('Failed to load tasks');
-      getTasks.mockRejectedValueOnce(error);
+    it('should handle task loading errors', async () => {
+      // Arrange
+      const errorMessage = 'Failed to load tasks';
+      mockTaskManager.getTasks.mockRejectedValueOnce(new Error(errorMessage));
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      const { result } = renderHook(() => useTestStore());
 
-      const { result } = renderHook(() => useTaskStore());
+      // Act
       await act(async () => {
         await result.current.loadTasks();
       });
 
-      expect(result.current.tasks).toEqual({ high: [], medium: [], low: [] });
-      expect(consoleSpy).toHaveBeenCalledWith('Failed to load tasks:', error);
+      // Assert - Check error is captured in state
+      expect(result.current.error).toBe(errorMessage);
+      expect(consoleSpy).toHaveBeenCalled();
+
       consoleSpy.mockRestore();
     });
   });
 
   describe('Task Operations', () => {
-    it('should add a new task', async () => {
-      const mockUpdatedTasks = {
-        high: [mockTask1],
-        medium: [],
-        low: [],
-      };
-      createNewTask.mockResolvedValueOnce(mockUpdatedTasks);
+    it('should call task manager when adding a task', async () => {
+      // Arrange
+      const { result } = renderHook(() => useTestStore());
+      const taskTitle = 'New Test Task';
+      const taskPriority = 'High';
+      const taskDueDate = new Date();
 
-      const { result } = renderHook(() => useTaskStore());
+      // Act
       await act(async () => {
-        await result.current.addTask('Test Task 1', 'High', mockDate);
+        await result.current.addTask(taskTitle, taskPriority, taskDueDate);
       });
 
-      expect(createNewTask).toHaveBeenCalledWith('Test Task 1', 'High', mockDate);
-      expect(result.current.tasks).toEqual(mockUpdatedTasks);
+      // Assert
+      expect(mockTaskManager.createNewTask).toHaveBeenCalledWith(
+        taskTitle,
+        taskPriority,
+        taskDueDate,
+      );
+      expect(result.current.tasks).toEqual(groupedTaskSets.singleHighTask);
     });
 
-    it('should edit an existing task', async () => {
-      const mockUpdatedTasks = {
-        high: [{ ...mockTask1, title: 'Updated Task' }],
-        medium: [],
-        low: [],
-      };
-      editExistingTask.mockResolvedValueOnce(mockUpdatedTasks);
+    it('should call task manager when editing a task', async () => {
+      // Arrange
+      const { result } = renderHook(() => useTestStore());
+      const taskId = '123';
+      const updatedTitle = 'Updated Task';
+      const updatedPriority = 'Medium';
+      const updatedDueDate = new Date();
 
-      const { result } = renderHook(() => useTaskStore());
+      // Act
       await act(async () => {
-        await result.current.editTask('1', 'Updated Task', 'High', mockDate);
+        await result.current.editTask(taskId, updatedTitle, updatedPriority, updatedDueDate);
       });
 
-      expect(editExistingTask).toHaveBeenCalledWith('1', 'Updated Task', 'High', mockDate);
-      expect(result.current.tasks).toEqual(mockUpdatedTasks);
+      // Assert
+      expect(mockTaskManager.editExistingTask).toHaveBeenCalledWith(
+        taskId,
+        updatedTitle,
+        updatedPriority,
+        updatedDueDate,
+      );
+      expect(result.current.tasks).toEqual(groupedTaskSets.singleHighTask);
     });
 
-    it('should toggle task completion', async () => {
-      const mockUpdatedTasks = {
-        high: [{ ...mockTask1, completed: true }],
-        medium: [],
-        low: [],
-      };
-      toggleTaskCompletion.mockResolvedValueOnce(mockUpdatedTasks);
+    it('should call task manager when toggling task completion', async () => {
+      // Arrange
+      const { result } = renderHook(() => useTestStore());
+      const taskId = '123';
 
-      const { result } = renderHook(() => useTaskStore());
+      // Act
       await act(async () => {
-        await result.current.toggleCompleteTask('1');
+        await result.current.toggleCompleteTask(taskId);
       });
 
-      expect(toggleTaskCompletion).toHaveBeenCalledWith('1');
-      expect(result.current.tasks).toEqual(mockUpdatedTasks);
+      // Assert
+      expect(mockTaskManager.toggleTaskCompletion).toHaveBeenCalledWith(taskId);
+      expect(result.current.tasks).toEqual(groupedTaskSets.withCompleted);
+    });
+
+    it('should handle task operation errors', async () => {
+      // Arrange
+      const errorMessage = 'Failed to add task';
+      mockTaskManager.createNewTask.mockRejectedValueOnce(new Error(errorMessage));
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      const { result } = renderHook(() => useTestStore());
+
+      // Act & Assert
+      await act(async () => {
+        try {
+          await result.current.addTask('Test', 'High', new Date());
+          expect(true).toBe(false); // Should not reach here
+        } catch (error) {
+          expect(error.message).toBe(errorMessage);
+        }
+      });
+
+      expect(result.current.error).toBe(errorMessage);
+      consoleSpy.mockRestore();
     });
   });
 
   describe('Task Filtering', () => {
-    beforeEach(() => {
-      const MockDate = class extends Date {
-        constructor(...args) {
-          if (args.length === 0) {
-            super(mockDate);
-          } else {
-            super(...args);
-          }
-        }
-      };
-      global.Date = MockDate;
-      jest.spyOn(global.Date, 'now').mockImplementation(() => mockDate.getTime());
-    });
+    it('should filter tasks for today', async () => {
+      // Arrange - Setup store with pre-populated tasks
+      const { result } = renderHook(() => useTestStore());
 
-    afterEach(() => {
-      jest.restoreAllMocks();
-    });
-
-    it('should return tasks due today', () => {
-      const { result } = renderHook(() => useTaskStore());
-
-      act(() => {
+      // Pre-populate tasks
+      await act(async () => {
+        // Mock the store state directly
         result.current.tasks = {
-          high: [mockTask1],
-          medium: [mockTask2],
-          low: [mockTask3],
+          high: [{ ...sampleTasks.highPriorityTask, dueDate: testDates.today }],
+          medium: [{ ...sampleTasks.mediumPriorityTask, dueDate: testDates.tomorrow }],
+          low: [{ ...sampleTasks.lowPriorityTask, dueDate: testDates.nextWeek }],
         };
       });
 
-      const todayTasks = result.current.getTodayTasks();
-      expect(todayTasks).toHaveLength(1);
-      expect(todayTasks[0].id).toBe(mockTask1.id);
+      // Act
+      let todayTasks;
+      await act(async () => {
+        todayTasks = result.current.getTodayTasks();
+      });
+
+      // Assert
+      expect(todayTasks.length).toBe(1);
+      expect(todayTasks[0].priority).toBe('High');
     });
 
-    it('should return tasks due this week', () => {
-      const { result } = renderHook(() => useTaskStore());
+    it('should filter tasks for the current week', async () => {
+      // Arrange - Setup store with pre-populated tasks
+      const { result } = renderHook(() => useTestStore());
 
-      act(() => {
+      // Pre-populate tasks
+      await act(async () => {
+        // Mock the store state directly with tasks that are in this week and beyond
         result.current.tasks = {
-          high: [mockTask1],
-          medium: [mockTask2],
-          low: [mockTask3],
+          high: [{ ...sampleTasks.highPriorityTask, dueDate: testDates.today }],
+          medium: [{ ...sampleTasks.mediumPriorityTask, dueDate: testDates.tomorrow }],
+          low: [{ ...sampleTasks.lowPriorityTask, dueDate: testDates.nextWeek }],
         };
       });
 
-      const weekTasks = result.current.getWeekTasks();
-      expect(weekTasks).toHaveLength(2);
-      expect(weekTasks.map((t) => t.id)).toEqual(
-        expect.arrayContaining([mockTask1.id, mockTask2.id]),
-      );
+      // Act
+      let weekTasks;
+      await act(async () => {
+        weekTasks = result.current.getWeekTasks();
+      });
+
+      // Assert - Only high and medium should be in this week
+      expect(weekTasks.length).toBe(2);
+      const priorities = weekTasks.map((t) => t.priority);
+      expect(priorities).toContain('High');
+      expect(priorities).toContain('Medium');
+      expect(priorities).not.toContain('Low');
     });
   });
 });

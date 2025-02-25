@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Task } from '../domain/Task';
 
-const TASKS_KEY = '@myapp_tasks';
+export const TASKS_KEY = '@myapp_tasks';
 
 /**
  * Creates a task repository with the specified storage mechanism

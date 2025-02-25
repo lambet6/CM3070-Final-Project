@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet } from 'react-native';
-import { useTaskStore } from '../store/taskStore'; 
+import { useTaskStore } from '../store/taskStore';
 import TaskModal from '../components/TaskModal';
 
 export default function TasksScreen() {
