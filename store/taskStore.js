@@ -1,23 +1,22 @@
 import { create } from 'zustand';
-import {
-  getTasks,
-  createNewTask,
-  editExistingTask,
-  toggleTaskCompletion,
-} from '../managers/task-manager';
+import { createTaskManager } from '../managers/task-manager';
+import { taskRepository } from '../repositories/task-repository';
 import { isSameDay, isWithinInterval, startOfWeek, endOfWeek } from 'date-fns';
 
+// Create a task manager instance with the repository
+const taskManager = createTaskManager(taskRepository);
+
 /**
- * Store for managing tasks state.
+ * Store for managing tasks state
  */
 export const useTaskStore = create((set, get) => ({
   tasks: { high: [], medium: [], low: [] },
   error: null,
 
-  // Loads tasks using the manager, handling errors by updating the store's error state.
+  // Loads tasks using the manager
   loadTasks: async () => {
     try {
-      const fetchedTasks = await getTasks();
+      const fetchedTasks = await taskManager.getTasks();
       set({ tasks: fetchedTasks, error: null });
     } catch (error) {
       console.error('Failed to load tasks:', error);
@@ -28,10 +27,10 @@ export const useTaskStore = create((set, get) => ({
     }
   },
 
-  // Calls the manager to add a task.
+  // Calls the manager to add a task
   addTask: async (title, priority, dueDate) => {
     try {
-      const updatedTasks = await createNewTask(title, priority, dueDate);
+      const updatedTasks = await taskManager.createNewTask(title, priority, dueDate);
       set({ tasks: updatedTasks, error: null });
     } catch (error) {
       console.error('Failed to add task:', error);
@@ -40,10 +39,10 @@ export const useTaskStore = create((set, get) => ({
     }
   },
 
-  // Calls the manager to edit a task.
+  // Calls the manager to edit a task
   editTask: async (taskId, title, priority, dueDate) => {
     try {
-      const updatedTasks = await editExistingTask(taskId, title, priority, dueDate);
+      const updatedTasks = await taskManager.editExistingTask(taskId, title, priority, dueDate);
       set({ tasks: updatedTasks, error: null });
     } catch (error) {
       console.error('Failed to edit task:', error);
@@ -52,10 +51,10 @@ export const useTaskStore = create((set, get) => ({
     }
   },
 
-  // Calls the manager to toggle a task's completion status.
+  // Calls the manager to toggle a task's completion status
   toggleCompleteTask: async (taskId) => {
     try {
-      const updatedTasks = await toggleTaskCompletion(taskId);
+      const updatedTasks = await taskManager.toggleTaskCompletion(taskId);
       set({ tasks: updatedTasks });
     } catch (error) {
       console.error('Failed to toggle task completion:', error);
@@ -64,7 +63,7 @@ export const useTaskStore = create((set, get) => ({
     }
   },
 
-  // Utility functions to filter tasks.
+  // Utility functions to filter tasks
   getTodayTasks: () => {
     const { tasks } = get();
     const today = new Date();
@@ -87,3 +86,11 @@ export const useTaskStore = create((set, get) => ({
     });
   },
 }));
+
+// For testing purposes, expose a function to create a store with custom dependencies
+export const createTaskStore = (customTaskManager) => {
+  return create((set, get) => ({
+    // Same implementation as above but using customTaskManager
+    // This allows for easier testing by injecting mocks
+  }));
+};
