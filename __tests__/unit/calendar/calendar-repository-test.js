@@ -1,12 +1,10 @@
 /*global jest*/
 import { describe, it, beforeEach, expect } from '@jest/globals';
 import * as Calendar from 'expo-calendar';
-import {
-  getStoredCalendarEvents,
-  addCalendarEvent,
-} from '../../../repositories/calendar-repository';
+import { createCalendarRepository } from '../../../repositories/calendar-repository';
 import { CalendarEvent } from '../../../domain/CalendarEvent';
 
+// Mock expo-calendar
 jest.mock('expo-calendar', () => ({
   requestCalendarPermissionsAsync: jest.fn(),
   getEventsAsync: jest.fn(),
@@ -16,12 +14,28 @@ jest.mock('expo-calendar', () => ({
 }));
 
 describe('Calendar Repository', () => {
+  let calendarRepository;
+  let mockCalendarApi;
+
   beforeEach(() => {
     jest.clearAllMocks();
+
+    // Create a mock calendar API
+    mockCalendarApi = {
+      requestCalendarPermissionsAsync: Calendar.requestCalendarPermissionsAsync,
+      getEventsAsync: Calendar.getEventsAsync,
+      createEventAsync: Calendar.createEventAsync,
+      getCalendarsAsync: Calendar.getCalendarsAsync,
+      getDefaultCalendarAsync: Calendar.getDefaultCalendarAsync,
+    };
+
+    // Create repository with mock calendar API
+    calendarRepository = createCalendarRepository(mockCalendarApi);
   });
 
   describe('Calendar Event Retrieval', () => {
     it('should fetch and transform stored calendar events', async () => {
+      // Arrange
       const mockNativeEvent = {
         id: '1',
         title: 'Test Event',
@@ -29,12 +43,17 @@ describe('Calendar Repository', () => {
         endDate: '2025-02-10T12:00:00.000Z',
       };
 
-      Calendar.requestCalendarPermissionsAsync.mockResolvedValue({ status: 'granted' });
-      Calendar.getDefaultCalendarAsync.mockResolvedValue({ id: 'default-calendar' });
-      Calendar.getEventsAsync.mockResolvedValue([mockNativeEvent]);
+      mockCalendarApi.requestCalendarPermissionsAsync.mockResolvedValue({ status: 'granted' });
+      mockCalendarApi.getDefaultCalendarAsync.mockResolvedValue({ id: 'default-calendar' });
+      mockCalendarApi.getEventsAsync.mockResolvedValue([mockNativeEvent]);
 
-      const events = await getStoredCalendarEvents(new Date('2025-02-10'), new Date('2025-02-11'));
+      // Act
+      const events = await calendarRepository.getStoredCalendarEvents(
+        new Date('2025-02-10'),
+        new Date('2025-02-11'),
+      );
 
+      // Assert
       expect(events[0]).toBeInstanceOf(CalendarEvent);
       expect(events[0].startDate).toBeInstanceOf(Date);
       expect(events[0].endDate).toBeInstanceOf(Date);
@@ -47,59 +66,71 @@ describe('Calendar Repository', () => {
     });
 
     it('should throw error for invalid start date', async () => {
-      await expect(getStoredCalendarEvents('invalid-date', new Date())).rejects.toThrow(
-        'Invalid start date',
-      );
+      // Act & Assert
+      await expect(
+        calendarRepository.getStoredCalendarEvents('invalid-date', new Date()),
+      ).rejects.toThrow('Invalid start date');
     });
 
     it('should throw error for invalid end date', async () => {
-      await expect(getStoredCalendarEvents(new Date(), 'invalid-date')).rejects.toThrow(
-        'Invalid end date',
-      );
+      // Act & Assert
+      await expect(
+        calendarRepository.getStoredCalendarEvents(new Date(), 'invalid-date'),
+      ).rejects.toThrow('Invalid end date');
     });
 
     it('should throw error when end date is before start date', async () => {
+      // Arrange
       const endDate = new Date('2025-02-10');
       const startDate = new Date('2025-02-11');
-      await expect(getStoredCalendarEvents(startDate, endDate)).rejects.toThrow(
+
+      // Act & Assert
+      await expect(calendarRepository.getStoredCalendarEvents(startDate, endDate)).rejects.toThrow(
         'End date cannot be before start date',
       );
     });
 
     it('should throw error when permission is denied', async () => {
-      Calendar.requestCalendarPermissionsAsync.mockResolvedValue({ status: 'denied' });
+      // Arrange
+      mockCalendarApi.requestCalendarPermissionsAsync.mockResolvedValue({ status: 'denied' });
 
-      await expect(getStoredCalendarEvents(new Date(), new Date())).rejects.toThrow(
-        'Calendar permission not granted',
-      );
+      // Act & Assert
+      await expect(
+        calendarRepository.getStoredCalendarEvents(new Date(), new Date()),
+      ).rejects.toThrow('Calendar permission not granted');
     });
 
     it('should throw error when no default calendar is found', async () => {
-      Calendar.requestCalendarPermissionsAsync.mockResolvedValue({ status: 'granted' });
-      Calendar.getDefaultCalendarAsync.mockResolvedValue(null);
-      Calendar.getCalendarsAsync.mockResolvedValue([]);
+      // Arrange
+      mockCalendarApi.requestCalendarPermissionsAsync.mockResolvedValue({ status: 'granted' });
+      mockCalendarApi.getDefaultCalendarAsync.mockResolvedValue(null);
+      mockCalendarApi.getCalendarsAsync.mockResolvedValue([]);
 
-      await expect(getStoredCalendarEvents(new Date(), new Date())).rejects.toThrow(
-        'No default calendar found',
-      );
+      // Act & Assert
+      await expect(
+        calendarRepository.getStoredCalendarEvents(new Date(), new Date()),
+      ).rejects.toThrow('No default calendar found');
     });
   });
 
   describe('Calendar Event Creation', () => {
     it('should save and return new calendar event', async () => {
+      // Arrange
       const event = new CalendarEvent({
-        id: 'temp', // Changed from null to 'temp'
+        id: 'temp',
         title: 'New Meeting',
         startDate: new Date('2025-02-10T10:00:00.000Z'),
         endDate: new Date('2025-02-10T11:00:00.000Z'),
       });
 
-      Calendar.requestCalendarPermissionsAsync.mockResolvedValue({ status: 'granted' });
-      Calendar.getDefaultCalendarAsync.mockResolvedValue({ id: 'default-calendar' });
-      Calendar.createEventAsync.mockResolvedValue('new-event-1');
+      mockCalendarApi.requestCalendarPermissionsAsync.mockResolvedValue({ status: 'granted' });
+      mockCalendarApi.getDefaultCalendarAsync.mockResolvedValue({ id: 'default-calendar' });
+      mockCalendarApi.createEventAsync.mockResolvedValue('new-event-1');
 
-      const savedEvent = await addCalendarEvent(event);
+      // Act
+      const savedEvent = await calendarRepository.addCalendarEvent(event);
 
+      // Assert
       expect(savedEvent).toBeInstanceOf(CalendarEvent);
       expect(savedEvent.toJSON()).toEqual({
         id: 'new-event-1',
@@ -110,6 +141,7 @@ describe('Calendar Repository', () => {
     });
 
     it('should throw error when dates are invalid', async () => {
+      // Act & Assert
       await expect(
         () =>
           new CalendarEvent({
@@ -122,7 +154,7 @@ describe('Calendar Repository', () => {
     });
 
     it('should validate dates before saving event', async () => {
-      // Create event with valid dates first
+      // Arrange - Create event with valid dates first
       const validEvent = new CalendarEvent({
         id: 'temp',
         title: 'New Meeting',
@@ -130,13 +162,14 @@ describe('Calendar Repository', () => {
         endDate: new Date('2025-02-10T11:00:00.000Z'),
       });
 
-      // Then try to update end date to invalid value
+      // Act & Assert - Try to update end date to invalid value
       expect(() => validEvent.setEndDate(new Date('2025-02-10T09:00:00.000Z'))).toThrow(
         'End date cannot be before start date',
       );
     });
 
     it('should throw error when calendar permission is denied', async () => {
+      // Arrange
       const event = new CalendarEvent({
         id: 'temp',
         title: 'Test Event',
@@ -144,12 +177,16 @@ describe('Calendar Repository', () => {
         endDate: new Date(),
       });
 
-      Calendar.requestCalendarPermissionsAsync.mockResolvedValue({ status: 'denied' });
+      mockCalendarApi.requestCalendarPermissionsAsync.mockResolvedValue({ status: 'denied' });
 
-      await expect(addCalendarEvent(event)).rejects.toThrow('Calendar permission not granted');
+      // Act & Assert
+      await expect(calendarRepository.addCalendarEvent(event)).rejects.toThrow(
+        'Calendar permission not granted',
+      );
     });
 
     it('should throw error when no default calendar is found', async () => {
+      // Arrange
       const event = new CalendarEvent({
         id: 'temp',
         title: 'Test Event',
@@ -157,11 +194,14 @@ describe('Calendar Repository', () => {
         endDate: new Date(),
       });
 
-      Calendar.requestCalendarPermissionsAsync.mockResolvedValue({ status: 'granted' });
-      Calendar.getDefaultCalendarAsync.mockResolvedValue(null);
-      Calendar.getCalendarsAsync.mockResolvedValue([]);
+      mockCalendarApi.requestCalendarPermissionsAsync.mockResolvedValue({ status: 'granted' });
+      mockCalendarApi.getDefaultCalendarAsync.mockResolvedValue(null);
+      mockCalendarApi.getCalendarsAsync.mockResolvedValue([]);
 
-      await expect(addCalendarEvent(event)).rejects.toThrow('No default calendar found');
+      // Act & Assert
+      await expect(calendarRepository.addCalendarEvent(event)).rejects.toThrow(
+        'No default calendar found',
+      );
     });
   });
 });

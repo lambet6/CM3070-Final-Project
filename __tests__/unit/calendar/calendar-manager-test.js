@@ -1,28 +1,26 @@
 /*global jest*/
 import { describe, it, beforeEach, afterEach, expect } from '@jest/globals';
-import {
-  getWeeklyCalendarEvents,
-  createNewCalendarEvent,
-} from '../../../managers/calendar-manager';
-import {
-  getStoredCalendarEvents,
-  addCalendarEvent,
-} from '../../../repositories/calendar-repository';
-import { CalendarEvent } from '../../../domain/CalendarEvent';
+import { createCalendarManager } from '../../../managers/calendar-manager';
+import { createMockCalendarRepository } from '../../mocks/calendar-repository.mock';
+import { createSampleCalendarEvents } from '../../fixtures/calendar-fixtures';
 import { startOfWeek, endOfWeek } from 'date-fns';
-
-jest.mock('../../../repositories/calendar-repository', () => ({
-  getStoredCalendarEvents: jest.fn(),
-  addCalendarEvent: jest.fn(),
-}));
 
 describe('Calendar Manager', () => {
   const MOCK_DATE = new Date('2025-02-12T00:00:00.000Z');
   const MOCK_TIMESTAMP = MOCK_DATE.getTime();
 
+  let mockRepository;
+  let calendarManager;
+  let sampleEvents;
+
   beforeEach(() => {
-    jest.clearAllMocks();
-    // Create a class that extends Date
+    // Create fresh test data for each test
+    sampleEvents = createSampleCalendarEvents();
+    // Setup mock repository and create manager with dependency injection
+    mockRepository = createMockCalendarRepository();
+    calendarManager = createCalendarManager(mockRepository);
+
+    // Create a class that extends Date for consistent date testing
     const MockDate = class extends Date {
       constructor(...args) {
         if (args.length === 0) {
@@ -44,23 +42,19 @@ describe('Calendar Manager', () => {
 
   describe('Calendar Event Creation', () => {
     it('should create and save a new calendar event', async () => {
+      // Arrange
       const title = 'Team Meeting';
       const startDate = new Date('2025-02-12T10:00:00.000Z');
       const endDate = new Date('2025-02-12T11:00:00.000Z');
 
-      const mockSavedEvent = new CalendarEvent({
-        id: 'event-1',
-        title,
-        startDate,
-        endDate,
-      });
+      mockRepository.addCalendarEvent.mockResolvedValueOnce(sampleEvents.meeting);
 
-      addCalendarEvent.mockResolvedValue(mockSavedEvent);
+      // Act
+      const result = await calendarManager.createNewCalendarEvent(title, startDate, endDate);
 
-      const result = await createNewCalendarEvent(title, startDate, endDate);
-
-      expect(result).toEqual(mockSavedEvent);
-      expect(addCalendarEvent).toHaveBeenCalledWith(
+      // Assert
+      expect(result).toEqual(sampleEvents.meeting);
+      expect(mockRepository.addCalendarEvent).toHaveBeenCalledWith(
         expect.objectContaining({
           id: 'temp',
           title,
@@ -71,81 +65,97 @@ describe('Calendar Manager', () => {
     });
 
     it('should throw error for invalid date parameters', async () => {
+      // Arrange
       const title = 'Team Meeting';
       const startDate = 'invalid-date';
       const endDate = new Date('2025-02-12T11:00:00.000Z');
 
-      await expect(createNewCalendarEvent(title, startDate, endDate)).rejects.toThrow(
-        'Failed to create calendar event: Invalid start date',
-      );
+      // Act & Assert
+      await expect(
+        calendarManager.createNewCalendarEvent(title, startDate, endDate),
+      ).rejects.toThrow('Failed to create calendar event: Invalid start date');
     });
 
     it('should throw error when repository fails', async () => {
+      // Arrange
       const title = 'Team Meeting';
       const startDate = new Date('2025-02-12T10:00:00.000Z');
       const endDate = new Date('2025-02-12T11:00:00.000Z');
 
-      addCalendarEvent.mockRejectedValue(new Error('Calendar permission not granted'));
-
-      await expect(createNewCalendarEvent(title, startDate, endDate)).rejects.toThrow(
-        'Failed to create calendar event: Calendar permission not granted',
+      mockRepository.addCalendarEvent.mockRejectedValueOnce(
+        new Error('Calendar permission not granted'),
       );
+
+      // Act & Assert
+      await expect(
+        calendarManager.createNewCalendarEvent(title, startDate, endDate),
+      ).rejects.toThrow('Failed to create calendar event: Calendar permission not granted');
     });
   });
 
   describe('Calendar Event Retrieval', () => {
     it('should fetch weekly calendar events from repository', async () => {
-      const mockEvents = [
-        new CalendarEvent({
-          id: '1',
-          title: 'Meeting',
-          startDate: new Date('2025-02-12T10:00:00.000Z'),
-          endDate: new Date('2025-02-12T11:00:00.000Z'),
-        }),
-      ];
+      // Arrange
+      mockRepository.getStoredCalendarEvents.mockResolvedValueOnce([sampleEvents.meeting]);
 
-      getStoredCalendarEvents.mockResolvedValue(mockEvents);
+      // Act
+      const events = await calendarManager.getWeeklyCalendarEvents();
 
-      const events = await getWeeklyCalendarEvents();
-
+      // Assert
       const expectedStartDate = startOfWeek(new Date(MOCK_DATE), { weekStartsOn: 1 });
       const expectedEndDate = endOfWeek(new Date(MOCK_DATE), { weekStartsOn: 1 });
 
-      expect(getStoredCalendarEvents).toHaveBeenCalledWith(expectedStartDate, expectedEndDate);
-      expect(events).toEqual(mockEvents);
+      expect(mockRepository.getStoredCalendarEvents).toHaveBeenCalledWith(
+        expectedStartDate,
+        expectedEndDate,
+      );
+      expect(events).toEqual([sampleEvents.meeting]);
     });
 
     it('should throw error when repository fails', async () => {
-      getStoredCalendarEvents.mockRejectedValue(new Error('Calendar permission not granted'));
+      // Arrange
+      mockRepository.getStoredCalendarEvents.mockRejectedValueOnce(
+        new Error('Calendar permission not granted'),
+      );
 
-      await expect(getWeeklyCalendarEvents()).rejects.toThrow(
+      // Act & Assert
+      await expect(calendarManager.getWeeklyCalendarEvents()).rejects.toThrow(
         'Failed to get weekly calendar events: Calendar permission not granted',
       );
     });
 
     it('should throw error when repository fails with network error', async () => {
-      getStoredCalendarEvents.mockRejectedValue(new Error('Network error'));
+      // Arrange
+      mockRepository.getStoredCalendarEvents.mockRejectedValueOnce(new Error('Network error'));
 
-      await expect(getWeeklyCalendarEvents()).rejects.toThrow(
+      // Act & Assert
+      await expect(calendarManager.getWeeklyCalendarEvents()).rejects.toThrow(
         'Failed to get weekly calendar events: Network error',
       );
     });
 
     it('should pass correct date range to repository', async () => {
-      getStoredCalendarEvents.mockResolvedValue([]);
+      // Arrange
+      mockRepository.getStoredCalendarEvents.mockResolvedValueOnce([]);
 
-      await getWeeklyCalendarEvents();
+      // Act
+      await calendarManager.getWeeklyCalendarEvents();
 
+      // Assert
       const expectedStartDate = startOfWeek(MOCK_DATE, { weekStartsOn: 1 });
       const expectedEndDate = endOfWeek(MOCK_DATE, { weekStartsOn: 1 });
 
-      expect(getStoredCalendarEvents).toHaveBeenCalledWith(expect.any(Date), expect.any(Date));
-      expect(getStoredCalendarEvents.mock.calls[0][0].toISOString()).toBe(
-        expectedStartDate.toISOString(),
+      expect(mockRepository.getStoredCalendarEvents).toHaveBeenCalledWith(
+        expect.any(Date),
+        expect.any(Date),
       );
-      expect(getStoredCalendarEvents.mock.calls[0][1].toISOString()).toBe(
-        expectedEndDate.toISOString(),
-      );
+
+      // Verify date parameters match expected values
+      const actualStartDate = mockRepository.getStoredCalendarEvents.mock.calls[0][0];
+      const actualEndDate = mockRepository.getStoredCalendarEvents.mock.calls[0][1];
+
+      expect(actualStartDate.toISOString()).toBe(expectedStartDate.toISOString());
+      expect(actualEndDate.toISOString()).toBe(expectedEndDate.toISOString());
     });
   });
 });
