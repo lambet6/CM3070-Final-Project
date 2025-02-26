@@ -129,5 +129,4 @@ export const createCalendarRepository = (calendarApi = Calendar) => {
   };
 };
 
-// Export a default instance for backward compatibility
 export const calendarRepository = createCalendarRepository();
