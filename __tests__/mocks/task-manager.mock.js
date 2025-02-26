@@ -7,7 +7,7 @@ import { createGroupedTaskSets } from '../fixtures/task-fixtures';
  * @returns {Object} Mock task manager with all required methods
  */
 export const createMockTaskManager = (
-  initialTaskSets = createGroupedTaskSets().empty,
+  initialTaskSets = createGroupedTaskSets(),
   customImplementations = {},
 ) => {
   // Default implementations

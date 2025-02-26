@@ -5,7 +5,7 @@ import { isSameDay, isWithinInterval, startOfWeek, endOfWeek } from 'date-fns';
 
 /**
  * Creates a task store with the provided task manager
- * @param {Object} customTaskManager - Optional custom task manager to use for dependency injection
+ * @param {Object} customTaskManager - Custom task manager to use for dependency injection
  * @returns {Function} Zustand store hook
  */
 export const createTaskStore = (customTaskManager = null) => {

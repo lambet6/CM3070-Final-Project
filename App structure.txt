@@ -1,71 +1,96 @@
 /FirstImplementation
-├── /screens                    # UI Screens
-│   ├── TaskScreen.js
-│   ├── CalendarScreen.js 
-│   ├── WellbeingScreen.js
-│   └── GoalsScreen.js
+├── /assets
+│   ├── adaptive-icon.png
+│   ├── favicon.png
+│   ├── icon.png
+│   └── splash-icon.png
 │
-├── /components                # Reusable Components
-│   ├── TaskModal.js
-│   ├── GoalModal.js
-│   ├── MoodChart.js
-│   └── CalendarView.js
+├── /components
+│   ├── GoalItem.js
+│   └── TaskModal.js
 │
-├── /navigation               # Navigation Setup
-│   └── RootNavigator.js     # Tab navigation configuration
-│
-├── /store                    # Zustand State Management
-│   ├── taskStore.js
-│   ├── wellbeingStore.js
-│   ├── calendarStore.js
-│   └── goalStore.js
-│
-├── /managers                 # Business Logic
-│   ├── task-manager.js
-│   ├── calendar-manager.js
-│   ├── wellbeing-manager.js
-│   └── goal-manager.js
-│
-├── /repositories            # Data Layer
-│   ├── task-repository.js
-│   ├── calendar-repository.js
-│   ├── wellbeing-repository.js
-│   └── goal-repository.js
-│
-├── /domain                  # Domain Models
-│   ├── Task.js
+├── /domain
 │   ├── CalendarEvent.js
 │   ├── Goal.js
-│   └── MoodEntry.js
+│   ├── Mood.js
+│   └── Task.js
 │
-├── /__tests__              # Tests
+├── /managers
+│   ├── calendar-manager.js
+│   ├── goals-manager.js
+│   ├── task-manager.js
+│   └── wellbeing-manager.js
+│
+├── /navigation
+│   └── RootNavigator.js
+│
+├── /repositories
+│   ├── calendar-repository.js
+│   ├── goals-repository.js
+│   ├── task-repository.js
+│   └── wellbeing-repository.js
+│
+├── /screens
+│   ├── CalendarScreen.js
+│   ├── GoalsScreen.js
+│   ├── TaskScreen.js
+│   └── WellbeingScreen.js
+│
+├── /store
+│   ├── calendarStore.js
+│   ├── goalsStore.js
+│   ├── taskStore.js
+│   └── wellbeingStore.js
+│
+├── /__tests__
+│   ├── /fixtures
+│   │   ├── calendar-fixtures.js
+│   │   └── task-fixtures.js
+│   ├── /mocks
+│   │   ├── calendar-repository.mock.js
+│   │   ├── task-manager.mock.js
+│   │   └── task-repository.mock.js
+│   ├── /integration
+│   │   └── Navigation-test.js
 │   ├── /unit
-│   │   ├── /tasks
-│   │   │   ├── task-manager-test.js
-│   │   │   ├── taskStore-test.js
-│   │   │   ├── taskScreen-test.js
-│   │   │   └── task-repository-test.js
 │   │   ├── /calendar
 │   │   │   ├── calendar-manager-test.js
-│   │   │   ├── calendarStore-test.js
+│   │   │   ├── calendar-repository-test.js
 │   │   │   ├── calendarScreen-test.js
-│   │   │   └── calendar-repository-test.js
-│   │   ├── /wellbeing
-│   │   │   ├── wellbeing-manager-test.js
-│   │   │   ├── wellbeingStore-test.js
-│   │   │   ├── wellbeingScreen-test.js
-│   │   │   └── wellbeing-repository-test.js
-│   │   └── /goals
-│   │       ├── goals-manager-test.js
-│   │       ├── goalsStore-test.js
-│   │       ├── goalsScreen-test.js
-│   │       └── goals-repository-test.js
-│   └── /integration
-│       └── Navigation-test.js
+│   │   │   └── calendarStore-test.js
+│   │   ├── /goals
+│   │   │   ├── goals-manager-test.js
+│   │   │   ├── goals-repository-test.js
+│   │   │   ├── goalsScreen-test.js
+│   │   │   └── goalsStore-test.js
+│   │   ├── /task
+│   │   │   ├── task-manager-test.js
+│   │   │   ├── task-repository-test.js
+│   │   │   ├── taskScreen-test.js
+│   │   │   └── taskStore-test.js
+│   │   └── /wellbeing
+│   │       ├── wellbeing-manager-test.js
+│   │       ├── wellbeing-repository-test.js
+│   │       ├── wellbeingScreen-test.js
+│   │       └── wellbeingStore-test.js
+│   └── /utils
+│       └── test-utils.js
 │
-├── App.js                  # Root Component
-├── index.js               # Entry Point
-├── package.json           # Dependencies
-├── babel.config.js        # Babel Config
-├── jest.config.js         # Test Config
-└── README.md             # Documentation
+├── /utilities
+│   └── constants.js
+│
+├── .eslintignore
+├── .eslintrc.js
+├── .gitignore
+├── .prettierrc
+├── App.js
+├── App structure.txt
+├── BOM.md
+├── CONVENTIONS.md
+├── REQUIREMENTS.md
+├── USER_STORIES.md
+├── app.json
+├── index.js
+├── jestSetup.js
+├── package-lock.json
+└── package.json

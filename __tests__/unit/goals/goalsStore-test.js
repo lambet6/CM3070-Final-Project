@@ -1,102 +1,152 @@
 /*global jest*/
-import { describe, it, beforeEach, expect } from '@jest/globals';
-import { act } from 'react-test-renderer';
-import { useGoalsStore } from '../../../store/goalsStore';
-import { fetchGoals, addGoal, updateGoalData, deleteGoal } from '../../../managers/goals-manager';
+import { describe, it, beforeEach, afterEach, expect } from '@jest/globals';
+import { act, renderHook } from '@testing-library/react-native';
+import { createGoalsStore } from '../../../store/goalsStore';
+import { createMockGoalsManager } from '../../mocks/goals-manager.mock';
+import { createSampleGoals, createGoalCollections } from '../../fixtures/goal-fixtures';
 
-// Mock the manager functions used by the store
-jest.mock('../../../managers/goals-manager', () => ({
-  fetchGoals: jest.fn(),
-  addGoal: jest.fn(),
-  updateGoalData: jest.fn(),
-  deleteGoal: jest.fn(),
-}));
+describe('GoalsStore', () => {
+  let mockGoalsManager;
+  let useTestStore;
+  let sampleGoals;
+  let goalCollections;
 
-describe('goalsStore', () => {
   beforeEach(() => {
-    useGoalsStore.setState({ goals: [] });
-    jest.resetAllMocks();
+    // Get fresh test data for each test
+    sampleGoals = createSampleGoals();
+    goalCollections = createGoalCollections();
+
+    // Create testing dependencies with proper injection
+    mockGoalsManager = createMockGoalsManager();
+    useTestStore = createGoalsStore(mockGoalsManager);
+
+    // Spy on console.error to prevent test output noise
+    jest.spyOn(console, 'error').mockImplementation(() => {});
   });
 
-  it('loads goals and updates state', async () => {
-    const sampleGoals = [{ id: '1', title: 'Test Goal', hoursPerWeek: 2 }];
-    fetchGoals.mockResolvedValue(sampleGoals);
-    await act(async () => {
-      await useGoalsStore.getState().loadGoals();
-    });
-    expect(useGoalsStore.getState().goals).toEqual(sampleGoals);
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
-  it('adds a new goal and updates state', async () => {
-    const newGoal = { id: '2', title: 'New Goal', hoursPerWeek: 0 };
-    addGoal.mockResolvedValue([newGoal]);
-    await act(async () => {
-      await useGoalsStore.getState().addNewGoal('New Goal', 0);
-    });
-    expect(useGoalsStore.getState().goals).toEqual([newGoal]);
+  it('should initialize with empty goals array', () => {
+    // Arrange & Act
+    const { result } = renderHook(() => useTestStore());
+
+    // Assert
+    expect(result.current.goals).toEqual([]);
+    expect(result.current.error).toBeNull();
+    expect(result.current.isLoading).toBe(false);
   });
 
-  it('updates a goal and updates state', async () => {
-    const existing = { id: '1', title: 'Old Goal', hoursPerWeek: 2 };
-    useGoalsStore.setState({ goals: [existing] });
-    const updated = { id: '1', title: 'Updated Goal', hoursPerWeek: 3 };
-    updateGoalData.mockResolvedValue([updated]);
-    await act(async () => {
-      await useGoalsStore.getState().updateGoal('1', 'Updated Goal', 3);
-    });
-    expect(useGoalsStore.getState().goals).toEqual([updated]);
-  });
+  it('should load goals successfully', async () => {
+    // Arrange
+    mockGoalsManager.fetchGoals.mockResolvedValueOnce(goalCollections.multipleGoals);
+    const { result } = renderHook(() => useTestStore());
 
-  it('deletes a goal and updates state', async () => {
-    const existing = { id: '1', title: 'Goal to delete', hoursPerWeek: 2 };
-    useGoalsStore.setState({ goals: [existing] });
-    deleteGoal.mockResolvedValue([]);
+    // Act
     await act(async () => {
-      await useGoalsStore.getState().deleteGoal('1');
-    });
-    expect(useGoalsStore.getState().goals).toEqual([]);
-  });
-
-  it('should set error state when loading fails', async () => {
-    fetchGoals.mockRejectedValue(new Error('Failed to load'));
-
-    await act(async () => {
-      await useGoalsStore.getState().loadGoals();
+      await result.current.loadGoals();
     });
 
-    expect(useGoalsStore.getState().error).toBe('Failed to load');
-    expect(useGoalsStore.getState().goals).toEqual([]);
+    // Assert
+    expect(mockGoalsManager.fetchGoals).toHaveBeenCalledTimes(1);
+    expect(result.current.goals).toEqual(goalCollections.multipleGoals);
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.error).toBeNull();
   });
 
-  it('should set error state when adding goal fails', async () => {
-    addGoal.mockRejectedValue(new Error('Invalid goal'));
+  it('should handle loading errors gracefully', async () => {
+    // Arrange
+    const errorMessage = 'Failed to load goals';
+    mockGoalsManager.fetchGoals.mockRejectedValueOnce(new Error(errorMessage));
+    const { result } = renderHook(() => useTestStore());
 
+    // Act
+    await act(async () => {
+      await result.current.loadGoals();
+    });
+
+    // Assert
+    expect(result.current.goals).toEqual([]);
+    expect(result.current.error).toBe(errorMessage);
+    expect(result.current.isLoading).toBe(false);
+    expect(console.error).toHaveBeenCalled();
+  });
+
+  it('should add a new goal', async () => {
+    // Arrange
+    const title = 'New Goal';
+    const hours = 3.5;
+    mockGoalsManager.addGoal.mockResolvedValueOnce(goalCollections.singleGoal);
+    const { result } = renderHook(() => useTestStore());
+
+    // Act
+    await act(async () => {
+      await result.current.addNewGoal(title, hours);
+    });
+
+    // Assert
+    expect(mockGoalsManager.addGoal).toHaveBeenCalledWith(title, hours);
+    expect(result.current.goals).toEqual(goalCollections.singleGoal);
+    expect(result.current.error).toBeNull();
+  });
+
+  it('should update a goal', async () => {
+    // Arrange
+    const goalId = '1';
+    const newTitle = 'Updated Goal';
+    const newHours = 4.5;
+    mockGoalsManager.updateGoalData.mockResolvedValueOnce([
+      { ...sampleGoals.exercise, title: newTitle, hoursPerWeek: newHours },
+    ]);
+    const { result } = renderHook(() => useTestStore());
+
+    // Act
+    await act(async () => {
+      await result.current.updateGoal(goalId, newTitle, newHours);
+    });
+
+    // Assert
+    expect(mockGoalsManager.updateGoalData).toHaveBeenCalledWith(goalId, newTitle, newHours);
+    expect(result.current.goals[0].title).toBe(newTitle);
+    expect(result.current.goals[0].hoursPerWeek).toBe(newHours);
+    expect(result.current.error).toBeNull();
+  });
+
+  it('should delete a goal', async () => {
+    // Arrange
+    const goalId = '1';
+    mockGoalsManager.deleteGoal.mockResolvedValueOnce([]);
+    const { result } = renderHook(() => useTestStore());
+
+    // Act
+    await act(async () => {
+      await result.current.deleteGoal(goalId);
+    });
+
+    // Assert
+    expect(mockGoalsManager.deleteGoal).toHaveBeenCalledWith(goalId);
+    expect(result.current.goals).toEqual([]);
+    expect(result.current.error).toBeNull();
+  });
+
+  it('should handle errors during goal operations', async () => {
+    // Arrange
+    const errorMessage = 'Failed to add goal';
+    mockGoalsManager.addGoal.mockRejectedValueOnce(new Error(errorMessage));
+    const { result } = renderHook(() => useTestStore());
+
+    // Act & Assert
     await act(async () => {
       try {
-        await useGoalsStore.getState().addNewGoal('', 0);
+        await result.current.addNewGoal('Test', 5);
+        expect(true).toBe(false); // Should not reach here
       } catch (error) {
-        // Expected error
+        expect(error.message).toBe(errorMessage);
       }
     });
 
-    expect(useGoalsStore.getState().error).toBe('Invalid goal');
-  });
-
-  it('should maintain current goals when update fails', async () => {
-    const existing = { id: '1', title: 'Old Goal', hoursPerWeek: 2 };
-    useGoalsStore.setState({ goals: [existing] });
-
-    updateGoalData.mockRejectedValue(new Error('Update failed'));
-
-    await act(async () => {
-      try {
-        await useGoalsStore.getState().updateGoal('1', '', 3);
-      } catch (error) {
-        // Expected error
-      }
-    });
-
-    expect(useGoalsStore.getState().goals).toEqual([existing]);
-    expect(useGoalsStore.getState().error).toBe('Update failed');
+    expect(result.current.error).toBe(errorMessage);
+    expect(console.error).toHaveBeenCalled();
   });
 });

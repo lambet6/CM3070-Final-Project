@@ -21,73 +21,93 @@ This document outlines the coding standards, naming conventions, test coverage g
 Our canonical folder structure is:
 
     /FirstImplementation
-    ├── /screens                   # Screen Components
-    │   ├── TaskScreen.js
-    │   ├── CalendarScreen.js
-    │   ├── WellbeingScreen.js
-    │   └── GoalsScreen.js
+    ├── /assets                    # App Icons and Images
+    │   ├── adaptive-icon.png
+    │   ├── favicon.png
+    │   ├── icon.png
+    │   └── splash-icon.png
     │
-    ├── /components                # Reusable Components
-    │   ├── TaskModal.js
-    │   └── GoalItem.js
+    ├── /components               # Reusable Components
+    │   ├── GoalItem.js
+    │   └── TaskModal.js
     │
-    ├── /navigation                # Navigation Setup
-    │   └── RootNavigator.js
-    │
-    ├── /store                     # Zustand State Management
-    │   ├── taskStore.js
-    │   ├── wellbeingStore.js
-    │   ├── calendarStore.js
-    │   └── goalStore.js
-    │
-    ├── /managers                  # Business/Domain Logic (kebab-case)
-    │   ├── task-manager.js
-    │   ├── calendar-manager.js
-    │   ├── wellbeing-manager.js
-    │   └── goal-manager.js
-    │
-    ├── /repositories              # Data Layer (kebab-case)
-    │   ├── task-repository.js
-    │   ├── calendar-repository.js
-    │   ├── wellbeing-repository.js
-    │   └── goal-repository.js
-    │
-    ├── /domain                    # Domain Models (PascalCase)
-    │   ├── Task.js
+    ├── /domain                   # Domain Models (PascalCase)
     │   ├── CalendarEvent.js
     │   ├── Goal.js
-    │   └── MoodEntry.js
+    │   ├── Mood.js
+    │   └── Task.js
+    │
+    ├── /managers                 # Business/Domain Logic (kebab-case)
+    │   ├── calendar-manager.js
+    │   ├── goals-manager.js
+    │   ├── task-manager.js
+    │   └── wellbeing-manager.js
+    │
+    ├── /navigation              # Navigation Setup
+    │   └── RootNavigator.js
+    │
+    ├── /repositories            # Data Layer (kebab-case)
+    │   ├── calendar-repository.js
+    │   ├── goals-repository.js
+    │   ├── task-repository.js
+    │   └── wellbeing-repository.js
+    │
+    ├── /screens                 # Screen Components
+    │   ├── CalendarScreen.js
+    │   ├── GoalsScreen.js
+    │   ├── TaskScreen.js
+    │   └── WellbeingScreen.js
+    │
+    ├── /store                   # Zustand State Management
+    │   ├── calendarStore.js
+    │   ├── goalsStore.js
+    │   ├── taskStore.js
+    │   └── wellbeingStore.js
     │
     ├── /__tests__              # Test Files
-    │   ├── /unit
-    │   │   ├── /tasks
-    │   │   │   ├── task-manager-test.js
-    │   │   │   ├── taskStore-test.js
-    │   │   │   ├── taskScreen-test.js
-    │   │   │   └── task-repository-test.js
+    │   ├── /fixtures           # Test Data
+    │   │   ├── calendar-fixtures.js
+    │   │   └── task-fixtures.js
+    │   ├── /mocks             # Mock Implementations
+    │   │   ├── calendar-repository.mock.js
+    │   │   ├── task-manager.mock.js
+    │   │   └── task-repository.mock.js
+    │   ├── /integration       # Integration Tests
+    │   │   └── Navigation-test.js
+    │   ├── /unit             # Unit Tests by Feature
     │   │   ├── /calendar
     │   │   │   ├── calendar-manager-test.js
-    │   │   │   ├── calendarStore-test.js
+    │   │   │   ├── calendar-repository-test.js
     │   │   │   ├── calendarScreen-test.js
-    │   │   │   └── calendar-repository-test.js
-    │   │   ├── /wellbeing
-    │   │   │   ├── wellbeing-manager-test.js
-    │   │   │   ├── wellbeingStore-test.js
-    │   │   │   ├── wellbeingScreen-test.js
-    │   │   │   └── wellbeing-repository-test.js
-    │   │   └── /goals
-    │   │       ├── goals-manager-test.js
-    │   │       ├── goalsStore-test.js
-    │   │       ├── goalsScreen-test.js
-    │   │       └── goals-repository-test.js
-    │   └── /integration
-    │       └── Navigation-test.js
+    │   │   │   └── calendarStore-test.js
+    │   │   ├── /goals
+    │   │   │   ├── goals-manager-test.js
+    │   │   │   ├── goals-repository-test.js
+    │   │   │   ├── goalsScreen-test.js
+    │   │   │   └── goalsStore-test.js
+    │   │   ├── /task
+    │   │   │   ├── task-manager-test.js
+    │   │   │   ├── task-repository-test.js
+    │   │   │   ├── taskScreen-test.js
+    │   │   │   └── taskStore-test.js
+    │   │   └── /wellbeing
+    │   │       ├── wellbeing-manager-test.js
+    │   │       ├── wellbeing-repository-test.js
+    │   │       ├── wellbeingScreen-test.js
+    │   │       └── wellbeingStore-test.js
+    │   └── /utils            # Test Utilities
+    │       └── test-utils.js
     │
-    ├── App.js
-    ├── index.js
-    ├── package.json
-    ├── babel.config.js
-    └── jest.config.js
+    ├── /utilities           # Utility Functions and Constants
+    │   └── constants.js
+    │
+    ├── App.js              # Root Component
+    ├── index.js            # Entry Point
+    ├── app.json            # Expo Configuration
+    ├── package.json        # Dependencies and Scripts
+    ├── .eslintrc.js       # ESLint Configuration
+    ├── .prettierrc        # Prettier Configuration
+    └── jestSetup.js       # Jest Configuration
 
 **Guidelines**:
 

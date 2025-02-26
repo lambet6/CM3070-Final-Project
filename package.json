@@ -48,6 +48,12 @@
     ],
     "setupFiles": [
       "./jestSetup.js"
+    ],
+    "testPathIgnorePatterns": [
+      "/node_modules/",
+      "/__tests__/fixtures/",
+      "/__tests__/mocks/",
+      "/__tests__/utils/"
     ]
   },
   "private": true

@@ -1,30 +1,37 @@
 /*global jest*/
 import { describe, it, beforeEach, expect } from '@jest/globals';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {
-  getGoalsFromRepo,
-  saveGoalsToRepo,
-  GOALS_KEY,
-} from '../../../repositories/goals-repository';
+import { createGoalsRepository, GOALS_KEY } from '../../../repositories/goals-repository';
 import { Goal } from '../../../domain/Goal';
 
-describe('goals-repository', () => {
+describe('Goals Repository', () => {
+  let goalsRepository;
+
   beforeEach(async () => {
     await AsyncStorage.clear();
     jest.clearAllMocks();
+
+    // Create a fresh repository instance for each test
+    goalsRepository = createGoalsRepository();
   });
 
-  it('getGoalsFromRepo returns empty array if nothing stored', async () => {
-    const goals = await getGoalsFromRepo();
+  it('returns empty array if nothing stored', async () => {
+    // Act
+    const goals = await goalsRepository.getGoals();
+
+    // Assert
     expect(goals).toEqual([]);
   });
 
-  it('getGoalsFromRepo returns properly instantiated Goal objects', async () => {
+  it('returns properly instantiated Goal objects', async () => {
+    // Arrange
     const sampleGoalData = { id: '1', title: 'Test Goal', hoursPerWeek: 5 };
     await AsyncStorage.setItem(GOALS_KEY, JSON.stringify([sampleGoalData]));
 
-    const goals = await getGoalsFromRepo();
+    // Act
+    const goals = await goalsRepository.getGoals();
 
+    // Assert
     expect(goals.length).toBe(1);
     expect(goals[0]).toBeInstanceOf(Goal);
     expect(goals[0].id).toBe(sampleGoalData.id);
@@ -32,10 +39,14 @@ describe('goals-repository', () => {
     expect(goals[0].hoursPerWeek).toBe(sampleGoalData.hoursPerWeek);
   });
 
-  it('saveGoalsToRepo stores goals correctly and maintains only necessary properties', async () => {
+  it('stores goals correctly and maintains only necessary properties', async () => {
+    // Arrange
     const goal = new Goal({ id: '1', title: 'Test Goal', hoursPerWeek: 5 });
-    await saveGoalsToRepo([goal]);
 
+    // Act
+    await goalsRepository.saveGoals([goal]);
+
+    // Assert
     const stored = await AsyncStorage.getItem(GOALS_KEY);
     const parsedStored = JSON.parse(stored);
 
@@ -48,27 +59,71 @@ describe('goals-repository', () => {
     ]);
   });
 
-  it('getGoalsFromRepo handles invalid data by skipping invalid goals', async () => {
+  it('handles invalid data by skipping invalid goals', async () => {
+    // Arrange
     const invalidData = [
       { id: '1', title: null, hoursPerWeek: 5 },
       { id: '2', title: 'Valid Goal', hoursPerWeek: 10 },
     ];
     await AsyncStorage.setItem(GOALS_KEY, JSON.stringify(invalidData));
 
-    const goals = await getGoalsFromRepo();
+    // Act
+    const goals = await goalsRepository.getGoals();
 
+    // Assert
     expect(goals.length).toBe(1);
     expect(goals[0].id).toBe('2');
   });
 
-  it('should throw error when storage operations fail', async () => {
-    // Test fetch failure
-    jest.spyOn(AsyncStorage, 'getItem').mockRejectedValue(new Error('Storage error'));
-    await expect(getGoalsFromRepo()).rejects.toThrow('Failed to fetch goals: Storage error');
+  it('throws error when storage operations fail', async () => {
+    // Arrange - Mock storage with errors
+    const mockErrorStorage = {
+      getItem: jest.fn().mockRejectedValue(new Error('Storage error')),
+      setItem: jest.fn().mockRejectedValue(new Error('Storage error')),
+    };
 
-    // Test save failure
-    jest.spyOn(AsyncStorage, 'setItem').mockRejectedValue(new Error('Storage error'));
+    // Create repository with error-generating storage
+    const errorRepository = createGoalsRepository(mockErrorStorage);
+
+    // Act & Assert - Test fetch failure
+    await expect(errorRepository.getGoals()).rejects.toThrow(
+      'Failed to fetch goals: Storage error',
+    );
+
+    // Act & Assert - Test save failure
     const goal = new Goal({ id: '1', title: 'Test Goal', hoursPerWeek: 5 });
-    await expect(saveGoalsToRepo([goal])).rejects.toThrow('Failed to save goals: Storage error');
+    await expect(errorRepository.saveGoals([goal])).rejects.toThrow(
+      'Failed to save goals: Storage error',
+    );
+  });
+
+  it('works with a custom storage implementation', async () => {
+    // Arrange - Create an in-memory mock storage
+    let storedData = null;
+    const mockStorage = {
+      getItem: jest.fn().mockImplementation(() => Promise.resolve(storedData)),
+      setItem: jest.fn().mockImplementation((key, value) => {
+        storedData = value;
+        return Promise.resolve();
+      }),
+    };
+
+    // Create repository with custom storage
+    const customRepository = createGoalsRepository(mockStorage);
+
+    // Act - Save data
+    const goal = new Goal({ id: '1', title: 'Custom Storage Goal', hoursPerWeek: 7 });
+    await customRepository.saveGoals([goal]);
+
+    // Assert - Mock methods were called
+    expect(mockStorage.setItem).toHaveBeenCalledWith(GOALS_KEY, expect.any(String));
+
+    // Act - Retrieve data
+    const retrievedGoals = await customRepository.getGoals();
+
+    // Assert - Data was correctly retrieved
+    expect(retrievedGoals.length).toBe(1);
+    expect(retrievedGoals[0].title).toBe('Custom Storage Goal');
+    expect(mockStorage.getItem).toHaveBeenCalledWith(GOALS_KEY);
   });
 });
