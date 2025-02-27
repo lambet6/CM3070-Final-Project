@@ -37,6 +37,9 @@ describe('Calendar Manager', () => {
       }
     };
     global.Date = MockDate;
+
+    // Spy on console.error to prevent test output noise
+    jest.spyOn(console, 'error').mockImplementation(() => {});
   });
 
   afterEach(() => {

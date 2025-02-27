@@ -21,6 +21,9 @@ describe('Goals Manager', () => {
     mockRepository = createGoalsRepository();
     goalsManager = createGoalsManager(mockRepository);
 
+    // Spy on console.error to prevent test output noise
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+
     // Clear all mocks before each test
     jest.clearAllMocks();
   });

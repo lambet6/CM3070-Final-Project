@@ -31,6 +31,9 @@ describe('TaskScreen', () => {
       toggleCompleteTask: mockToggleCompleteTask,
       error: null,
     });
+
+    // Spy on console.error to prevent test output noise
+    jest.spyOn(console, 'error').mockImplementation(() => {});
   });
 
   describe('Task Display', () => {

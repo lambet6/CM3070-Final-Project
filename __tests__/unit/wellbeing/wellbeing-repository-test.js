@@ -20,6 +20,9 @@ describe('wellbeing-repository', () => {
     // Create fresh repository and fixtures for each test
     wellbeingRepository = createWellbeingRepository();
     moods = createSampleMoods();
+
+    // Spy on console.error to prevent test output noise
+    jest.spyOn(console, 'error').mockImplementation(() => {});
   });
 
   it('getMoodData returns empty array if no data exists', async () => {

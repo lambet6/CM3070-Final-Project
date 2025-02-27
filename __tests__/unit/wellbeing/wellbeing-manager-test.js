@@ -18,6 +18,9 @@ describe('wellbeing-manager', () => {
     moods = createSampleMoods();
     mockRepository = createWellbeingRepository();
     wellbeingManager = createWellbeingManager(mockRepository);
+
+    // Spy on console.error to prevent test output noise
+    jest.spyOn(console, 'error').mockImplementation(() => {});
   });
 
   it('getMoodData returns array of Mood objects', async () => {

@@ -31,6 +31,9 @@ describe('Calendar Repository', () => {
 
     // Create repository with mock calendar API
     calendarRepository = createCalendarRepository(mockCalendarApi);
+
+    // Spy on console.error to prevent test output noise
+    jest.spyOn(console, 'error').mockImplementation(() => {});
   });
 
   describe('Calendar Event Retrieval', () => {

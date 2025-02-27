@@ -19,6 +19,9 @@ describe('Task Repository', () => {
 
     // Create a fresh repository for each test
     taskRepository = createTaskRepository();
+
+    // Spy on console.error to prevent test output noise
+    jest.spyOn(console, 'error').mockImplementation(() => {});
   });
 
   it('loads tasks from storage', async () => {

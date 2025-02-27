@@ -21,6 +21,9 @@ describe('wellbeingStore', () => {
     // Create mock manager and store for each test
     mockManager = createWellbeingManager();
     wellbeingStore = createWellbeingStore(mockManager);
+
+    // Spy on console.error to prevent test output noise
+    jest.spyOn(console, 'error').mockImplementation(() => {});
   });
 
   it('loads mood data and updates state', async () => {

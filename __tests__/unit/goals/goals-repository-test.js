@@ -13,6 +13,9 @@ describe('Goals Repository', () => {
 
     // Create a fresh repository instance for each test
     goalsRepository = createGoalsRepository();
+
+    // Spy on console.error to prevent test output noise
+    jest.spyOn(console, 'error').mockImplementation(() => {});
   });
 
   it('returns empty array if nothing stored', async () => {
