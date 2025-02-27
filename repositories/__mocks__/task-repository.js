@@ -5,7 +5,7 @@
  * @param {Object} initialData - Optional data to initialize the mock repository
  * @returns {Object} Mock repository with getTasks and saveTasks functions
  */
-export const createMockTaskRepository = (initialData = []) => {
+export const createTaskRepository = (initialData = []) => {
   // In-memory data store for the mock
   let tasksData = [...initialData];
 
@@ -22,3 +22,5 @@ export const createMockTaskRepository = (initialData = []) => {
     }),
   };
 };
+
+export const TASKS_KEY = 'mock-tasks-key';

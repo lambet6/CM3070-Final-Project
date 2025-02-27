@@ -5,7 +5,7 @@
  * @param {Array} initialGoals - Optional initial goals data
  * @returns {Object} Mock repository with goals operations
  */
-export const createMockGoalsRepository = (initialData = []) => {
+export const createGoalsRepository = (initialData = []) => {
   // In-memory data store for the mock
   let goalsData = [...initialData];
 
@@ -22,3 +22,5 @@ export const createMockGoalsRepository = (initialData = []) => {
     }),
   };
 };
+
+export const GOALS_KEY = 'mock-goals-key';

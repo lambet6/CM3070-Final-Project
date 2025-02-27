@@ -1,8 +1,11 @@
 /*global jest*/
 import { describe, it, beforeEach, afterEach, expect } from '@jest/globals';
 import { createTaskManager } from '../../../managers/task-manager';
-import { createMockTaskRepository } from '../../mocks/task-repository.mock';
 import { createSampleTasks } from '../../fixtures/task-fixtures';
+import { createTaskRepository } from '../../../repositories/task-repository';
+
+// Automatically mock the repository
+jest.mock('../../../repositories/task-repository');
 
 describe('Task Manager', () => {
   const MOCK_TIMESTAMP = 1234567890;
@@ -15,7 +18,7 @@ describe('Task Manager', () => {
     sampleTasks = createSampleTasks();
 
     // Setup a mock repository and inject it into the task manager
-    mockRepository = createMockTaskRepository();
+    mockRepository = createTaskRepository();
     taskManager = createTaskManager(mockRepository);
 
     // Mock Date.now for consistent task IDs

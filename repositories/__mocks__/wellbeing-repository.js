@@ -5,7 +5,7 @@
  * @param {Array} initialMoodData - Optional initial mood data
  * @returns {Object} Mock repository with wellbeing operations
  */
-export const createMockWellbeingRepository = (initialData = []) => {
+export const createWellbeingRepository = (initialData = []) => {
   // In-memory data store for the mock
   let moodData = [...initialData];
 
@@ -29,3 +29,5 @@ export const createMockWellbeingRepository = (initialData = []) => {
     }),
   };
 };
+
+export const MOOD_DATA_KEY = 'mock-mood-key';

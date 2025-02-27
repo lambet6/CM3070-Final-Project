@@ -1,9 +1,12 @@
 /*global jest*/
 import { describe, it, beforeEach, expect } from '@jest/globals';
 import { createGoalsManager } from '../../../managers/goals-manager';
-import { createMockGoalsRepository } from '../../mocks/goals-repository.mock';
 import { createSampleGoals } from '../../fixtures/goal-fixtures';
 import { Goal } from '../../../domain/Goal';
+import { createGoalsRepository } from '../../../repositories/goals-repository';
+
+// Automatically mock the repository
+jest.mock('../../../repositories/goals-repository');
 
 describe('Goals Manager', () => {
   let mockRepository;
@@ -15,7 +18,7 @@ describe('Goals Manager', () => {
     sampleGoals = createSampleGoals();
 
     // Create mock repository and inject it into the manager
-    mockRepository = createMockGoalsRepository();
+    mockRepository = createGoalsRepository();
     goalsManager = createGoalsManager(mockRepository);
 
     // Clear all mocks before each test

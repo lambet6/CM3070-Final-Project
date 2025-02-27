@@ -5,7 +5,7 @@
  * @param {Object} initialData - Optional data to initialize the mock repository
  * @returns {Object} Mock repository with calendar operations
  */
-export const createMockCalendarRepository = (initialData = []) => {
+export const createCalendarRepository = (initialData = []) => {
   // In-memory data store for the mock
   let eventsData = [...initialData];
 

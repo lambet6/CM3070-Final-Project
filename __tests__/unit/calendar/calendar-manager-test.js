@@ -1,9 +1,12 @@
 /*global jest*/
 import { describe, it, beforeEach, afterEach, expect } from '@jest/globals';
 import { createCalendarManager } from '../../../managers/calendar-manager';
-import { createMockCalendarRepository } from '../../mocks/calendar-repository.mock';
 import { createSampleCalendarEvents } from '../../fixtures/calendar-fixtures';
 import { startOfWeek, endOfWeek } from 'date-fns';
+import { createCalendarRepository } from '../../../repositories/calendar-repository';
+
+// Automatically mock the repository
+jest.mock('../../../repositories/calendar-repository');
 
 describe('Calendar Manager', () => {
   const MOCK_DATE = new Date('2025-02-12T00:00:00.000Z');
@@ -17,7 +20,7 @@ describe('Calendar Manager', () => {
     // Create fresh test data for each test
     sampleEvents = createSampleCalendarEvents();
     // Setup mock repository and create manager with dependency injection
-    mockRepository = createMockCalendarRepository();
+    mockRepository = createCalendarRepository();
     calendarManager = createCalendarManager(mockRepository);
 
     // Create a class that extends Date for consistent date testing

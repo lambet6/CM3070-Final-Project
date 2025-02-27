@@ -1,8 +1,12 @@
+/*global jest*/
 import { describe, it, beforeEach, expect } from '@jest/globals';
 import { createWellbeingManager } from '../../../managers/wellbeing-manager';
-import { createMockWellbeingRepository } from '../../mocks/wellbeing-repository.mock';
 import { Mood } from '../../../domain/Mood';
 import { createSampleMoods } from '../../fixtures/wellbeing-fixtures';
+import { createWellbeingRepository } from '../../../repositories/wellbeing-repository';
+
+// Automatically mock the repository
+jest.mock('../../../repositories/wellbeing-repository');
 
 describe('wellbeing-manager', () => {
   let mockRepository;
@@ -12,7 +16,7 @@ describe('wellbeing-manager', () => {
   beforeEach(() => {
     // Create fresh mocks and manager for each test
     moods = createSampleMoods();
-    mockRepository = createMockWellbeingRepository();
+    mockRepository = createWellbeingRepository();
     wellbeingManager = createWellbeingManager(mockRepository);
   });
 
