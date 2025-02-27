@@ -1,50 +1,50 @@
-/*global jest*/
 import { describe, it, beforeEach, expect } from '@jest/globals';
-import { getMoodData, saveMood } from '../../../managers/wellbeing-manager';
-import {
-  getMoodDataFromRepo,
-  updateMoodForToday,
-} from '../../../repositories/wellbeing-repository';
+import { createWellbeingManager } from '../../../managers/wellbeing-manager';
+import { createMockWellbeingRepository } from '../../mocks/wellbeing-repository.mock';
 import { Mood } from '../../../domain/Mood';
-
-jest.mock('../../../repositories/wellbeing-repository', () => ({
-  getMoodDataFromRepo: jest.fn(),
-  updateMoodForToday: jest.fn(),
-}));
+import { createSampleMoods } from '../../fixtures/wellbeing-fixtures';
 
 describe('wellbeing-manager', () => {
+  let mockRepository;
+  let wellbeingManager;
+  let moods;
+
   beforeEach(() => {
-    jest.clearAllMocks();
+    // Create fresh mocks and manager for each test
+    moods = createSampleMoods();
+    mockRepository = createMockWellbeingRepository();
+    wellbeingManager = createWellbeingManager(mockRepository);
   });
 
   it('getMoodData returns array of Mood objects', async () => {
-    const mockMood = new Mood({ mood: 'Happy', date: '2024-01-01T00:00:00.000Z' });
-    getMoodDataFromRepo.mockResolvedValue([mockMood]);
+    mockRepository.getMoodData.mockResolvedValue(moods.singleMood);
 
-    const data = await getMoodData();
+    const data = await wellbeingManager.getMoodData();
+
+    expect(mockRepository.getMoodData).toHaveBeenCalled();
     expect(data[0]).toBeInstanceOf(Mood);
     expect(data[0].mood).toBe('Happy');
     expect(data[0].moodValue).toBe(4);
   });
 
   it('saveMood creates and saves new Mood object', async () => {
-    updateMoodForToday.mockResolvedValue();
-    const result = await saveMood('Happy');
+    const result = await wellbeingManager.saveMood('Happy');
 
     expect(result).toBeInstanceOf(Mood);
     expect(result.mood).toBe('Happy');
     expect(result.date).toBeInstanceOf(Date);
-    expect(updateMoodForToday).toHaveBeenCalled();
+    expect(mockRepository.updateMoodForToday).toHaveBeenCalledWith(expect.any(Mood));
   });
 
-  it('should throw error for invalid mood value', async () => {
-    await expect(saveMood('INVALID_MOOD')).rejects.toThrow(
+  it('throws error for invalid mood value', async () => {
+    await expect(wellbeingManager.saveMood('INVALID_MOOD')).rejects.toThrow(
       'Failed to save mood: Invalid mood value',
     );
+    expect(mockRepository.updateMoodForToday).not.toHaveBeenCalled();
   });
 
-  it('should handle repository errors', async () => {
-    getMoodDataFromRepo.mockRejectedValue(new Error('Storage error'));
-    await expect(getMoodData()).rejects.toThrow('Failed to fetch mood data: Storage error');
+  it('handles repository errors', async () => {
+    mockRepository.getMoodData.mockRejectedValue(new Error('Storage error'));
+    await expect(wellbeingManager.getMoodData()).rejects.toThrow('Failed to fetch mood data');
   });
 });

@@ -20,13 +20,5 @@ export const createMockTaskRepository = (initialData = []) => {
       tasksData = [...tasks];
       return Promise.resolve();
     }),
-
-    // Helper to reset the mock data
-    __resetData: (newData = []) => {
-      tasksData = [...newData];
-    },
-
-    // Helper to get the current mock data directly
-    __getData: () => [...tasksData],
   };
 };

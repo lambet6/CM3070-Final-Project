@@ -1,13 +1,11 @@
 /*global jest*/
-import { describe, it, beforeEach, afterEach, expect, fail } from '@jest/globals';
+import { describe, it, beforeEach, afterEach, expect } from '@jest/globals';
 import { act, renderHook } from '@testing-library/react-native';
 import { createCalendarStore } from '../../../store/calendarStore';
-import { createMockCalendarRepository } from '../../mocks/calendar-repository.mock';
-import { createCalendarManager } from '../../../managers/calendar-manager';
+import { createMockCalendarManager } from '../../mocks/calendar-manager.mock';
 import { createSampleCalendarEvents } from '../../fixtures/calendar-fixtures';
 
 describe('Calendar Store', () => {
-  let mockRepository;
   let mockManager;
   let useTestStore;
   let sampleEvents;
@@ -17,8 +15,7 @@ describe('Calendar Store', () => {
     sampleEvents = createSampleCalendarEvents();
 
     // Create testing dependencies with proper injection
-    mockRepository = createMockCalendarRepository();
-    mockManager = createCalendarManager(mockRepository);
+    mockManager = createMockCalendarManager();
     useTestStore = createCalendarStore(mockManager);
 
     // Spy on console.error to prevent test output noise
@@ -41,7 +38,7 @@ describe('Calendar Store', () => {
 
   it('should load weekly calendar events into the store', async () => {
     // Arrange
-    mockRepository.getStoredCalendarEvents.mockResolvedValueOnce([sampleEvents.meeting]);
+    mockManager.getWeeklyCalendarEvents.mockResolvedValueOnce([sampleEvents.meeting]);
     const { result } = renderHook(() => useTestStore());
 
     // Act
@@ -50,7 +47,7 @@ describe('Calendar Store', () => {
     });
 
     // Assert
-    expect(mockRepository.getStoredCalendarEvents).toHaveBeenCalledTimes(1);
+    expect(mockManager.getWeeklyCalendarEvents).toHaveBeenCalledTimes(1);
     expect(result.current.events[0]).toEqual(sampleEvents.meeting);
     expect(result.current.isLoading).toBe(false);
   });
@@ -58,7 +55,7 @@ describe('Calendar Store', () => {
   it('should handle errors when loading events', async () => {
     // Arrange
     const errorMessage = 'Failed to load calendar events';
-    mockRepository.getStoredCalendarEvents.mockRejectedValueOnce(new Error(errorMessage));
+    mockManager.getWeeklyCalendarEvents.mockRejectedValueOnce(new Error(errorMessage));
     const { result } = renderHook(() => useTestStore());
 
     // Act
@@ -76,7 +73,7 @@ describe('Calendar Store', () => {
   it('should create and add new event to the store', async () => {
     // Arrange
     const newEvent = sampleEvents.meeting;
-    mockRepository.addCalendarEvent.mockResolvedValueOnce(newEvent);
+    mockManager.createNewCalendarEvent.mockResolvedValueOnce(newEvent);
     const { result } = renderHook(() => useTestStore());
 
     // Act
@@ -85,7 +82,7 @@ describe('Calendar Store', () => {
     });
 
     // Assert
-    expect(mockRepository.addCalendarEvent).toHaveBeenCalledTimes(1);
+    expect(mockManager.createNewCalendarEvent).toHaveBeenCalledTimes(1);
     expect(result.current.events).toContain(newEvent);
     expect(result.current.error).toBeNull();
   });
@@ -93,18 +90,15 @@ describe('Calendar Store', () => {
   it('should handle errors when creating events', async () => {
     // Arrange
     const errorMessage = 'Failed to create event';
-    mockRepository.addCalendarEvent.mockRejectedValueOnce(new Error(errorMessage));
+    mockManager.createNewCalendarEvent.mockRejectedValueOnce(new Error(errorMessage));
     const { result } = renderHook(() => useTestStore());
     const newEvent = sampleEvents.meeting;
 
     // Act & Assert
     await act(async () => {
-      try {
-        await result.current.createEvent(newEvent.title, newEvent.startDate, newEvent.endDate);
-        fail('Should have thrown an error');
-      } catch (error) {
-        expect(error.message).toContain(errorMessage);
-      }
+      await expect(
+        result.current.createEvent(newEvent.title, newEvent.startDate, newEvent.endDate),
+      ).rejects.toThrow(errorMessage);
     });
   });
 });

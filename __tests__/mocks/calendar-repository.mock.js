@@ -1,14 +1,13 @@
 /*global jest*/
-import { createEventCollections } from '../fixtures/calendar-fixtures';
 
 /**
  * Creates a mock calendar repository for testing
  * @param {Object} initialData - Optional data to initialize the mock repository
  * @returns {Object} Mock repository with calendar operations
  */
-export const createMockCalendarRepository = (initialEvents = createEventCollections().empty) => {
+export const createMockCalendarRepository = (initialData = []) => {
   // In-memory data store for the mock
-  let eventsData = [...initialEvents];
+  let eventsData = [...initialData];
 
   return {
     // Mock implementation of getStoredCalendarEvents
@@ -31,13 +30,5 @@ export const createMockCalendarRepository = (initialEvents = createEventCollecti
       eventsData.push(newEventWithId);
       return Promise.resolve(newEventWithId);
     }),
-
-    // Helper to reset the mock data
-    __resetData: (newData = []) => {
-      eventsData = [...newData];
-    },
-
-    // Helper to get the current mock data directly
-    __getData: () => [...eventsData],
   };
 };

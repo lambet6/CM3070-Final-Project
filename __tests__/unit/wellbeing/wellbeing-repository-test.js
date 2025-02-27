@@ -3,30 +3,36 @@ import { describe, it, beforeEach, expect } from '@jest/globals';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { isSameDay } from 'date-fns';
 import {
-  getMoodDataFromRepo,
-  updateMoodForToday,
+  createWellbeingRepository,
   MOOD_DATA_KEY,
-  saveMoodToRepo,
 } from '../../../repositories/wellbeing-repository';
 import { Mood } from '../../../domain/Mood';
+import { createSampleMoods } from '../../fixtures/wellbeing-fixtures';
 
 describe('wellbeing-repository', () => {
+  let wellbeingRepository;
+  let moods;
+
   beforeEach(async () => {
     await AsyncStorage.clear();
     jest.clearAllMocks();
+
+    // Create fresh repository and fixtures for each test
+    wellbeingRepository = createWellbeingRepository();
+    moods = createSampleMoods();
   });
 
-  it('getMoodDataFromRepo returns empty array if no data exists', async () => {
-    const data = await getMoodDataFromRepo();
+  it('getMoodData returns empty array if no data exists', async () => {
+    const data = await wellbeingRepository.getMoodData();
     expect(data).toEqual([]);
   });
 
-  it('getMoodDataFromRepo returns array of Mood objects', async () => {
+  it('getMoodData returns array of Mood objects', async () => {
     const testDate = new Date('2024-01-01T00:00:00.000Z');
     const sampleData = [{ mood: 'Happy', date: testDate.toISOString() }];
     await AsyncStorage.setItem(MOOD_DATA_KEY, JSON.stringify(sampleData));
 
-    const data = await getMoodDataFromRepo();
+    const data = await wellbeingRepository.getMoodData();
     expect(data[0]).toBeInstanceOf(Mood);
     expect(data[0].mood).toBe('Happy');
     expect(data[0].moodValue).toBe(4);
@@ -38,14 +44,18 @@ describe('wellbeing-repository', () => {
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
 
-    const oldMood = new Mood({ mood: 'Low', date: today });
-    const yesterdayMood = new Mood({ mood: 'Neutral', date: yesterday });
-    await AsyncStorage.setItem(MOOD_DATA_KEY, JSON.stringify([oldMood, yesterdayMood]));
+    // Use fixture helpers to create test data
+    const testData = moods.createCustomMoods([
+      { mood: 'Low', date: today },
+      { mood: 'Neutral', daysAgo: 1 },
+    ]);
+
+    await AsyncStorage.setItem(MOOD_DATA_KEY, JSON.stringify(testData));
 
     const newMood = new Mood({ mood: 'Happy', date: today });
-    await updateMoodForToday(newMood);
+    await wellbeingRepository.updateMoodForToday(newMood);
 
-    const storedData = await getMoodDataFromRepo();
+    const storedData = await wellbeingRepository.getMoodData();
     expect(storedData).toHaveLength(2);
 
     const todayEntry = storedData.find((m) => m.isToday());
@@ -55,14 +65,26 @@ describe('wellbeing-repository', () => {
     expect(yesterdayEntry.mood).toBe('Neutral');
   });
 
-  it('should handle getItem storage errors', async () => {
-    jest.spyOn(AsyncStorage, 'getItem').mockRejectedValue(new Error('Storage error'));
-    await expect(getMoodDataFromRepo()).rejects.toThrow('Failed to fetch mood data: Storage error');
+  it('handles storage errors when getting data', async () => {
+    // Create repository with custom storage that throws errors
+    const mockStorage = {
+      getItem: jest.fn().mockRejectedValue(new Error('Storage error')),
+    };
+
+    const errorRepository = createWellbeingRepository(mockStorage);
+    await expect(errorRepository.getMoodData()).rejects.toThrow('Failed to fetch mood data');
   });
 
-  it('should handle setItem storage errors', async () => {
+  it('handles storage errors when saving data', async () => {
+    // Create repository with custom storage that throws errors
+    const mockStorage = {
+      getItem: jest.fn().mockResolvedValue(null),
+      setItem: jest.fn().mockRejectedValue(new Error('Storage error')),
+    };
+
+    const errorRepository = createWellbeingRepository(mockStorage);
     const mood = new Mood({ mood: 'Happy', date: new Date() });
-    jest.spyOn(AsyncStorage, 'setItem').mockRejectedValue(new Error('Storage error'));
-    await expect(saveMoodToRepo(mood)).rejects.toThrow();
+
+    await expect(errorRepository.saveMood(mood)).rejects.toThrow('Failed to save mood');
   });
 });
