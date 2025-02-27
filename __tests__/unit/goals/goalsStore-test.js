@@ -2,8 +2,11 @@
 import { describe, it, beforeEach, afterEach, expect } from '@jest/globals';
 import { act, renderHook } from '@testing-library/react-native';
 import { createGoalsStore } from '../../../store/goalsStore';
-import { createMockGoalsManager } from '../../mocks/goals-manager.mock';
 import { createSampleGoals, createGoalCollections } from '../../fixtures/goal-fixtures';
+import { createGoalsManager } from '../../../managers/goals-manager';
+
+// Automatically mock the repository
+jest.mock('../../../managers/goals-manager');
 
 describe('GoalsStore', () => {
   let mockGoalsManager;
@@ -17,7 +20,7 @@ describe('GoalsStore', () => {
     goalCollections = createGoalCollections();
 
     // Create testing dependencies with proper injection
-    mockGoalsManager = createMockGoalsManager();
+    mockGoalsManager = createGoalsManager();
     useTestStore = createGoalsStore(mockGoalsManager);
 
     // Spy on console.error to prevent test output noise

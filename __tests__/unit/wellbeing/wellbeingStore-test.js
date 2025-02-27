@@ -1,10 +1,14 @@
+/*global jest*/
 import { describe, it, beforeEach, expect } from '@jest/globals';
 import { act } from 'react-test-renderer';
 import { isSameDay } from 'date-fns';
 import { createWellbeingStore } from '../../../store/wellbeingStore';
-import { createMockWellbeingManager } from '../../mocks/wellbeing-manager.mock';
 import { createSampleMoods } from '../../fixtures/wellbeing-fixtures';
 import { Mood } from '../../../domain/Mood';
+import { createWellbeingManager } from '../../../managers/wellbeing-manager';
+
+// Automatically mock the repository
+jest.mock('../../../managers/wellbeing-manager');
 
 describe('wellbeingStore', () => {
   let mockManager;
@@ -15,7 +19,7 @@ describe('wellbeingStore', () => {
     moods = createSampleMoods();
 
     // Create mock manager and store for each test
-    mockManager = createMockWellbeingManager();
+    mockManager = createWellbeingManager();
     wellbeingStore = createWellbeingStore(mockManager);
   });
 

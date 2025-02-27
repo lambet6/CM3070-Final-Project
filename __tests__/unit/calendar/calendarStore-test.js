@@ -2,8 +2,11 @@
 import { describe, it, beforeEach, afterEach, expect } from '@jest/globals';
 import { act, renderHook } from '@testing-library/react-native';
 import { createCalendarStore } from '../../../store/calendarStore';
-import { createMockCalendarManager } from '../../mocks/calendar-manager.mock';
 import { createSampleCalendarEvents } from '../../fixtures/calendar-fixtures';
+import { createCalendarManager } from '../../../managers/calendar-manager';
+
+// Automatically mock the repository
+jest.mock('../../../managers/calendar-manager');
 
 describe('Calendar Store', () => {
   let mockManager;
@@ -15,7 +18,7 @@ describe('Calendar Store', () => {
     sampleEvents = createSampleCalendarEvents();
 
     // Create testing dependencies with proper injection
-    mockManager = createMockCalendarManager();
+    mockManager = createCalendarManager();
     useTestStore = createCalendarStore(mockManager);
 
     // Spy on console.error to prevent test output noise

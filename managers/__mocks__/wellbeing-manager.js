@@ -1,13 +1,13 @@
 /*global jest*/
 import { Mood } from '../../domain/Mood';
-import { createSampleMoods } from '../fixtures/wellbeing-fixtures';
+import { createSampleMoods } from '../../__tests__/fixtures/wellbeing-fixtures';
 
 /**
  * Creates a mock wellbeing manager for testing
  * @param {Object} customImplementations - Optional custom implementations for methods
  * @returns {Object} Mock wellbeing manager with all required methods
  */
-export const createMockWellbeingManager = (
+export const createWellbeingManager = (
   initialMoods = createSampleMoods(),
   customImplementations = {},
 ) => {

@@ -1,12 +1,12 @@
 /*global jest*/
-import { createGroupedTaskSets } from '../fixtures/task-fixtures';
+import { createGroupedTaskSets } from '../../__tests__/fixtures/task-fixtures';
 
 /**
  * Creates a mock task manager for testing
  * @param {Object} customImplementations - Optional custom implementations for specific methods
  * @returns {Object} Mock task manager with all required methods
  */
-export const createMockTaskManager = (
+export const createTaskManager = (
   initialTaskSets = createGroupedTaskSets(),
   customImplementations = {},
 ) => {

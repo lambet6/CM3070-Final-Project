@@ -8,7 +8,10 @@ import {
   createTestDates,
 } from '../../fixtures/task-fixtures';
 import { setupMockDate } from '../../utils/test-utils';
-import { createMockTaskManager } from '../../mocks/task-manager.mock';
+import { createTaskManager } from '../../../managers/task-manager';
+
+// Automatically mock the repository
+jest.mock('../../../managers/task-manager');
 
 describe('TaskStore', () => {
   let mockTaskManager;
@@ -24,7 +27,7 @@ describe('TaskStore', () => {
     testDates = createTestDates();
 
     // Create mock task manager
-    mockTaskManager = createMockTaskManager();
+    mockTaskManager = createTaskManager();
 
     // Create test store with our mock manager
     useTestStore = createTaskStore(mockTaskManager);

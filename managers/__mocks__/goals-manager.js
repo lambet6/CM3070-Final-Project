@@ -1,12 +1,12 @@
 /*global jest*/
-import { createGoalCollections } from '../fixtures/goal-fixtures';
+import { createGoalCollections } from '../../__tests__/fixtures/goal-fixtures';
 
 /**
  * Creates a mock goals manager for testing
  * @param {Object} customImplementations - Optional custom implementations for specific methods
  * @returns {Object} Mock goals manager with all required methods
  */
-export const createMockGoalsManager = (
+export const createGoalsManager = (
   initialGoals = createGoalCollections(),
   customImplementations = {},
 ) => {
