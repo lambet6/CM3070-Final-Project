@@ -38,6 +38,11 @@ Our canonical folder structure is:
     │   └── Task.js
     │
     ├── /managers                 # Business/Domain Logic (kebab-case)
+    │   ├── __mocks__            # Mock implementations for managers
+    │   │   ├── calendar-manager.js
+    │   │   ├── goals-manager.js
+    │   │   ├── task-manager.js
+    │   │   └── wellbeing-manager.js
     │   ├── calendar-manager.js
     │   ├── goals-manager.js
     │   ├── task-manager.js
@@ -47,6 +52,11 @@ Our canonical folder structure is:
     │   └── RootNavigator.js
     │
     ├── /repositories            # Data Layer (kebab-case)
+    │   ├── __mocks__           # Mock implementations for repositories
+    │   │   ├── calendar-repository.js
+    │   │   ├── goals-repository.js
+    │   │   ├── task-repository.js
+    │   │   └── wellbeing-repository.js
     │   ├── calendar-repository.js
     │   ├── goals-repository.js
     │   ├── task-repository.js
@@ -68,10 +78,6 @@ Our canonical folder structure is:
     │   ├── /fixtures           # Test Data
     │   │   ├── calendar-fixtures.js
     │   │   └── task-fixtures.js
-    │   ├── /mocks             # Mock Implementations
-    │   │   ├── calendar-repository.mock.js
-    │   │   ├── task-manager.mock.js
-    │   │   └── task-repository.mock.js
     │   ├── /integration       # Integration Tests
     │   │   └── Navigation-test.js
     │   ├── /unit             # Unit Tests by Feature
@@ -117,6 +123,7 @@ Our canonical folder structure is:
 - **Repositories** handle data persistence (async storage, APIs) in kebab-case files.
 - **Domain** includes entities (Task, Goal, etc.) in **PascalCase**.
 - **Zustand stores** manage global state slices.
+- **Mocks** are placed in **__mocks__** directories adjacent to the modules they mock.
 
 ---
 
@@ -128,6 +135,7 @@ Our canonical folder structure is:
 2. **Screens/Components**: **PascalCase** (e.g., `TaskScreen.js`, `GoalModal.js`).
 3. **Domain Models**: **PascalCase** (`Task.js`, `Goal.js`).
 4. **Hooks**: If you create custom hooks, use **camelCase** with a `use` prefix (e.g., `useTaskManager.js`).
+5. **Mocks**: Same name as the original file, placed in a `__mocks__` directory adjacent to the module (e.g., `repositories/__mocks__/task-repository.js`)
 
 ### JS Variables & Functions
 
@@ -270,15 +278,52 @@ We use **Jest** plus **@testing-library/react-native**. Tests reside in `__tests
 
 ### Mocking Guidelines
 
-- Mock external libraries (notifications, calendar, etc.) in `__mocks__` folder
-- Create consistent mock data in a `__fixtures__` folder
-- Example mock for notifications:
+- Follow Jest's conventions for manual mocks
+- Place mocks in a `__mocks__` directory adjacent to the module being mocked
+- Mock filenames should match the original module (without the `.mock` suffix)
+- Use `jest.mock()` to automatically use these mocks in tests
 
-      // __mocks__/expo-notifications.js
-      export default {
-        requestPermissionsAsync: jest.fn(() => Promise.resolve({ granted: true })),
-        scheduleNotificationAsync: jest.fn(),
-      };
+Example:
+
+```javascript
+// In repositories/__mocks__/task-repository.js
+export const createTaskRepository = (initialData = []) => {
+  // In-memory data store for the mock
+  let tasksData = [...initialData];
+
+  return {
+    // Mock implementation of getTasks
+    getTasks: jest.fn().mockImplementation(() => {
+      return Promise.resolve([...tasksData]);
+    }),
+
+    // Mock implementation of saveTasks 
+    saveTasks: jest.fn().mockImplementation((tasks) => {
+      tasksData = [...tasks];
+      return Promise.resolve();
+    })
+  };
+};
+
+// Export any other constants from the original module
+export const TASKS_KEY = 'mock-tasks-key';
+```
+
+Then in your test:
+
+```javascript
+// Import the module
+import { createTaskRepository } from '../../../repositories/task-repository';
+
+// Mock the module
+jest.mock('../../../repositories/task-repository');
+
+```
+
+### Test Data and Fixtures
+
+- Use the `__tests__/fixtures` directory for shared test data
+- Fixtures should be pure data without mocking behavior
 
 ### Integration Testing
 
@@ -349,12 +394,13 @@ We follow **modern React Native** best practices for comments:
 ## FAQ / Future Updates
 
 1. **Subfolders for screens/components?**
-   - Optionally create subfolders if a screen or component grows complex (e.g., “/TaskScreen/index.js” plus local child components).
+   - Optionally create subfolders if a screen or component grows complex (e.g., "/TaskScreen/index.js" plus local child components).
 2. **Hook location?**
    - If you have multiple shared hooks, consider a `/hooks` folder. Otherwise, store them near the relevant feature.
 3. **Coverage below 80%?**
    - You can lower it to 70% initially or push to increase coverage as the project stabilizes.
 
-We’ll update this file as new needs arise or if the project’s scope changes.
+We'll update this file as new needs arise or if the project's scope changes.
 
-**Last Updated**: [Current Date]
+**Last Updated**: February 27, 2025
+```
