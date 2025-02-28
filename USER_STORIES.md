@@ -1,32 +1,32 @@
-# Holistic Task Manager – User Stories
-
-Below are user stories, each with basic acceptance criteria for clarity.
-
----
-
 ## Task Management Stories
 
 ### Quick Task Creation
 
 - **Story**: As a busy user, I want to create new tasks in under 15 seconds, so I can quickly record tasks without losing momentum.
 - **Acceptance Criteria**:
-  1. Tapping the “+” button opens a simple form with Task Name, Due Date, and Priority.
+  1. Tapping the "+" button opens a simple form with Task Name, Due Date, and Priority.
   2. Users can save the task with minimal required fields (name, due date, priority).
-  3. The new task appears immediately in both the list and the calendar.
+  3. The new task appears immediately in both the task screen and the calendar.
+  4. The task creation process completes in 15 seconds or less.
+  5. If I try to save without a task name, a clear error message appears.
+  6. If I enter an invalid date, I receive immediate feedback.
+  7. The save button remains disabled until all required fields have valid values.
 
-### Time Blocks & Drag-and-Drop
+### Task Views and Filtering
 
-- **Story**: As a user, I want tasks to appear in 30-minute blocks on my daily calendar, and to reorder them easily, so I can adapt my schedule to changing needs.
+- **Story**: As a user, I want to toggle between grouped priority view and a single list view, so I can see my tasks organized in the way most useful to me at the moment.
 - **Acceptance Criteria**:
-  1. Newly created tasks default to a 30-minute duration in the calendar.
-  2. The daily screen shows tasks in chronological blocks.
-  3. Users can press-and-hold a task, drag it to a new time slot, and release to reschedule.
+  1. Users can switch between two view modes:
+     - Tasks grouped by priority (High, Medium, Low) and sorted by due date within each group
+     - A single list of all tasks sorted by due date
+  2. Each task is color-coded by priority (High: Red, Medium: Yellow, Low: Green)
+  3. The view preference persists between app sessions
 
 ### Auto-Rescheduling Incomplete Tasks
 
 - **Story**: As a user prone to missing tasks, I want them automatically moved to the next day if not completed, so I never lose them.
 - **Acceptance Criteria**:
-  1. At the end of the day (e.g., midnight), any tasks marked “incomplete” are reassigned to the next day’s list.
+  1. At the end of the day (e.g., midnight), any tasks marked "incomplete" are reassigned to the next day's list.
   2. Completed tasks disappear from the active list.
   3. Users see a subtle UI indicator or toast message when tasks are rescheduled.
 
@@ -34,30 +34,67 @@ Below are user stories, each with basic acceptance criteria for clarity.
 
 - **Story**: As a user, I want to mark tasks complete or remove them, so my active list remains relevant.
 - **Acceptance Criteria**:
-  1. Tapping a “Complete” or checkbox instantly updates the task status.
-  2. A “Delete” button triggers a confirmation dialog.
+  1. Tapping a task instantly updates the task status to complete.
+  2. A "Delete" button triggers a confirmation dialog or a swipe gesture.
   3. Confirming deletion permanently removes the task.
   4. User receives visual feedback on successful deletion.
   5. Failed operations show clear error messages with retry options.
+
+### Error Recovery and Data Validation
+
+- **Story**: As a user, I want clear feedback when operations fail and easy ways to recover, so I don't lose data or get frustrated.
+- **Acceptance Criteria**:
+  1. Error messages are displayed in plain language (not technical jargon)
+  2. Failed operations (create, edit, delete) show clear error states with specific messages
+  3. The app attempts to automatically retry failed storage operations once
+  4. If automatic retry fails, users are provided with a manual retry option
+  5. Data is validated before submission to prevent common errors:
+     - Required fields are checked for presence
+     - Numeric fields are checked for valid ranges
+     - Dates are validated for proper format and logical values
+  6. Validation happens in real-time as I type/select values
+  7. Form submission buttons are disabled until all validation passes
+  8. Network or storage errors provide clear recovery options
 
 ---
 
 ## Calendar Integration Stories
 
+### Weekly Calendar with Daily Timeline
+
+- **Story**: As a user, I want to see a weekly overview with a detailed daily timeline, so I can plan at different time scales.
+- **Acceptance Criteria**:
+  1. The calendar screen shows a weekly view (Monday through Sunday) at the top
+  2. Below the weekly view is a detailed timeline for the selected day
+  3. Tapping a day in the weekly view updates the daily timeline
+  4. The weekly calendar shows scheduled calendar events
+  5. The daily timeline shows both fixed calendar events at their scheduled times and reorderable tasks due that day
+
 ### Unified View of Tasks & Events
 
 - **Story**: As a user, I want to see all my tasks and external calendar events in one view, so I can easily avoid scheduling conflicts.
 - **Acceptance Criteria**:
-  1. The weekly calendar merges tasks and device calendar events in chronological order.
-  2. Tapping an event or task opens its details (task details or system calendar info).
+  1. The weekly calendar merges tasks and device calendar events into a unified view.
+  2. Tasks and calendar events are visually distinct (different colors or indicators).
+  3. Tapping an event or task opens its details (task details or system calendar info).
 
 ### Two-Way Real-Time Sync
 
-- **Story**: As a user who already uses my phone’s calendar, I want changes from my device calendar to reflect in the app, so I don’t double-book tasks.
+- **Story**: As a user who already uses my phone's calendar, I want changes from my device calendar to reflect in the app, so I don't double-book tasks.
 - **Acceptance Criteria**:
-  1. Creating or editing a task in the app also creates/updates an event in the device calendar.
-  2. Changes made in the device calendar (e.g., adjusting an event time) reflect in the app if it’s linked to a specific task.
-  3. Specify which events from the native calendar are imported, how changes to them reflect back in the app, and whether external (non-app) events appear in the app’s UI.
+  1. Changes made in the device calendar (e.g., adjusting an event time) reflect in the app.
+  2. Changes made to goal-related events in the app update in the device calendar.
+
+### Task Ordering & Drag-and-Drop
+
+- **Story**: As a user, I want to reorder tasks in my daily timeline through intuitive drag-and-drop, so I can organize my day efficiently.
+- **Acceptance Criteria**:
+  1. The daily timeline shows tasks as reorderable items alongside fixed calendar events.
+  2. Users can press-and-hold a task to initiate a drag operation.
+  3. When dragging a task near calendar events, the task automatically snaps to position above or below the event (depending on which is closer).
+  4. When dragging a task near other tasks, it behaves similar to reordering apps on a smartphone, with other tasks shifting to make space.
+  5. Dragging is limited to the current day's timeline only.
+  6. Visual feedback is provided during drag operations (e.g., highlighting potential drop zones).
 
 ---
 
@@ -68,15 +105,20 @@ Below are user stories, each with basic acceptance criteria for clarity.
 - **Story**: As a user, I want to define up to 7 goals with weekly hour targets, so I can focus on long-term objectives (e.g., Fitness, Learning).
 - **Acceptance Criteria**:
   1. Each goal has a name/title and an hours-per-week target.
-  2. The goals screen lists all current goals, hours planned vs. hours scheduled.
+  2. The goals screen lists all current goals and hours target.
+  3. If I try to create a goal without a title, I see an error message "Goal title cannot be empty".
+  4. If I enter zero or negative hours, I see an error message "Hours must be greater than zero".
+  5. If I enter more than 168 hours (total hours in a week), I see an error message "Hours cannot exceed 168".
+  6. The save button is disabled until all validation errors are resolved.
+  7. Error messages appear immediately after I finish editing a field, not just when I try to save.
 
-### Suggest Scheduling for Goals
+### Goal Scheduling
 
-- **Story**: As a user, I want the app to suggest times in my calendar to fulfill goal hours, so I’m more likely to follow through.
+- **Story**: As a user, I want to be able to schedule time into my calendar for these goals.
 - **Acceptance Criteria**:
-  1. The system checks free time slots in the weekly calendar.
-  2. For each goal, the user can accept or reject suggested blocks, which become scheduled events.
-  3. Suggestions respect existing tasks and calendar events.
+  1. The user can create calendar events from the goal screen for each goal.
+  2. Goal events can be one-time or recurring.
+  3. Goal events appear in both the app calendar and device calendar.
 
 ---
 
@@ -84,18 +126,18 @@ Below are user stories, each with basic acceptance criteria for clarity.
 
 ### Daily Mood Logging
 
-- **Story**: As a user concerned about my mental health, I want to log a single emoji rating each day, so I can see at-a-glance how I’m feeling over time.
+- **Story**: As a user concerned about my mental health, I want to log a single emoji rating each day, so I can see at-a-glance how I'm feeling over time.
 - **Acceptance Criteria**:
   1. The user can select from 5 mood emojis (very sad → very happy).
-  2. Only one mood entry per day is allowed (though they can update it before midnight).
-  3. Invalid mood selections are prevented with clear error messages.
-  4. Failed save attempts notify the user and offer retry options.
+  2. Only one mood entry per day is allowed (though they can update it anytime before midnight).
+  3. Mood selection is done by tapping directly on emoji buttons, preventing the possibility of invalid entries.
+  4. Visual feedback confirms the currently selected mood.
 
 ### Mood & Task Completion Graph
 
 - **Story**: As a user, I want to see a 14-day chart of daily mood vs. tasks completed, so I can identify potential correlations between productivity and wellbeing.
 - **Acceptance Criteria**:
-  1. A graph or chart shows each day’s mood on a numeric scale.
+  1. A graph or chart shows each day's mood on a numeric scale.
   2. The same timeline overlays a bar or line representing tasks completed.
   3. Each day on the chart updates automatically whenever mood or tasks are updated.
 
@@ -105,11 +147,33 @@ Below are user stories, each with basic acceptance criteria for clarity.
 
 ### Daily Summary
 
-- **Story**: As a user who dislikes constant reminders, I want one daily morning notification that summarizes my tasks, so I don’t get overwhelmed by alerts.
+- **Story**: As a user who dislikes constant reminders, I want one daily morning notification that summarizes my tasks, so I don't get overwhelmed by alerts.
 - **Acceptance Criteria**:
   1. A local push notification is sent once each morning (e.g., 8 AM).
-  2. The notification lists the day’s tasks and events.
-  3. No additional “task due soon” popups by default unless explicitly enabled.
+  2. The notification lists the day's tasks and events.
+  3. No additional "task due soon" popups by default unless explicitly enabled.
+
+---
+
+## Accessibility Stories
+
+### Screen Reader Compatibility
+
+- **Story**: As a visually impaired user, I want the app to work well with screen readers, so I can use all its features without seeing the screen.
+- **Acceptance Criteria**:
+  1. All interactive elements have appropriate accessibility labels
+  2. Screen readers announce changes in task status
+  3. Calendar navigation works properly with VoiceOver/TalkBack
+  4. Form controls are properly labeled and accessible
+
+### High Contrast and Readable Text
+
+- **Story**: As a user with vision impairments, I want high contrast UI elements and readable text, so I can use the app comfortably.
+- **Acceptance Criteria**:
+  1. Color combinations meet WCAG AA contrast standards
+  2. Text is scalable according to system text size settings
+  3. Priority color indicators include text or symbols for colorblind users
+  4. Touch targets are large enough for users with motor control difficulties
 
 ---
 
@@ -117,15 +181,16 @@ Below are user stories, each with basic acceptance criteria for clarity.
 
 1. **AI-Assisted Scheduling**:
 
-   - “As a user, I want AI to automatically place tasks in free calendar slots based on my history, so I can optimize my time without manual planning.”
+   - "As a user, I want AI to automatically place tasks in free calendar slots based on my history, so I can optimize my time without manual planning."
+   - "As a user, I want AI to automatically place goals, in appropriate blocks, in free calendar slots based on my history, so I can optimize my wellbeing."
 
 2. **Cross-Device Sync**:
 
-   - “As a user with multiple devices, I want to sign in and see my data everywhere, so I can manage tasks and mood on any device seamlessly.”
+   - "As a user with multiple devices, I want to sign in and see my data everywhere, so I can manage tasks and mood on any device seamlessly."
 
 3. **Advanced Mood Analytics**:
 
-   - “As a user wanting deeper insights, I want to see correlations between mood, time of day, and task difficulty, so I can adjust my schedule for better wellbeing.”
+   - "As a user wanting deeper insights, I want to see correlations between mood, time of day, and task difficulty, so I can adjust my schedule for better wellbeing."
 
 4. **Handwritten List Scanning**
-   - “As a user who writes tasks on paper, I want to use my phone’s camera to scan and convert them into digital tasks, so I can avoid manual typing.”
+   - "As a user who writes tasks on paper, I want to use my phone's camera to scan and convert them into digital tasks, so I can avoid manual typing."
