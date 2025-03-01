@@ -9,18 +9,26 @@ const TaskHiddenActions = ({ item, animVal, onEdit, onDelete }) => {
   return (
     <Animated.View style={animatedStyles}>
       <View style={styles.rowBack}>
-        <TouchableOpacity
-          style={[styles.backLeftBtn]}
-          onPress={() => {
-            onEdit(item);
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-          }}>
-          <Text style={styles.backTextWhite}>Edit</Text>
-        </TouchableOpacity>
+        {/* Empty view on the left side */}
+        <View />
 
-        <TouchableOpacity style={[styles.backRightBtn]} onPress={() => onDelete(item.id)}>
-          <Text style={styles.backTextWhite}>Delete</Text>
-        </TouchableOpacity>
+        {/* Both buttons on the right side */}
+        <View style={styles.rightButtonContainer}>
+          <TouchableOpacity
+            style={[styles.backRightBtn, styles.editButton]}
+            onPress={() => {
+              onEdit(item);
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            }}>
+            <Text style={styles.backTextWhite}>Edit</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.backRightBtn, styles.deleteButton]}
+            onPress={() => onDelete(item.id)}>
+            <Text style={styles.backTextWhite}>Delete</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </Animated.View>
   );
@@ -37,21 +45,22 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     height: 56,
   },
+  rightButtonContainer: {
+    flexDirection: 'row',
+    width: 150, // Match the rightOpenValue
+  },
   backRightBtn: {
     alignItems: 'center',
     bottom: 0,
     justifyContent: 'center',
     top: 0,
-    width: 76,
-    backgroundColor: 'red',
+    width: 75,
   },
-  backLeftBtn: {
-    alignItems: 'center',
-    bottom: 0,
-    justifyContent: 'center',
-    top: 0,
-    width: 76,
-    backgroundColor: '#4CD964',
+  editButton: {
+    backgroundColor: '#4CD964', // Keep the same green color
+  },
+  deleteButton: {
+    backgroundColor: 'red', // Keep the same red color
   },
   backTextWhite: {
     color: '#FFF',

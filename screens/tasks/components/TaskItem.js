@@ -6,12 +6,11 @@ const TaskItem = ({ item, animVal }) => {
   const animatedStyles = createAnimatedStyles(animVal, false);
 
   return (
-    <Animated.View style={animatedStyles}>
-      <View style={[styles.taskItem, item.completed && styles.completedTask]}>
-        <Text style={[styles.taskText, item.completed && styles.strikethrough]}>
-          {item.title} — {new Date(item.dueDate).toDateString()}
-        </Text>
-      </View>
+    <Animated.View
+      style={[styles.taskItem, animatedStyles, item.completed && styles.completedTask]}>
+      <Text style={[styles.taskText, item.completed && styles.strikethrough]}>
+        {item.title} — {new Date(item.dueDate).toDateString()}
+      </Text>
     </Animated.View>
   );
 };

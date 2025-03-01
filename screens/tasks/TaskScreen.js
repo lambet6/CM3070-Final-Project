@@ -67,15 +67,17 @@ export default function TasksScreen() {
         renderItem={({ item }) => (
           <SwipeRow
             preview={item.id === sections[0]?.data[0]?.id}
-            previewOpenValue={-75}
+            previewOpenValue={-150}
             previewDuration={1000}
-            previewOpenDelay={2500}
+            previewOpenDelay={1500}
             onRowPress={() => {
+              console.log('Row pressed');
               toggleCompleteTask(item.id);
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
             }}
-            leftOpenValue={75}
-            rightOpenValue={-75}
+            leftOpenValue={1}
+            disableRightSwipe={true}
+            rightOpenValue={-150} // Increased to fit both buttons
             swipeRowStyle={styles.swipeRowStyle}>
             {/* Hidden actions */}
             <TaskHiddenActions
@@ -89,13 +91,6 @@ export default function TasksScreen() {
           </SwipeRow>
         )}
         renderSectionHeader={({ section }) => <TaskSectionHeader section={section} />}
-        stopLeftSwipe={100}
-        stopRightSwipe={-100}
-        swipeToOpenPercent={25}
-        swipeToClosePercent={10}
-        disableLeftSwipe={false}
-        disableRightSwipe={false}
-        friction={100}
       />
 
       <TaskFAB onPress={openAddModal} />
