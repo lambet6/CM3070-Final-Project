@@ -66,7 +66,10 @@ export default function TasksScreen() {
         // Combine hidden & visible content in each row:
         renderItem={({ item }) => (
           <SwipeRow
-            closeOnRowPress={true}
+            preview={item.id === sections[0]?.data[0]?.id}
+            previewOpenValue={-75}
+            previewDuration={1000}
+            previewOpenDelay={2500}
             onRowPress={() => {
               toggleCompleteTask(item.id);
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -92,11 +95,6 @@ export default function TasksScreen() {
         swipeToClosePercent={10}
         disableLeftSwipe={false}
         disableRightSwipe={false}
-        previewRowKey={tasksLoaded ? sections[0]?.data[0]?.id : null}
-        previewOpenValue={-75}
-        previewOpenDelay={1500}
-        previewDuration={1000}
-        previewRepeat={false}
         friction={100}
       />
 
