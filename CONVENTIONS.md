@@ -14,8 +14,7 @@ This document outlines the coding standards, naming conventions, test coverage g
 8. [Testing & Coverage](#testing--coverage)
 9. [Code Documentation](#code-documentation)
 10. [Version Control & Branching](#version-control--branching)
-11. [Performance Optimizations](#performance-optimizations)
-12. [FAQ / Future Updates](#faq--future-updates)
+11. [FAQ / Future Updates](#faq--future-updates)
 
 ---
 
@@ -88,7 +87,7 @@ Our canonical folder structure is:
     │   └── wellbeingStore.js
     │
     ├── /hooks                   # Shared Custom Hooks
-    │   └── useFormValidation.js
+    │   └── 
     │
     ├── /__tests__              # Test Files
     │   ├── /fixtures           # Test Data
@@ -204,8 +203,6 @@ For complex screens, use a subfolder structure with dedicated components and hoo
 
 ## Custom Hooks
 
-Custom hooks should be used to extract and reuse stateful logic. This improves code organization, testability, and reusability.
-
 ### Types of Hooks:
 
 1. **Screen-specific hooks**: Placed in `/screens/<feature>/hooks/` directory
@@ -221,31 +218,6 @@ Custom hooks should be used to extract and reuse stateful logic. This improves c
 1. **Naming**: Always prefix with `use` (e.g., `useTaskAnimations`)
 2. **Return object**: Return a clearly named object with all values/functions needed
 3. **Dependencies**: Properly manage dependencies in useEffect and useCallback
-4. **Memoization**: Use useCallback for functions that are:
-   - Passed to child components
-   - Used in dependency arrays
-   - Computationally expensive
-
-Example:
-
-```javascript
-// Good example of a custom hook
-export default function useTaskAnimations(tasks, tasksLoaded, loadTasks) {
-  const animatedValues = useRef(new Map()).current;
-  const listOpacity = useRef(new Animated.Value(0)).current;
-
-  const initializeAnimations = useCallback((taskId) => {
-    // Logic here...
-  }, [/* dependencies */]);
-
-  // Effects and other logic...
-
-  return {
-    listOpacity,
-    initializeAnimations,
-  };
-}
-```
 
 ---
 
@@ -475,50 +447,6 @@ We follow **modern React Native** best practices for comments:
 
 ---
 
-## Performance Optimizations
-
-### React Memoization
-
-1. **useCallback** - Memoize callback functions when:
-   - They are passed to child components as props
-   - They are dependencies in a useEffect
-   - They are used in complex calculations
-
-   ```javascript
-   const handleDelete = useCallback((id) => {
-     // Delete logic
-   }, [/* dependencies */]);
-   ```
-
-2. **useMemo** - Memoize expensive calculations:
-   ```javascript 
-   const sortedTasks = useMemo(() => {
-     return [...tasks].sort((a, b) => a.priority - b.priority);
-   }, [tasks]);
-   ```
-
-3. **React.memo** - Prevent unnecessary re-renders for pure components:
-   ```javascript
-   const TaskItem = React.memo(function TaskItem({ task, onToggle }) {
-     // Component logic
-   });
-   ```
-
-### Animation Performance
-
-1. Use `useNativeDriver: true` for animations when possible
-2. Avoid animating layout properties (width, height) when using native driver
-3. Batch related animations with `Animated.parallel` or `Animated.sequence`
-
-### List Optimization
-
-1. Use `FlatList` or `SectionList` for long lists (not `ScrollView`)
-2. Implement `keyExtractor` and stable keys
-3. Use `getItemLayout` when item heights are predictable
-4. Apply `windowSize` and `maxToRenderPerBatch` for performance tuning
-
----
-
 ## Version Control & Branching
 
 1. **Merge Commits**
@@ -551,4 +479,3 @@ We follow **modern React Native** best practices for comments:
 We'll update this file as new needs arise or if the project's scope changes.
 
 **Last Updated**: March 01, 2025
-```
