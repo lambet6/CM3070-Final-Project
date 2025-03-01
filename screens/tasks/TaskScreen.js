@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { SwipeListView } from 'react-native-swipe-list-view';
 import { useTaskStore } from '../../store/taskStore';
-import { Snackbar } from 'react-native-paper';
+import { Snackbar, Button } from 'react-native-paper';
 import * as Haptics from 'expo-haptics';
+import { MaterialIcons } from '@expo/vector-icons';
 
 // Custom hooks
 import useTaskAnimations from './hooks/useTaskAnimations';
@@ -17,8 +18,10 @@ import TaskFAB from './components/TaskFAB';
 import TaskItem from './components/TaskItem';
 
 export default function TasksScreen() {
-  const { tasks, loadTasks, addTask, editTask, toggleCompleteTask, deleteTask } = useTaskStore();
+  const { tasks, loadTasks, addTask, editTask, toggleCompleteTask, deleteTasks } = useTaskStore();
   const [tasksLoaded, setTasksLoaded] = useState(false);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedTasks, setSelectedTasks] = useState([]);
 
   // Reference to the swipe list to programmatically close rows
   const listRef = React.useRef();
@@ -44,21 +47,52 @@ export default function TasksScreen() {
     handleUndoDelete,
     openAddModal,
     openEditModal,
-  } = useTaskActions(tasks, addTask, editTask, deleteTask);
+    handleDeleteMultipleTasks,
+  } = useTaskActions(tasks, addTask, editTask, deleteTasks);
 
   useEffect(() => {
     setTasksLoaded(true);
   }, []);
 
+  const handleLongPress = (taskId) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setSelectionMode(true);
+    setSelectedTasks([taskId]);
+  };
+
   const handleTaskPress = (taskId) => {
-    // First close any open rows
+    // In selection mode, toggle task selection
+    if (selectionMode) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      setSelectedTasks((prev) => {
+        if (prev.includes(taskId)) {
+          return prev.filter((id) => id !== taskId);
+        } else {
+          return [...prev, taskId];
+        }
+      });
+      return;
+    }
+
+    // Normal mode - toggle task completion
     if (listRef.current) {
       listRef.current.closeAllOpenRows();
     }
-
-    // Then toggle task completion
     toggleCompleteTask(taskId);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  };
+
+  const cancelSelection = () => {
+    setSelectionMode(false);
+    setSelectedTasks([]);
+  };
+
+  const deleteSelectedTasks = () => {
+    if (selectedTasks.length > 0) {
+      handleDeleteMultipleTasks(selectedTasks);
+      setSelectionMode(false);
+      setSelectedTasks([]);
+    }
   };
 
   const sections = [
@@ -70,6 +104,23 @@ export default function TasksScreen() {
   return (
     <View testID="tasks-screen" style={styles.container}>
       {error && <Text style={styles.errorMessage}>{error}</Text>}
+
+      {selectionMode && (
+        <View style={styles.selectionHeader}>
+          <Text style={styles.selectionText}>{selectedTasks.length} selected</Text>
+          <View style={styles.selectionActions}>
+            <TouchableOpacity onPress={cancelSelection} style={styles.selectionButton}>
+              <MaterialIcons name="close" size={24} color="#777" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={deleteSelectedTasks}
+              style={[styles.selectionButton, styles.deleteButton]}
+              disabled={selectedTasks.length === 0}>
+              <MaterialIcons name="delete" size={24} color="white" />
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
 
       <SwipeListView
         ref={listRef}
@@ -87,7 +138,10 @@ export default function TasksScreen() {
           <TaskItem
             item={item}
             animVal={initializeAnimations(item.id)}
-            onToggleComplete={handleTaskPress}
+            onToggleComplete={() => handleTaskPress(item.id)}
+            onLongPress={() => handleLongPress(item.id)}
+            selected={selectedTasks.includes(item.id)}
+            selectionMode={selectionMode}
           />
         )}
         renderHiddenItem={({ item }) => (
@@ -103,7 +157,7 @@ export default function TasksScreen() {
         disableRightSwipe={true}
       />
 
-      <TaskFAB onPress={openAddModal} />
+      {!selectionMode && <TaskFAB onPress={openAddModal} />}
 
       <TaskModal
         visible={isModalVisible}
@@ -150,5 +204,29 @@ const styles = StyleSheet.create({
   snackbar: {
     alignSelf: 'center',
     width: '90%',
+  },
+  selectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 10,
+    marginBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ddd',
+  },
+  selectionText: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  selectionActions: {
+    flexDirection: 'row',
+  },
+  selectionButton: {
+    padding: 8,
+    marginLeft: 8,
+    borderRadius: 20,
+  },
+  deleteButton: {
+    backgroundColor: 'red',
   },
 });

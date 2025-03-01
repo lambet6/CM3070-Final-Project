@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import * as Haptics from 'expo-haptics';
 
-export default function useTaskActions(tasks, addTask, editTask, deleteTask) {
+export default function useTaskActions(tasks, addTask, editTask, deleteTasks) {
   const [isModalVisible, setModalVisible] = useState(false);
   const [taskTitle, setTaskTitle] = useState('');
   const [taskPriority, setTaskPriority] = useState('Medium');
@@ -11,7 +11,7 @@ export default function useTaskActions(tasks, addTask, editTask, deleteTask) {
 
   const [snackbarVisible, setSnackbarVisible] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
-  const deletedTaskRef = useRef(null);
+  const deletedTasksRef = useRef([]);
 
   const handleSaveTask = async () => {
     try {
@@ -38,13 +38,15 @@ export default function useTaskActions(tasks, addTask, editTask, deleteTask) {
       const taskObj = tasks[taskPriority.toLowerCase()].find((t) => t.id === taskId);
 
       if (taskObj) {
-        deletedTaskRef.current = {
-          ...taskObj,
-          priority: taskPriority,
-        };
+        deletedTasksRef.current = [
+          {
+            ...taskObj,
+            priority: taskPriority,
+          },
+        ];
         await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
 
-        await deleteTask(taskId);
+        await deleteTasks([taskId]);
 
         setSnackbarMessage(`"${taskObj.title}" deleted`);
         setSnackbarVisible(true);
@@ -52,22 +54,68 @@ export default function useTaskActions(tasks, addTask, editTask, deleteTask) {
     } catch (error) {
       setError(error.message);
       try {
-        await deleteTask(taskId);
+        await deleteTasks([taskId]);
       } catch (retryError) {
         setError('Failed to delete task. Please try again.');
       }
     }
   };
 
+  const handleDeleteMultipleTasks = async (taskIds) => {
+    try {
+      if (taskIds.length === 1) {
+        return handleDeleteTask(taskIds[0]);
+      }
+
+      const tasksToDelete = [];
+
+      taskIds.forEach((id) => {
+        let taskObj = null;
+        let taskPriority = null;
+
+        if (tasks.high.some((t) => t.id === id)) {
+          taskObj = tasks.high.find((t) => t.id === id);
+          taskPriority = 'High';
+        } else if (tasks.medium.some((t) => t.id === id)) {
+          taskObj = tasks.medium.find((t) => t.id === id);
+          taskPriority = 'Medium';
+        } else if (tasks.low.some((t) => t.id === id)) {
+          taskObj = tasks.low.find((t) => t.id === id);
+          taskPriority = 'Low';
+        }
+
+        if (taskObj) {
+          tasksToDelete.push({
+            ...taskObj,
+            priority: taskPriority,
+          });
+        }
+      });
+
+      deletedTasksRef.current = tasksToDelete;
+
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+      await deleteTasks(taskIds);
+
+      setSnackbarMessage(`${taskIds.length} tasks deleted`);
+      setSnackbarVisible(true);
+    } catch (error) {
+      setError(error.message);
+    }
+  };
+
   const handleUndoDelete = async () => {
-    if (deletedTaskRef.current) {
+    if (deletedTasksRef.current.length > 0) {
       try {
-        const { id, title, dueDate, completed, priority } = deletedTaskRef.current;
-        await addTask(title, priority, new Date(dueDate), id, completed);
-        deletedTaskRef.current = null;
+        for (const task of deletedTasksRef.current) {
+          const { title, dueDate, priority } = task;
+          await addTask(title, priority, new Date(dueDate));
+        }
+
+        deletedTasksRef.current = [];
         setSnackbarVisible(false);
       } catch (error) {
-        setError('Failed to restore task. Please try again.');
+        setError('Failed to restore task(s). Please try again.');
       }
     }
   };
@@ -108,6 +156,7 @@ export default function useTaskActions(tasks, addTask, editTask, deleteTask) {
     snackbarMessage,
     handleSaveTask,
     handleDeleteTask,
+    handleDeleteMultipleTasks,
     handleUndoDelete,
     openAddModal,
     openEditModal,

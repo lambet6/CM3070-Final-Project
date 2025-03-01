@@ -160,28 +160,28 @@ export const createTaskManager = (repository) => {
   };
 
   /**
-   * Deletes a task by ID and persists the change
-   * @param {string} taskId
+   * Deletes tasks by ID and persists the change
+   * @param {string[]} taskIds
    * @returns {Promise<GroupedTasks>}
    */
-  const deleteTask = async (taskId) => {
-    if (!taskId) {
-      throw new Error('Task ID is required');
+  const deleteTasks = async (taskIds) => {
+    if (!Array.isArray(taskIds) || taskIds.length === 0) {
+      throw new Error('At least one task ID is required');
     }
 
     try {
       const tasks = await repository.getTasks();
-      const taskExists = tasks.some((t) => t.id === taskId);
+      const nonExistentTasks = taskIds.filter((id) => !tasks.some((t) => t.id === id));
 
-      if (!taskExists) {
-        throw new Error('Task not found');
+      if (nonExistentTasks.length > 0) {
+        throw new Error(`Tasks not found: ${nonExistentTasks.join(', ')}`);
       }
 
-      const updatedTasks = tasks.filter((t) => t.id !== taskId);
+      const updatedTasks = tasks.filter((t) => !taskIds.includes(t.id));
       await repository.saveTasks(updatedTasks);
       return groupAndSortTasks(updatedTasks);
     } catch (error) {
-      throw new Error(`Failed to delete task: ${error.message}`);
+      throw new Error(`Failed to delete tasks: ${error.message}`);
     }
   };
 
@@ -202,7 +202,7 @@ export const createTaskManager = (repository) => {
     createNewTask,
     editExistingTask,
     toggleTaskCompletion,
-    deleteTask,
+    deleteTasks,
     getTasks,
   };
 };

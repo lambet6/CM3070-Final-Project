@@ -66,13 +66,13 @@ export const createTaskStore = (customTaskManager = null) => {
       }
     },
 
-    // Calls the manager to delete a task
-    deleteTask: async (taskId) => {
+    // Calls the manager to delete multiple tasks
+    deleteTasks: async (taskIds) => {
       try {
-        const updatedTasks = await taskManager.deleteTask(taskId);
+        const updatedTasks = await taskManager.deleteTasks(taskIds);
         set({ tasks: updatedTasks, error: null });
       } catch (error) {
-        console.error('Failed to delete task:', error);
+        console.error('Failed to delete tasks:', error);
         set({ error: error.message });
         throw error;
       }
