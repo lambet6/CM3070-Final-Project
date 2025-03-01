@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import TasksScreen from '../screens/TaskScreen';
+import TasksScreen from '../screens/tasks/TaskScreen';
 import CalendarScreen from '../screens/CalendarScreen';
 import GoalsScreen from '../screens/GoalsScreen';
 import WellbeingScreen from '../screens/WellbeingScreen';

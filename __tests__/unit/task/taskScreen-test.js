@@ -3,7 +3,7 @@ import { describe, it, beforeEach, expect } from '@jest/globals';
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { useTaskStore } from '../../../store/taskStore';
-import TasksScreen from '../../../screens/TaskScreen';
+import TasksScreen from '../../../screens/tasks/TaskScreen';
 import { createGroupedTaskSets } from '../../fixtures/task-fixtures';
 
 jest.mock('../../../store/taskStore', () => ({
