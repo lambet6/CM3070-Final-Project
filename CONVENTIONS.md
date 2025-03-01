@@ -6,13 +6,16 @@ This document outlines the coding standards, naming conventions, test coverage g
 
 1. [Folder Structure](#folder-structure)
 2. [Naming Conventions](#naming-conventions)
-3. [Coding Style & Linting](#coding-style--linting)
-4. [Error Handling & Logging](#error-handling--logging)
-5. [Commit Message Guidelines](#commit-message-guidelines)
-6. [Testing & Coverage](#testing--coverage)
-7. [Code Documentation](#code-documentation)
-8. [Version Control & Branching](#version-control--branching)
-9. [FAQ / Future Updates](#faq--future-updates)
+3. [Component Organization](#component-organization)
+4. [Custom Hooks](#custom-hooks)
+5. [Coding Style & Linting](#coding-style--linting)
+6. [Error Handling & Logging](#error-handling--logging)
+7. [Commit Message Guidelines](#commit-message-guidelines)
+8. [Testing & Coverage](#testing--coverage)
+9. [Code Documentation](#code-documentation)
+10. [Version Control & Branching](#version-control--branching)
+11. [Performance Optimizations](#performance-optimizations)
+12. [FAQ / Future Updates](#faq--future-updates)
 
 ---
 
@@ -63,16 +66,29 @@ Our canonical folder structure is:
     │   └── wellbeing-repository.js
     │
     ├── /screens                 # Screen Components
-    │   ├── CalendarScreen.js
-    │   ├── GoalsScreen.js
-    │   ├── TaskScreen.js
-    │   └── WellbeingScreen.js
+    │   ├── /tasks               # Organization by feature
+    │   │   ├── TaskScreen.js    # Main screen component
+    │   │   ├── /components      # Screen-specific components
+    │   │   │   ├── TaskItem.js
+    │   │   │   ├── TaskHiddenActions.js
+    │   │   │   ├── TaskSectionHeader.js
+    │   │   │   ├── TaskEmptyState.js
+    │   │   │   └── TaskFAB.js
+    │   │   └── /hooks           # Screen-specific hooks
+    │   │       ├── useTaskAnimations.js
+    │   │       └── useTaskActions.js
+    │   ├── /calendar
+    │   ├── /goals
+    │   └── /wellbeing
     │
     ├── /store                   # Zustand State Management
     │   ├── calendarStore.js
     │   ├── goalsStore.js
     │   ├── taskStore.js
     │   └── wellbeingStore.js
+    │
+    ├── /hooks                   # Shared Custom Hooks
+    │   └── useFormValidation.js
     │
     ├── /__tests__              # Test Files
     │   ├── /fixtures           # Test Data
@@ -105,7 +121,8 @@ Our canonical folder structure is:
     │       └── test-utils.js
     │
     ├── /utilities           # Utility Functions and Constants
-    │   └── constants.js
+    │   ├── constants.js
+    │   └── animation-utils.js
     │
     ├── App.js              # Root Component
     ├── index.js            # Entry Point
@@ -134,8 +151,9 @@ Our canonical folder structure is:
 1. **Managers/Repositories**: **kebab-case** (e.g., `task-manager.js`, `goal-repository.js`).
 2. **Screens/Components**: **PascalCase** (e.g., `TaskScreen.js`, `GoalModal.js`).
 3. **Domain Models**: **PascalCase** (`Task.js`, `Goal.js`).
-4. **Hooks**: If you create custom hooks, use **camelCase** with a `use` prefix (e.g., `useTaskManager.js`).
-5. **Mocks**: Same name as the original file, placed in a `__mocks__` directory adjacent to the module (e.g., `repositories/__mocks__/task-repository.js`)
+4. **Hooks**: Use **camelCase** with a `use` prefix (e.g., `useTaskAnimations.js`).
+5. **Utilities**: Use **kebab-case** for utility files (e.g., `animation-utils.js`).
+6. **Mocks**: Same name as the original file, placed in a `__mocks__` directory adjacent to the module (e.g., `repositories/__mocks__/task-repository.js`)
 
 ### JS Variables & Functions
 
@@ -145,6 +163,89 @@ Our canonical folder structure is:
 ### Class Names
 
 - **PascalCase** for classes (e.g., `class Task {}`).
+
+---
+
+## Component Organization
+
+For complex screens, use a subfolder structure with dedicated components and hooks:
+
+```
+/screens
+  /tasks                      # Feature folder
+    TaskScreen.js             # Main screen component
+    /components               # Screen-specific components
+      TaskItem.js
+      TaskHiddenActions.js
+      TaskEmptyState.js
+    /hooks                    # Screen-specific hooks
+      useTaskAnimations.js
+      useTaskActions.js
+```
+
+### Guidelines for Component Splitting:
+
+1. **Component Extraction** - Extract components when they:
+   - Represent a logical UI piece (e.g., a list item)
+   - Can be reused within the screen or elsewhere
+   - Grow beyond ~100 lines
+   - Have their own internal state or complex rendering logic
+
+2. **Component Placement**:
+   - Place **screen-specific** components in `/screens/<feature>/components/`
+   - Place **globally reusable** components in the root `/components/` folder
+
+3. **Size and Responsibility**:
+   - Each component should have a single responsibility
+   - Components should be small enough to understand at a glance (ideally <150 lines)
+   - Components should be named descriptively based on their function
+
+---
+
+## Custom Hooks
+
+Custom hooks should be used to extract and reuse stateful logic. This improves code organization, testability, and reusability.
+
+### Types of Hooks:
+
+1. **Screen-specific hooks**: Placed in `/screens/<feature>/hooks/` directory
+   - These hooks contain logic specific to one screen
+   - Example: `useTaskAnimations.js` for the TaskScreen animations
+
+2. **Shared hooks**: Placed in the root `/hooks/` directory
+   - These hooks can be used across multiple screens/components
+   - Example: `useFormValidation.js` for form input validation
+
+### Hook Guidelines:
+
+1. **Naming**: Always prefix with `use` (e.g., `useTaskAnimations`)
+2. **Return object**: Return a clearly named object with all values/functions needed
+3. **Dependencies**: Properly manage dependencies in useEffect and useCallback
+4. **Memoization**: Use useCallback for functions that are:
+   - Passed to child components
+   - Used in dependency arrays
+   - Computationally expensive
+
+Example:
+
+```javascript
+// Good example of a custom hook
+export default function useTaskAnimations(tasks, tasksLoaded, loadTasks) {
+  const animatedValues = useRef(new Map()).current;
+  const listOpacity = useRef(new Animated.Value(0)).current;
+
+  const initializeAnimations = useCallback((taskId) => {
+    // Logic here...
+  }, [/* dependencies */]);
+
+  // Effects and other logic...
+
+  return {
+    listOpacity,
+    initializeAnimations,
+  };
+}
+```
 
 ---
 
@@ -374,6 +475,50 @@ We follow **modern React Native** best practices for comments:
 
 ---
 
+## Performance Optimizations
+
+### React Memoization
+
+1. **useCallback** - Memoize callback functions when:
+   - They are passed to child components as props
+   - They are dependencies in a useEffect
+   - They are used in complex calculations
+
+   ```javascript
+   const handleDelete = useCallback((id) => {
+     // Delete logic
+   }, [/* dependencies */]);
+   ```
+
+2. **useMemo** - Memoize expensive calculations:
+   ```javascript 
+   const sortedTasks = useMemo(() => {
+     return [...tasks].sort((a, b) => a.priority - b.priority);
+   }, [tasks]);
+   ```
+
+3. **React.memo** - Prevent unnecessary re-renders for pure components:
+   ```javascript
+   const TaskItem = React.memo(function TaskItem({ task, onToggle }) {
+     // Component logic
+   });
+   ```
+
+### Animation Performance
+
+1. Use `useNativeDriver: true` for animations when possible
+2. Avoid animating layout properties (width, height) when using native driver
+3. Batch related animations with `Animated.parallel` or `Animated.sequence`
+
+### List Optimization
+
+1. Use `FlatList` or `SectionList` for long lists (not `ScrollView`)
+2. Implement `keyExtractor` and stable keys
+3. Use `getItemLayout` when item heights are predictable
+4. Apply `windowSize` and `maxToRenderPerBatch` for performance tuning
+
+---
+
 ## Version Control & Branching
 
 1. **Merge Commits**
@@ -394,13 +539,16 @@ We follow **modern React Native** best practices for comments:
 ## FAQ / Future Updates
 
 1. **Subfolders for screens/components?**
-   - Optionally create subfolders if a screen or component grows complex (e.g., "/TaskScreen/index.js" plus local child components).
+   - Yes, create subfolders for complex screens. Put screen-specific components in `/screens/<feature>/components/` and shared components in `/components/`.
+   
 2. **Hook location?**
-   - If you have multiple shared hooks, consider a `/hooks` folder. Otherwise, store them near the relevant feature.
+   - Screen-specific hooks go in `/screens/<feature>/hooks/`
+   - Shared hooks go in `/hooks/`
+   
 3. **Coverage below 80%?**
    - You can lower it to 70% initially or push to increase coverage as the project stabilizes.
 
 We'll update this file as new needs arise or if the project's scope changes.
 
-**Last Updated**: February 27, 2025
+**Last Updated**: March 01, 2025
 ```
