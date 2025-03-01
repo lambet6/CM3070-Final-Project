@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { SwipeListView, SwipeRow } from 'react-native-swipe-list-view';
+import { SwipeListView } from 'react-native-swipe-list-view';
 import { useTaskStore } from '../../store/taskStore';
 import { Snackbar } from 'react-native-paper';
 import * as Haptics from 'expo-haptics';
@@ -11,14 +11,17 @@ import useTaskActions from './hooks/useTaskActions';
 
 // Components
 import TaskModal from '../../components/TaskModal';
-import TaskItem from './components/TaskItem';
 import TaskHiddenActions from './components/TaskHiddenActions';
 import TaskSectionHeader from './components/TaskSectionHeader';
 import TaskFAB from './components/TaskFAB';
+import TaskItem from './components/TaskItem';
 
 export default function TasksScreen() {
   const { tasks, loadTasks, addTask, editTask, toggleCompleteTask, deleteTask } = useTaskStore();
   const [tasksLoaded, setTasksLoaded] = useState(false);
+
+  // Reference to the swipe list to programmatically close rows
+  const listRef = React.useRef();
 
   // Custom hooks
   const { listOpacity, initializeAnimations } = useTaskAnimations(tasks, tasksLoaded, loadTasks);
@@ -47,6 +50,17 @@ export default function TasksScreen() {
     setTasksLoaded(true);
   }, []);
 
+  const handleTaskPress = (taskId) => {
+    // First close any open rows
+    if (listRef.current) {
+      listRef.current.closeAllOpenRows();
+    }
+
+    // Then toggle task completion
+    toggleCompleteTask(taskId);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  };
+
   const sections = [
     { title: 'High Priority', data: tasks.high },
     { title: 'Medium Priority', data: tasks.medium },
@@ -58,39 +72,35 @@ export default function TasksScreen() {
       {error && <Text style={styles.errorMessage}>{error}</Text>}
 
       <SwipeListView
+        ref={listRef}
         useSectionList
         useAnimatedList={true}
         style={{ flex: 1, opacity: listOpacity }}
         sections={sections}
         keyExtractor={(item) => item.id}
-        // Combine hidden & visible content in each row:
+        // Preview settings
+        previewRowKey={sections[0]?.data[0]?.id}
+        previewOpenValue={-150}
+        previewOpenDelay={1500}
+        previewDuration={1000}
         renderItem={({ item }) => (
-          <SwipeRow
-            preview={item.id === sections[0]?.data[0]?.id}
-            previewOpenValue={-150}
-            previewDuration={1000}
-            previewOpenDelay={1500}
-            onRowPress={() => {
-              console.log('Row pressed');
-              toggleCompleteTask(item.id);
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            }}
-            leftOpenValue={1}
-            disableRightSwipe={true}
-            rightOpenValue={-150} // Increased to fit both buttons
-            swipeRowStyle={styles.swipeRowStyle}>
-            {/* Hidden actions */}
-            <TaskHiddenActions
-              item={item}
-              animVal={initializeAnimations(item.id)}
-              onEdit={openEditModal}
-              onDelete={handleDeleteTask}
-            />
-            {/* Visible content */}
-            <TaskItem item={item} animVal={initializeAnimations(item.id)} />
-          </SwipeRow>
+          <TaskItem
+            item={item}
+            animVal={initializeAnimations(item.id)}
+            onToggleComplete={handleTaskPress}
+          />
         )}
+        renderHiddenItem={({ item }) => (
+          <TaskHiddenActions
+            item={item}
+            animVal={initializeAnimations(item.id)}
+            onEdit={openEditModal}
+            onDelete={handleDeleteTask}
+          />
+        )}
+        rightOpenValue={-150}
         renderSectionHeader={({ section }) => <TaskSectionHeader section={section} />}
+        disableRightSwipe={true}
       />
 
       <TaskFAB onPress={openAddModal} />
@@ -127,6 +137,11 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
   },
+  rowFront: {
+    marginBottom: 8,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
   errorMessage: {
     color: 'red',
     padding: 10,
@@ -136,9 +151,4 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     width: '90%',
   },
-  swipeRowStyle: {
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  // Optional: define rowFront if needed (TaskItem already applies its own styles)
 });
