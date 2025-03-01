@@ -66,6 +66,18 @@ export const createTaskStore = (customTaskManager = null) => {
       }
     },
 
+    // Calls the manager to delete a task
+    deleteTask: async (taskId) => {
+      try {
+        const updatedTasks = await taskManager.deleteTask(taskId);
+        set({ tasks: updatedTasks, error: null });
+      } catch (error) {
+        console.error('Failed to delete task:', error);
+        set({ error: error.message });
+        throw error;
+      }
+    },
+
     // Utility functions to filter tasks
     getTodayTasks: () => {
       const { tasks } = get();

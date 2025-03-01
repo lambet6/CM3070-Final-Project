@@ -160,6 +160,32 @@ export const createTaskManager = (repository) => {
   };
 
   /**
+   * Deletes a task by ID and persists the change
+   * @param {string} taskId
+   * @returns {Promise<GroupedTasks>}
+   */
+  const deleteTask = async (taskId) => {
+    if (!taskId) {
+      throw new Error('Task ID is required');
+    }
+
+    try {
+      const tasks = await repository.getTasks();
+      const taskExists = tasks.some((t) => t.id === taskId);
+
+      if (!taskExists) {
+        throw new Error('Task not found');
+      }
+
+      const updatedTasks = tasks.filter((t) => t.id !== taskId);
+      await repository.saveTasks(updatedTasks);
+      return groupAndSortTasks(updatedTasks);
+    } catch (error) {
+      throw new Error(`Failed to delete task: ${error.message}`);
+    }
+  };
+
+  /**
    * Fetches all tasks, groups, and sorts them
    * @returns {Promise<GroupedTasks>}
    */
@@ -176,6 +202,7 @@ export const createTaskManager = (repository) => {
     createNewTask,
     editExistingTask,
     toggleTaskCompletion,
+    deleteTask,
     getTasks,
   };
 };

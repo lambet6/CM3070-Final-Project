@@ -33,14 +33,7 @@ This application aims to **balance productivity and wellbeing** by integrating:
      - Invalid dates trigger clear error messages
      - Form prevents submission until valid data is entered
 
-2. **Task Organization & Positioning**
-
-   - Tasks have a due date but no set duration.
-   - In the daily timeline, tasks appear as movable items that can be reordered.
-   - Users can **drag & drop** tasks in the daily timeline view to reposition them among other tasks and around calendar events.
-   - Drag & drop functionality applies within a single day only.
-
-3. **View & Filter Tasks**
+2. **View & Filter Tasks**
 
    - Tasks are displayed in two view modes:
      - **Grouped View**: Tasks sorted by priority (High, Medium, Low), then by due date within each priority group.
@@ -50,7 +43,7 @@ This application aims to **balance productivity and wellbeing** by integrating:
      - Medium priority: Yellow
      - Low priority: Green
 
-4. **Update & Edit Tasks**
+3. **Update & Edit Tasks**
 
    - Users can edit the name, due date, and priority.
    - The same validation rules apply to editing as to creation:
@@ -59,14 +52,14 @@ This application aims to **balance productivity and wellbeing** by integrating:
    - Failed edits preserve the original task data
    - Error messages clearly explain why an edit failed
 
-5. **Complete & Reschedule**
+4. **Complete & Reschedule**
 
    - Users can mark tasks as complete.
    - **Incomplete tasks** auto-reschedule to the next day.
      - If `dueDate < today` and `completed === false`, then shift `dueDate` to tomorrow at midnight.
    - **Completed tasks** leave the list at the end of the current day.
 
-6. **Delete Tasks**
+5. **Delete Tasks**
    - Tasks are permanently deleted after user confirmation
    - Deletion flow:
      1. User taps delete button
@@ -95,6 +88,7 @@ This application aims to **balance productivity and wellbeing** by integrating:
      - Updates from the phone's native calendar also reflect in the app.
 
 3. **Task/Goal Event Creation Only**
+
    - By default, standalone calendar events (unlinked to tasks/goals) are not created within the app.
    - (Optional future feature: Replace user's default calendar, letting them create any event.)
 
@@ -110,6 +104,7 @@ This application aims to **balance productivity and wellbeing** by integrating:
 ### Goals Management
 
 1. **Goals Setup**
+
    - Users can define up to **7 goals**, each with a target number of hours per week.
    - Input validation for goals:
      - Goal title cannot be blank
@@ -169,6 +164,7 @@ This application aims to **balance productivity and wellbeing** by integrating:
    - All error messages use plain language and suggest corrective actions
 
 2. **Single-Device**
+
    - No user login or cross-device account sync yet (may add in future).
 
 3. **Encryption**
@@ -183,7 +179,6 @@ This application aims to **balance productivity and wellbeing** by integrating:
    - Support for screen readers with appropriate labels
    - Adequate text scaling and large touch targets for drag & drop operations
    - Keyboard navigation support where applicable
-   
 2. **Usability Focus**
    - Quick setup of tasks
    - Clear labeling of priorities/due dates
