@@ -1,25 +1,17 @@
 import React from 'react';
-import { Animated, Pressable, Text, View, StyleSheet } from 'react-native';
-import * as Haptics from 'expo-haptics';
+import { Animated, Text, View, StyleSheet } from 'react-native';
 import { createAnimatedStyles } from '../../../utilities/animation-utils';
 
-const TaskItem = ({ item, animVal, onToggleComplete }) => {
+const TaskItem = ({ item, animVal }) => {
   const animatedStyles = createAnimatedStyles(animVal, false);
 
   return (
     <Animated.View style={animatedStyles}>
-      <Pressable
-        onPress={() => {
-          onToggleComplete(item.id);
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-        }}
-        style={[styles.taskItem, item.completed && styles.completedTask]}>
-        <View>
-          <Text style={[styles.taskText, item.completed && styles.strikethrough]}>
-            {item.title} — {new Date(item.dueDate).toDateString()}
-          </Text>
-        </View>
-      </Pressable>
+      <View style={[styles.taskItem, item.completed && styles.completedTask]}>
+        <Text style={[styles.taskText, item.completed && styles.strikethrough]}>
+          {item.title} — {new Date(item.dueDate).toDateString()}
+        </Text>
+      </View>
     </Animated.View>
   );
 };

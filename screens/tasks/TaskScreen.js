@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
-import { SwipeListView } from 'react-native-swipe-list-view';
+import { View, Text, StyleSheet } from 'react-native';
+import { SwipeListView, SwipeRow } from 'react-native-swipe-list-view';
 import { useTaskStore } from '../../store/taskStore';
 import { Snackbar } from 'react-native-paper';
 import * as Haptics from 'expo-haptics';
@@ -43,7 +43,6 @@ export default function TasksScreen() {
     openEditModal,
   } = useTaskActions(tasks, addTask, editTask, deleteTask);
 
-  // Set tasksLoaded state
   useEffect(() => {
     setTasksLoaded(true);
   }, []);
@@ -64,39 +63,35 @@ export default function TasksScreen() {
         style={{ flex: 1, opacity: listOpacity }}
         sections={sections}
         keyExtractor={(item) => item.id}
+        // Combine hidden & visible content in each row:
         renderItem={({ item }) => (
-          <TaskItem
-            item={item}
-            animVal={initializeAnimations(item.id)}
-            onToggleComplete={toggleCompleteTask}
-          />
-        )}
-        renderHiddenItem={({ item }) => (
-          <TaskHiddenActions
-            item={item}
-            animVal={initializeAnimations(item.id)}
-            onEdit={openEditModal}
-            onDelete={handleDeleteTask}
-          />
+          <SwipeRow
+            closeOnRowPress={true}
+            onRowPress={() => {
+              toggleCompleteTask(item.id);
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            }}
+            leftOpenValue={75}
+            rightOpenValue={-75}
+            swipeRowStyle={styles.swipeRowStyle}>
+            {/* Hidden actions */}
+            <TaskHiddenActions
+              item={item}
+              animVal={initializeAnimations(item.id)}
+              onEdit={openEditModal}
+              onDelete={handleDeleteTask}
+            />
+            {/* Visible content */}
+            <TaskItem item={item} animVal={initializeAnimations(item.id)} />
+          </SwipeRow>
         )}
         renderSectionHeader={({ section }) => <TaskSectionHeader section={section} />}
-        leftOpenValue={75}
-        rightOpenValue={-75}
         stopLeftSwipe={100}
         stopRightSwipe={-100}
         swipeToOpenPercent={25}
         swipeToClosePercent={10}
-        swipeRowStyle={styles.swipeRowStyle}
-        closeOnRowPress={true}
         disableLeftSwipe={false}
         disableRightSwipe={false}
-        onRowPress={(rowKey, rowMap) => {
-          if (rowMap[rowKey]) {
-            rowMap[rowKey].closeRow();
-          }
-          toggleCompleteTask(rowKey);
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        }}
         previewRowKey={tasksLoaded ? sections[0]?.data[0]?.id : null}
         previewOpenValue={-75}
         previewOpenDelay={1500}
@@ -152,4 +147,5 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     overflow: 'hidden',
   },
+  // Optional: define rowFront if needed (TaskItem already applies its own styles)
 });
