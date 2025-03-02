@@ -76,6 +76,19 @@ export default function useTaskAnimations(tasks, tasksLoaded, loadTasks) {
     }
   }, [animatedValues, tasks, tasksLoaded]);
 
+  useEffect(() => {
+    // Clean up animation values for deleted tasks
+    const allTasks = [...tasks.high, ...tasks.medium, ...tasks.low];
+    const allTaskIds = new Set(allTasks.map((task) => task.id));
+
+    // Remove animation values that don't correspond to existing tasks
+    animatedValues.forEach((_, key) => {
+      if (!allTaskIds.has(key)) {
+        animatedValues.delete(key);
+      }
+    });
+  }, [tasks, animatedValues]);
+
   return {
     listOpacity,
     initializeAnimations,

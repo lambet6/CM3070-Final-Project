@@ -169,6 +169,9 @@ export default function TasksScreen() {
           ref={listRef}
           useSectionList
           useAnimatedList={true}
+          windowSize={11} // 5 screens before, current screen, 5 screens after
+          maxToRenderPerBatch={15} // Slightly higher for smoother swipe interactions
+          updateCellsBatchingPeriod={100} // Longer period for more stable updateses
           style={{ flex: 1, opacity: listOpacity }}
           sections={sections}
           keyExtractor={(item) => item.id}
@@ -211,12 +214,11 @@ export default function TasksScreen() {
           useAnimatedList={true}
           style={{ flex: 1, opacity: listOpacity }}
           data={consolidatedTasks}
+          windowSize={11} // 5 screens before, current screen, 5 screens after
+          maxToRenderPerBatch={15} // Slightly higher for smoother swipe interactions
+          updateCellsBatchingPeriod={100} // Longer period for more stable updates
           keyExtractor={(item) => item.id}
           // Preview settings for the consolidated list
-          previewRowKey={consolidatedTasks[0]?.id}
-          previewOpenValue={-150}
-          previewOpenDelay={1500}
-          previewDuration={1000}
           onRowOpen={(rowKey) => {
             setOpenRowKey(rowKey);
           }}
