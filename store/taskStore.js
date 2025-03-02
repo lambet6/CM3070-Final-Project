@@ -15,6 +15,7 @@ export const createTaskStore = (customTaskManager = null) => {
   return create((set, get) => ({
     tasks: { high: [], medium: [], low: [] },
     error: null,
+    hasRescheduledThisSession: false,
 
     // Loads tasks using the manager
     loadTasks: async () => {
@@ -75,6 +76,31 @@ export const createTaskStore = (customTaskManager = null) => {
         console.error('Failed to delete tasks:', error);
         set({ error: error.message });
         throw error;
+      }
+    },
+
+    // Add this function inside the store object
+    rescheduleOverdueTasks: async (daysToAdd = 1) => {
+      try {
+        // Track if we've already rescheduled this session
+        if (get().hasRescheduledThisSession) return { count: 0 };
+
+        const result = await taskManager.rescheduleOverdueTasks(daysToAdd);
+        if (result.count > 0) {
+          set({
+            tasks: result.tasks,
+            hasRescheduledThisSession: true,
+            error: null,
+          });
+        } else {
+          set({ hasRescheduledThisSession: true });
+        }
+
+        return { count: result.count };
+      } catch (error) {
+        console.error('Failed to reschedule tasks:', error);
+        set({ error: error.message });
+        return { count: 0, error: error.message };
       }
     },
 

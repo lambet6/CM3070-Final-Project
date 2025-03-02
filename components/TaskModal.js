@@ -94,7 +94,7 @@ export default function TaskModal({
               mode="date"
               display="calendar"
               onChange={onDateChange}
-              minimumDate={new Date()}
+              // minimumDate={new Date()}
             />
           )}
 

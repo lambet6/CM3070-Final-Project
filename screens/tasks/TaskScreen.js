@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { SwipeListView } from 'react-native-swipe-list-view';
 import { useTaskStore } from '../../store/taskStore';
@@ -27,6 +27,7 @@ export default function TasksScreen() {
     toggleCompleteTask,
     deleteTasks,
     getConsolidatedTasks,
+    rescheduleOverdueTasks,
   } = useTaskStore();
   const [tasksLoaded, setTasksLoaded] = useState(false);
   const [selectionMode, setSelectionMode] = useState(false);
@@ -54,6 +55,7 @@ export default function TasksScreen() {
     snackbarVisible,
     setSnackbarVisible,
     snackbarMessage,
+    setSnackbarMessage,
     handleSaveTask,
     handleDeleteTask,
     handleUndoDelete,
@@ -62,9 +64,35 @@ export default function TasksScreen() {
     handleDeleteMultipleTasks,
   } = useTaskActions(tasks, addTask, editTask, deleteTasks);
 
+  const [rescheduleSnackbarVisible, setRescheduleSnackbarVisible] = useState(false);
+  const [rescheduleMessage, setRescheduleMessage] = useState('');
+
+  const checkAndRescheduleOverdueTasks = useCallback(async () => {
+    try {
+      const result = await loadTasks(); // Ensure tasks are loaded first
+      const { count } = await rescheduleOverdueTasks();
+
+      // Show notification if tasks were rescheduled
+      if (count > 0) {
+        setRescheduleMessage(
+          `${count} overdue ${count === 1 ? 'task' : 'tasks'} rescheduled to tomorrow`,
+        );
+        setRescheduleSnackbarVisible(true);
+      }
+    } catch (error) {
+      console.error('Failed to reschedule overdue tasks:', error);
+    }
+  }, [loadTasks, rescheduleOverdueTasks]);
+
   useEffect(() => {
     setTasksLoaded(true);
   }, []);
+
+  useEffect(() => {
+    if (tasksLoaded) {
+      checkAndRescheduleOverdueTasks();
+    }
+  }, [tasksLoaded, checkAndRescheduleOverdueTasks]);
 
   const handleLongPress = (taskId) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -285,6 +313,18 @@ export default function TasksScreen() {
           onPress: handleUndoDelete,
         }}>
         {snackbarMessage}
+      </Snackbar>
+
+      <Snackbar
+        visible={rescheduleSnackbarVisible}
+        wrapperStyle={styles.snackbar}
+        onDismiss={() => setRescheduleSnackbarVisible(false)}
+        duration={5000}
+        action={{
+          label: 'OK',
+          onPress: () => setRescheduleSnackbarVisible(false),
+        }}>
+        {rescheduleMessage}
       </Snackbar>
     </View>
   );

@@ -206,6 +206,39 @@ export const createTaskManager = (repository) => {
     ].sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
   };
 
+  /**
+   * Reschedules all overdue and incomplete tasks to a future date
+   * @param {number} daysToAdd - Number of days to add to the current date
+   * @returns {Promise<{tasks: GroupedTasks, count: number}>} - Updated tasks and count of rescheduled tasks
+   */
+  const rescheduleOverdueTasks = async (daysToAdd = 1) => {
+    try {
+      const tasks = await repository.getTasks();
+      let rescheduledCount = 0;
+
+      const updatedTasks = tasks.map((task) => {
+        if (!task.completed && task.isOverdue()) {
+          const newDueDate = new Date();
+          newDueDate.setDate(newDueDate.getDate() + daysToAdd);
+          task.setDueDate(newDueDate);
+          rescheduledCount++;
+        }
+        return task;
+      });
+
+      if (rescheduledCount > 0) {
+        await repository.saveTasks(updatedTasks);
+      }
+
+      return {
+        tasks: groupAndSortTasks(updatedTasks),
+        count: rescheduledCount,
+      };
+    } catch (error) {
+      throw new Error(`Failed to reschedule overdue tasks: ${error.message}`);
+    }
+  };
+
   return {
     createNewTask,
     editExistingTask,
@@ -213,5 +246,6 @@ export const createTaskManager = (repository) => {
     deleteTasks,
     getTasks,
     consolidateTasks,
+    rescheduleOverdueTasks, // Add this to the returned object
   };
 };
