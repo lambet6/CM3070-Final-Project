@@ -304,8 +304,19 @@ export default function TasksScreen() {
 
       <TaskModal
         visible={isModalVisible}
-        onSave={handleSaveTask}
-        onClose={() => setModalVisible(false)}
+        onSave={() => {
+          handleSaveTask();
+          // Close any open swipe rows before saving
+          if (listRef.current) {
+            listRef.current.closeAllOpenRows();
+          }
+        }}
+        onClose={() => {
+          setModalVisible(false);
+          if (listRef.current) {
+            listRef.current.closeAllOpenRows();
+          }
+        }}
         taskTitle={taskTitle}
         setTaskTitle={setTaskTitle}
         taskPriority={taskPriority}
