@@ -7,12 +7,17 @@ export default function useTaskAnimations(tasks, tasksLoaded, loadTasks) {
 
   // Pre-initialize all items as invisible
   const initializeAnimations = useCallback(
-    (taskId) => {
+    (taskId, forceValue = null) => {
       if (!animatedValues.has(taskId)) {
         // Start with completely hidden values
-        const animVal = new Animated.Value(0);
+        const animVal = new Animated.Value(forceValue !== null ? forceValue : 0);
         animatedValues.set(taskId, animVal);
         return animVal;
+      }
+      // If we're forcing a value for an existing animation, update it
+      if (forceValue !== null) {
+        const animVal = animatedValues.get(taskId);
+        animVal.setValue(forceValue);
       }
       return animatedValues.get(taskId);
     },

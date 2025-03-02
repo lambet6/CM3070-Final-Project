@@ -122,8 +122,21 @@ export default function TasksScreen() {
   // Create a consolidated list for the single view
   const consolidatedTasks = getConsolidatedTasks();
 
-  // When view mode changes, close any open rows
+  // When view mode changes ensure animations are applied
   useEffect(() => {
+    // Ensure all tasks in the consolidated list have animation values
+    if (viewMode === 1) {
+      // Force animation values for consolidated tasks to match their grouped counterparts
+      // This ensures tasks are visible even if switching views during animation
+      consolidatedTasks.forEach((task) => {
+        // For immediate view changes, force animations to be fully visible (value = 1)
+        initializeAnimations(task.id, 1);
+      });
+    }
+  }, [consolidatedTasks, initializeAnimations, viewMode]);
+
+  useEffect(() => {
+    // Close any open rows when switching views
     if (listRef.current) {
       listRef.current.closeAllOpenRows();
     }
