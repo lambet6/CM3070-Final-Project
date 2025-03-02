@@ -198,11 +198,20 @@ export const createTaskManager = (repository) => {
     }
   };
 
+  const consolidateTasks = (tasks) => {
+    return [
+      ...tasks.high.map((task) => ({ ...task, priority: 'High' })),
+      ...tasks.medium.map((task) => ({ ...task, priority: 'Medium' })),
+      ...tasks.low.map((task) => ({ ...task, priority: 'Low' })),
+    ].sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+  };
+
   return {
     createNewTask,
     editExistingTask,
     toggleTaskCompletion,
     deleteTasks,
     getTasks,
+    consolidateTasks,
   };
 };

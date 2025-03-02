@@ -78,6 +78,11 @@ export const createTaskStore = (customTaskManager = null) => {
       }
     },
 
+    getConsolidatedTasks: () => {
+      const { tasks } = get();
+      return taskManager.consolidateTasks(tasks);
+    },
+
     // Utility functions to filter tasks
     getTodayTasks: () => {
       const { tasks } = get();

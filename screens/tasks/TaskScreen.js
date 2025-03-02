@@ -5,6 +5,7 @@ import { useTaskStore } from '../../store/taskStore';
 import { Snackbar, Button } from 'react-native-paper';
 import * as Haptics from 'expo-haptics';
 import { MaterialIcons } from '@expo/vector-icons';
+import SegmentedControl from '@react-native-segmented-control/segmented-control';
 
 // Custom hooks
 import useTaskAnimations from './hooks/useTaskAnimations';
@@ -18,10 +19,20 @@ import TaskFAB from './components/TaskFAB';
 import TaskItem from './components/TaskItem';
 
 export default function TasksScreen() {
-  const { tasks, loadTasks, addTask, editTask, toggleCompleteTask, deleteTasks } = useTaskStore();
+  const {
+    tasks,
+    loadTasks,
+    addTask,
+    editTask,
+    toggleCompleteTask,
+    deleteTasks,
+    getConsolidatedTasks,
+  } = useTaskStore();
   const [tasksLoaded, setTasksLoaded] = useState(false);
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedTasks, setSelectedTasks] = useState([]);
+
+  const [viewMode, setViewMode] = useState(0); // 0 for grouped, 1 for consolidated
 
   // Reference to the swipe list to programmatically close rows
   const listRef = React.useRef();
@@ -101,15 +112,40 @@ export default function TasksScreen() {
     }
   };
 
+  // Prepare data for the different view modes
   const sections = [
     { title: 'High Priority', data: tasks.high },
     { title: 'Medium Priority', data: tasks.medium },
     { title: 'Low Priority', data: tasks.low },
   ];
 
+  // Create a consolidated list for the single view
+  const consolidatedTasks = getConsolidatedTasks();
+
+  // When view mode changes, close any open rows
+  useEffect(() => {
+    if (listRef.current) {
+      listRef.current.closeAllOpenRows();
+    }
+  }, [viewMode]);
+
   return (
     <View testID="tasks-screen" style={styles.container}>
       {error && <Text style={styles.errorMessage}>{error}</Text>}
+
+      <View style={styles.segmentContainer}>
+        <SegmentedControl
+          values={['Priority Groups', 'Due Date']}
+          selectedIndex={viewMode}
+          onChange={(event) => {
+            setViewMode(event.nativeEvent.selectedSegmentIndex);
+            // Close any open rows when switching views
+            if (listRef.current) {
+              listRef.current.closeAllOpenRows();
+            }
+          }}
+        />
+      </View>
 
       {selectionMode && (
         <View style={styles.selectionHeader}>
@@ -128,46 +164,87 @@ export default function TasksScreen() {
         </View>
       )}
 
-      <SwipeListView
-        ref={listRef}
-        useSectionList
-        useAnimatedList={true}
-        style={{ flex: 1, opacity: listOpacity }}
-        sections={sections}
-        keyExtractor={(item) => item.id}
-        // Preview settings
-        previewRowKey={sections[0]?.data[0]?.id}
-        previewOpenValue={-150}
-        previewOpenDelay={1500}
-        previewDuration={1000}
-        onRowOpen={(rowKey) => {
-          setOpenRowKey(rowKey);
-        }}
-        onRowClose={() => {
-          setOpenRowKey(null);
-        }}
-        renderItem={({ item }) => (
-          <TaskItem
-            item={item}
-            animVal={initializeAnimations(item.id)}
-            onToggleComplete={() => handleTaskPress(item.id)}
-            onLongPress={() => handleLongPress(item.id)}
-            selected={selectedTasks.includes(item.id)}
-            selectionMode={selectionMode}
-          />
-        )}
-        renderHiddenItem={({ item }) => (
-          <TaskHiddenActions
-            item={item}
-            animVal={initializeAnimations(item.id)}
-            onEdit={openEditModal}
-            onDelete={handleDeleteTask}
-          />
-        )}
-        rightOpenValue={-150}
-        renderSectionHeader={({ section }) => <TaskSectionHeader section={section} />}
-        disableRightSwipe={true}
-      />
+      {viewMode === 0 ? (
+        <SwipeListView
+          ref={listRef}
+          useSectionList
+          useAnimatedList={true}
+          style={{ flex: 1, opacity: listOpacity }}
+          sections={sections}
+          keyExtractor={(item) => item.id}
+          // Preview settings
+          previewRowKey={sections[0]?.data[0]?.id}
+          previewOpenValue={-150}
+          previewOpenDelay={1500}
+          previewDuration={1000}
+          onRowOpen={(rowKey) => {
+            setOpenRowKey(rowKey);
+          }}
+          onRowClose={() => {
+            setOpenRowKey(null);
+          }}
+          renderItem={({ item }) => (
+            <TaskItem
+              item={item}
+              animVal={initializeAnimations(item.id)}
+              onToggleComplete={() => handleTaskPress(item.id)}
+              onLongPress={() => handleLongPress(item.id)}
+              selected={selectedTasks.includes(item.id)}
+              selectionMode={selectionMode}
+            />
+          )}
+          renderHiddenItem={({ item }) => (
+            <TaskHiddenActions
+              item={item}
+              animVal={initializeAnimations(item.id)}
+              onEdit={openEditModal}
+              onDelete={handleDeleteTask}
+            />
+          )}
+          rightOpenValue={-150}
+          renderSectionHeader={({ section }) => <TaskSectionHeader section={section} />}
+          disableRightSwipe={true}
+        />
+      ) : (
+        <SwipeListView
+          ref={listRef}
+          useAnimatedList={true}
+          style={{ flex: 1, opacity: listOpacity }}
+          data={consolidatedTasks}
+          keyExtractor={(item) => item.id}
+          // Preview settings for the consolidated list
+          previewRowKey={consolidatedTasks[0]?.id}
+          previewOpenValue={-150}
+          previewOpenDelay={1500}
+          previewDuration={1000}
+          onRowOpen={(rowKey) => {
+            setOpenRowKey(rowKey);
+          }}
+          onRowClose={() => {
+            setOpenRowKey(null);
+          }}
+          renderItem={({ item }) => (
+            <TaskItem
+              item={item}
+              animVal={initializeAnimations(item.id)}
+              onToggleComplete={() => handleTaskPress(item.id)}
+              onLongPress={() => handleLongPress(item.id)}
+              selected={selectedTasks.includes(item.id)}
+              selectionMode={selectionMode}
+            />
+          )}
+          renderHiddenItem={({ item }) => (
+            <TaskHiddenActions
+              item={item}
+              animVal={initializeAnimations(item.id)}
+              onEdit={openEditModal}
+              onDelete={handleDeleteTask}
+            />
+          )}
+          rightOpenValue={-150}
+          disableRightSwipe={true}
+        />
+      )}
 
       {!selectionMode && <TaskFAB onPress={openAddModal} />}
 
@@ -202,6 +279,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
+  },
+  segmentContainer: {
+    marginBottom: 10,
   },
   rowFront: {
     marginBottom: 8,
