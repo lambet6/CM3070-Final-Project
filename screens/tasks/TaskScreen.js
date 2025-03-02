@@ -25,6 +25,7 @@ export default function TasksScreen() {
 
   // Reference to the swipe list to programmatically close rows
   const listRef = React.useRef();
+  const [openRowKey, setOpenRowKey] = useState(null);
 
   // Custom hooks
   const { listOpacity, initializeAnimations } = useTaskAnimations(tasks, tasksLoaded, loadTasks);
@@ -74,10 +75,15 @@ export default function TasksScreen() {
       return;
     }
 
-    // Normal mode - toggle task completion
-    if (listRef.current) {
-      listRef.current.closeAllOpenRows();
+    // If rows are open, just close them without toggling completion
+    if (openRowKey !== null) {
+      if (listRef.current) {
+        listRef.current.closeAllOpenRows();
+      }
+      return;
     }
+
+    // Normal mode - toggle task completion (only when no rows are open)
     toggleCompleteTask(taskId);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
   };
@@ -134,6 +140,12 @@ export default function TasksScreen() {
         previewOpenValue={-150}
         previewOpenDelay={1500}
         previewDuration={1000}
+        onRowOpen={(rowKey) => {
+          setOpenRowKey(rowKey);
+        }}
+        onRowClose={() => {
+          setOpenRowKey(null);
+        }}
         renderItem={({ item }) => (
           <TaskItem
             item={item}

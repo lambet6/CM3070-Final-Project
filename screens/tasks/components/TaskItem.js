@@ -1,12 +1,12 @@
 import React from 'react';
-import { Animated, Text, View, TouchableHighlight, StyleSheet } from 'react-native';
+import { Animated, Text, View, TouchableHighlight, StyleSheet, Pressable } from 'react-native';
 import { createAnimatedStyles } from '../../../utilities/animation-utils';
 import { MaterialIcons } from '@expo/vector-icons';
 
 const TaskItem = ({ item, animVal, onToggleComplete, onLongPress, selected, selectionMode }) => {
   return (
     <Animated.View style={[styles.rowFront, createAnimatedStyles(animVal, false)]}>
-      <TouchableHighlight
+      <Pressable
         onPress={onToggleComplete}
         onLongPress={onLongPress}
         activeOpacity={0.8}
@@ -36,7 +36,7 @@ const TaskItem = ({ item, animVal, onToggleComplete, onLongPress, selected, sele
             {item.title} — {new Date(item.dueDate).toDateString()}
           </Text>
         </View>
-      </TouchableHighlight>
+      </Pressable>
     </Animated.View>
   );
 };
