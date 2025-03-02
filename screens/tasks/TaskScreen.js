@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { SwipeListView } from 'react-native-swipe-list-view';
 import { useTaskStore } from '../../store/taskStore';
@@ -8,8 +8,8 @@ import { MaterialIcons } from '@expo/vector-icons';
 import SegmentedControl from '@react-native-segmented-control/segmented-control';
 
 // Custom hooks
-import useTaskAnimations from './hooks/useTaskAnimations';
 import useTaskActions from './hooks/useTaskActions';
+import useSelectionMode from './hooks/useSelectionMode';
 
 // Components
 import TaskModal from '../../components/TaskModal';
@@ -29,22 +29,13 @@ export default function TasksScreen() {
     getConsolidatedTasks,
     rescheduleOverdueTasks,
   } = useTaskStore();
-  const [tasksLoaded, setTasksLoaded] = useState(false);
-  const [selectionMode, setSelectionMode] = useState(false);
-  const [selectedTasks, setSelectedTasks] = useState([]);
 
+  // Removed unused tasksLoaded state
   const [viewMode, setViewMode] = useState(0); // 0 for grouped, 1 for consolidated
 
   // Reference to the swipe list to programmatically close rows
   const listRef = React.useRef();
   const [openRowKey, setOpenRowKey] = useState(null);
-
-  // Custom hooks
-  const { listOpacity, initializeAnimations, animationsComplete } = useTaskAnimations(
-    tasks,
-    tasksLoaded,
-    loadTasks,
-  );
 
   const {
     isModalVisible,
@@ -56,72 +47,57 @@ export default function TasksScreen() {
     taskDueDate,
     setTaskDueDate,
     error,
-    snackbarVisible,
-    setSnackbarVisible,
-    snackbarMessage,
+    snackbarState,
+    setSnackbarState,
     handleSaveTask,
     handleDeleteTask,
-    handleUndoDelete,
     openAddModal,
     openEditModal,
     handleDeleteMultipleTasks,
   } = useTaskActions(tasks, addTask, editTask, deleteTasks);
 
-  const [rescheduleSnackbarVisible, setRescheduleSnackbarVisible] = useState(false);
-  const [rescheduleMessage, setRescheduleMessage] = useState('');
+  const {
+    selectionMode,
+    selectedItems,
+    handleLongPress,
+    handleSelectionToggle,
+    cancelSelection,
+    deleteSelectedItems,
+  } = useSelectionMode(handleDeleteMultipleTasks);
 
-  // Modified to check for animations complete
-  const checkAndRescheduleOverdueTasks = useCallback(async () => {
-    try {
-      const result = await loadTasks(); // Ensure tasks are loaded first
-      const { count } = await rescheduleOverdueTasks();
+  useEffect(() => {
+    const initializeTasks = async () => {
+      try {
+        // Load all tasks first
+        await loadTasks();
 
-      // Store the reschedule results but don't show snackbar yet
-      if (count > 0) {
-        setRescheduleMessage(
-          `${count} overdue ${count === 1 ? 'task' : 'tasks'} rescheduled to tomorrow`,
-        );
-        // We'll show this later when animations are complete
+        // Then handle any overdue tasks
+        const { count } = await rescheduleOverdueTasks();
+
+        // Show notification immediately if needed
+        if (count > 0) {
+          setSnackbarState({
+            visible: true,
+            message: `${count} overdue ${count === 1 ? 'task' : 'tasks'} rescheduled to tomorrow`,
+            action: {
+              label: 'OK',
+              onPress: () => setSnackbarState((prev) => ({ ...prev, visible: false })),
+            },
+          });
+        }
+      } catch (error) {
+        console.error('Failed to initialize tasks:', error);
       }
-    } catch (error) {
-      console.error('Failed to reschedule overdue tasks:', error);
-    }
-  }, [loadTasks, rescheduleOverdueTasks]);
+    };
 
-  // Effect to show reschedule snackbar after animations are complete
-  useEffect(() => {
-    if (animationsComplete && rescheduleMessage) {
-      setRescheduleSnackbarVisible(true);
-    }
-  }, [animationsComplete, rescheduleMessage]);
-
-  useEffect(() => {
-    setTasksLoaded(true);
-  }, []);
-
-  useEffect(() => {
-    if (tasksLoaded) {
-      checkAndRescheduleOverdueTasks();
-    }
-  }, [tasksLoaded, checkAndRescheduleOverdueTasks]);
-
-  const handleLongPress = (taskId) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setSelectionMode(true);
-    setSelectedTasks([taskId]);
-  };
+    initializeTasks();
+  }, []); // Run once on component mount
 
   const handleTaskPress = (taskId) => {
     // In selection mode, toggle task selection
     if (selectionMode) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      setSelectedTasks((prev) => {
-        if (prev.includes(taskId)) {
-          return prev.filter((id) => id !== taskId);
-        } else {
-          return [...prev, taskId];
-        }
-      });
+      handleSelectionToggle(taskId);
       return;
     }
 
@@ -138,19 +114,6 @@ export default function TasksScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
   };
 
-  const cancelSelection = () => {
-    setSelectionMode(false);
-    setSelectedTasks([]);
-  };
-
-  const deleteSelectedTasks = () => {
-    if (selectedTasks.length > 0) {
-      handleDeleteMultipleTasks(selectedTasks);
-      setSelectionMode(false);
-      setSelectedTasks([]);
-    }
-  };
-
   // Prepare data for the different view modes
   const sections = [
     { title: 'High Priority', data: tasks.high },
@@ -160,19 +123,6 @@ export default function TasksScreen() {
 
   // Create a consolidated list for the single view
   const consolidatedTasks = getConsolidatedTasks();
-
-  // When view mode changes ensure animations are applied
-  useEffect(() => {
-    // Ensure all tasks in the consolidated list have animation values
-    if (viewMode === 1) {
-      // Force animation values for consolidated tasks to match their grouped counterparts
-      // This ensures tasks are visible even if switching views during animation
-      consolidatedTasks.forEach((task) => {
-        // For immediate view changes, force animations to be fully visible (value = 1)
-        initializeAnimations(task.id, 1);
-      });
-    }
-  }, [consolidatedTasks, initializeAnimations, viewMode]);
 
   useEffect(() => {
     // Close any open rows when switching views
@@ -201,15 +151,15 @@ export default function TasksScreen() {
 
       {selectionMode && (
         <View style={styles.selectionHeader}>
-          <Text style={styles.selectionText}>{selectedTasks.length} selected</Text>
+          <Text style={styles.selectionText}>{selectedItems.length} selected</Text>
           <View style={styles.selectionActions}>
             <TouchableOpacity onPress={cancelSelection} style={styles.selectionButton}>
               <MaterialIcons name="close" size={24} color="#777" />
             </TouchableOpacity>
             <TouchableOpacity
-              onPress={deleteSelectedTasks}
+              onPress={deleteSelectedItems}
               style={[styles.selectionButton, styles.deleteButton]}
-              disabled={selectedTasks.length === 0}>
+              disabled={selectedItems.length === 0}>
               <MaterialIcons name="delete" size={24} color="white" />
             </TouchableOpacity>
           </View>
@@ -220,11 +170,10 @@ export default function TasksScreen() {
         <SwipeListView
           ref={listRef}
           useSectionList
-          useAnimatedList={true}
-          windowSize={11} // 5 screens before, current screen, 5 screens after
-          maxToRenderPerBatch={15} // Slightly higher for smoother swipe interactions
-          updateCellsBatchingPeriod={100} // Longer period for more stable updateses
-          style={{ flex: 1, opacity: listOpacity }}
+          windowSize={11}
+          maxToRenderPerBatch={15}
+          updateCellsBatchingPeriod={100}
+          style={{ flex: 1 }}
           sections={sections}
           keyExtractor={(item) => item.id}
           // Preview settings
@@ -241,20 +190,14 @@ export default function TasksScreen() {
           renderItem={({ item }) => (
             <TaskItem
               item={item}
-              animVal={initializeAnimations(item.id)}
               onToggleComplete={() => handleTaskPress(item.id)}
               onLongPress={() => handleLongPress(item.id)}
-              selected={selectedTasks.includes(item.id)}
+              selected={selectedItems.includes(item.id)}
               selectionMode={selectionMode}
             />
           )}
           renderHiddenItem={({ item }) => (
-            <TaskHiddenActions
-              item={item}
-              animVal={initializeAnimations(item.id)}
-              onEdit={openEditModal}
-              onDelete={handleDeleteTask}
-            />
+            <TaskHiddenActions item={item} onEdit={openEditModal} onDelete={handleDeleteTask} />
           )}
           rightOpenValue={-150}
           renderSectionHeader={({ section }) => <TaskSectionHeader section={section} />}
@@ -263,14 +206,12 @@ export default function TasksScreen() {
       ) : (
         <SwipeListView
           ref={listRef}
-          useAnimatedList={true}
-          style={{ flex: 1, opacity: listOpacity }}
+          style={{ flex: 1 }}
           data={consolidatedTasks}
-          windowSize={11} // 5 screens before, current screen, 5 screens after
-          maxToRenderPerBatch={15} // Slightly higher for smoother swipe interactions
-          updateCellsBatchingPeriod={100} // Longer period for more stable updates
+          windowSize={11}
+          maxToRenderPerBatch={15}
+          updateCellsBatchingPeriod={100}
           keyExtractor={(item) => item.id}
-          // Preview settings for the consolidated list
           onRowOpen={(rowKey) => {
             setOpenRowKey(rowKey);
           }}
@@ -280,20 +221,14 @@ export default function TasksScreen() {
           renderItem={({ item }) => (
             <TaskItem
               item={item}
-              animVal={initializeAnimations(item.id)}
               onToggleComplete={() => handleTaskPress(item.id)}
               onLongPress={() => handleLongPress(item.id)}
-              selected={selectedTasks.includes(item.id)}
+              selected={selectedItems.includes(item.id)}
               selectionMode={selectionMode}
             />
           )}
           renderHiddenItem={({ item }) => (
-            <TaskHiddenActions
-              item={item}
-              animVal={initializeAnimations(item.id)}
-              onEdit={openEditModal}
-              onDelete={handleDeleteTask}
-            />
+            <TaskHiddenActions item={item} onEdit={openEditModal} onDelete={handleDeleteTask} />
           )}
           rightOpenValue={-150}
           disableRightSwipe={true}
@@ -325,28 +260,14 @@ export default function TasksScreen() {
         setTaskDueDate={setTaskDueDate}
       />
 
+      {/* Consolidated single snackbar */}
       <Snackbar
-        visible={snackbarVisible}
+        visible={snackbarState.visible}
         wrapperStyle={styles.snackbar}
-        onDismiss={() => setSnackbarVisible(false)}
+        onDismiss={() => setSnackbarState((prev) => ({ ...prev, visible: false }))}
         duration={5000}
-        action={{
-          label: 'Undo',
-          onPress: handleUndoDelete,
-        }}>
-        {snackbarMessage}
-      </Snackbar>
-
-      <Snackbar
-        visible={rescheduleSnackbarVisible}
-        wrapperStyle={styles.snackbar}
-        onDismiss={() => setRescheduleSnackbarVisible(false)}
-        duration={5000}
-        action={{
-          label: 'OK',
-          onPress: () => setRescheduleSnackbarVisible(false),
-        }}>
-        {rescheduleMessage}
+        action={snackbarState.action}>
+        {snackbarState.message}
       </Snackbar>
     </View>
   );
@@ -359,11 +280,6 @@ const styles = StyleSheet.create({
   },
   segmentContainer: {
     marginBottom: 10,
-  },
-  rowFront: {
-    marginBottom: 8,
-    borderRadius: 12,
-    overflow: 'hidden',
   },
   errorMessage: {
     color: 'red',

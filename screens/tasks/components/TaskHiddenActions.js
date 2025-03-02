@@ -1,36 +1,31 @@
 import React from 'react';
-import { Animated, TouchableOpacity, Text, View, StyleSheet } from 'react-native';
+import { TouchableOpacity, Text, View, StyleSheet } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { createAnimatedStyles } from '../../../utilities/animation-utils';
 
-const TaskHiddenActions = ({ item, animVal, onEdit, onDelete }) => {
-  const animatedStyles = createAnimatedStyles(animVal, true);
-
+const TaskHiddenActions = ({ item, onEdit, onDelete }) => {
   return (
-    <Animated.View style={animatedStyles}>
-      <View style={styles.rowBack}>
-        {/* Empty view on the left side */}
-        <View />
+    <View style={styles.rowBack}>
+      {/* Empty view on the left side */}
+      <View />
 
-        {/* Both buttons on the right side */}
-        <View style={styles.rightButtonContainer}>
-          <TouchableOpacity
-            style={[styles.backRightBtn, styles.editButton]}
-            onPress={() => {
-              onEdit(item);
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            }}>
-            <Text style={styles.backTextWhite}>Edit</Text>
-          </TouchableOpacity>
+      {/* Both buttons on the right side */}
+      <View style={styles.rightButtonContainer}>
+        <TouchableOpacity
+          style={[styles.backRightBtn, styles.editButton]}
+          onPress={() => {
+            onEdit(item);
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          }}>
+          <Text style={styles.backTextWhite}>Edit</Text>
+        </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.backRightBtn, styles.deleteButton]}
-            onPress={() => onDelete(item.id)}>
-            <Text style={styles.backTextWhite}>Delete</Text>
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity
+          style={[styles.backRightBtn, styles.deleteButton]}
+          onPress={() => onDelete(item.id)}>
+          <Text style={styles.backTextWhite}>Delete</Text>
+        </TouchableOpacity>
       </View>
-    </Animated.View>
+    </View>
   );
 };
 
@@ -38,12 +33,10 @@ const styles = StyleSheet.create({
   rowBack: {
     alignItems: 'stretch',
     backgroundColor: '#DDD',
-    flex: 1,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    borderRadius: 13,
-    overflow: 'hidden',
-    height: 56,
+    borderRadius: 15,
+    height: 64,
   },
   rightButtonContainer: {
     flexDirection: 'row',
@@ -61,6 +54,8 @@ const styles = StyleSheet.create({
   },
   deleteButton: {
     backgroundColor: 'red', // Keep the same red color
+    borderTopRightRadius: 16,
+    borderBottomRightRadius: 16,
   },
   backTextWhite: {
     color: '#FFF',

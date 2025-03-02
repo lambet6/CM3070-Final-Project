@@ -9,8 +9,13 @@ export default function useTaskActions(tasks, addTask, editTask, deleteTasks) {
   const [editingTaskId, setEditingTaskId] = useState(null);
   const [error, setError] = useState(null);
 
-  const [snackbarVisible, setSnackbarVisible] = useState(false);
-  const [snackbarMessage, setSnackbarMessage] = useState('');
+  // Replace individual snackbar states with a unified state object
+  const [snackbarState, setSnackbarState] = useState({
+    visible: false,
+    message: '',
+    action: null,
+  });
+
   const deletedTasksRef = useRef([]);
 
   const handleSaveTask = async () => {
@@ -48,8 +53,15 @@ export default function useTaskActions(tasks, addTask, editTask, deleteTasks) {
 
         await deleteTasks([taskId]);
 
-        setSnackbarMessage(`"${taskObj.title}" deleted`);
-        setSnackbarVisible(true);
+        // Use the unified snackbar state
+        setSnackbarState({
+          visible: true,
+          message: `"${taskObj.title}" deleted`,
+          action: {
+            label: 'Undo',
+            onPress: handleUndoDelete,
+          },
+        });
       }
     } catch (error) {
       setError(error.message);
@@ -97,8 +109,15 @@ export default function useTaskActions(tasks, addTask, editTask, deleteTasks) {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
       await deleteTasks(taskIds);
 
-      setSnackbarMessage(`${taskIds.length} tasks deleted`);
-      setSnackbarVisible(true);
+      // Use the unified snackbar state
+      setSnackbarState({
+        visible: true,
+        message: `${taskIds.length} tasks deleted`,
+        action: {
+          label: 'Undo',
+          onPress: handleUndoDelete,
+        },
+      });
     } catch (error) {
       setError(error.message);
     }
@@ -113,7 +132,7 @@ export default function useTaskActions(tasks, addTask, editTask, deleteTasks) {
         }
 
         deletedTasksRef.current = [];
-        setSnackbarVisible(false);
+        setSnackbarState((prev) => ({ ...prev, visible: false }));
       } catch (error) {
         setError('Failed to restore task(s). Please try again.');
       }
@@ -151,9 +170,8 @@ export default function useTaskActions(tasks, addTask, editTask, deleteTasks) {
     setTaskDueDate,
     editingTaskId,
     error,
-    snackbarVisible,
-    setSnackbarVisible,
-    snackbarMessage,
+    snackbarState,
+    setSnackbarState,
     handleSaveTask,
     handleDeleteTask,
     handleDeleteMultipleTasks,
