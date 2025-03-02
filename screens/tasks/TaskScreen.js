@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { SwipeListView } from 'react-native-swipe-list-view';
 import { useTaskStore } from '../../store/taskStore';
-import { Snackbar, Button } from 'react-native-paper';
+import { Snackbar } from 'react-native-paper';
 import * as Haptics from 'expo-haptics';
 import { MaterialIcons } from '@expo/vector-icons';
 import SegmentedControl from '@react-native-segmented-control/segmented-control';
@@ -40,7 +40,11 @@ export default function TasksScreen() {
   const [openRowKey, setOpenRowKey] = useState(null);
 
   // Custom hooks
-  const { listOpacity, initializeAnimations } = useTaskAnimations(tasks, tasksLoaded, loadTasks);
+  const { listOpacity, initializeAnimations, animationsComplete } = useTaskAnimations(
+    tasks,
+    tasksLoaded,
+    loadTasks,
+  );
 
   const {
     isModalVisible,
@@ -55,7 +59,6 @@ export default function TasksScreen() {
     snackbarVisible,
     setSnackbarVisible,
     snackbarMessage,
-    setSnackbarMessage,
     handleSaveTask,
     handleDeleteTask,
     handleUndoDelete,
@@ -67,22 +70,30 @@ export default function TasksScreen() {
   const [rescheduleSnackbarVisible, setRescheduleSnackbarVisible] = useState(false);
   const [rescheduleMessage, setRescheduleMessage] = useState('');
 
+  // Modified to check for animations complete
   const checkAndRescheduleOverdueTasks = useCallback(async () => {
     try {
       const result = await loadTasks(); // Ensure tasks are loaded first
       const { count } = await rescheduleOverdueTasks();
 
-      // Show notification if tasks were rescheduled
+      // Store the reschedule results but don't show snackbar yet
       if (count > 0) {
         setRescheduleMessage(
           `${count} overdue ${count === 1 ? 'task' : 'tasks'} rescheduled to tomorrow`,
         );
-        setRescheduleSnackbarVisible(true);
+        // We'll show this later when animations are complete
       }
     } catch (error) {
       console.error('Failed to reschedule overdue tasks:', error);
     }
   }, [loadTasks, rescheduleOverdueTasks]);
+
+  // Effect to show reschedule snackbar after animations are complete
+  useEffect(() => {
+    if (animationsComplete && rescheduleMessage) {
+      setRescheduleSnackbarVisible(true);
+    }
+  }, [animationsComplete, rescheduleMessage]);
 
   useEffect(() => {
     setTasksLoaded(true);

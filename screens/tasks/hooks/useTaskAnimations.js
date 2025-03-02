@@ -1,9 +1,11 @@
-import { useRef, useEffect, useCallback } from 'react';
+/* global setTimeout, clearTimeout */
+import { useRef, useEffect, useCallback, useState } from 'react';
 import { Animated } from 'react-native';
 
 export default function useTaskAnimations(tasks, tasksLoaded, loadTasks) {
   const animatedValues = useRef(new Map()).current;
   const listOpacity = useRef(new Animated.Value(0)).current;
+  const [animationsComplete, setAnimationsComplete] = useState(false);
 
   // Pre-initialize all items as invisible
   const initializeAnimations = useCallback(
@@ -69,6 +71,10 @@ export default function useTaskAnimations(tasks, tasksLoaded, loadTasks) {
         });
       });
 
+      // Calculate total animation duration (initial delay + all animations)
+      const totalDuration =
+        animations.length > 0 ? 100 + 200 + (animations.length - 1) * 80 + 300 : 400; // 300ms buffer for spring animation
+
       // Start all animations in sequence
       if (animations.length > 0) {
         Animated.sequence([
@@ -78,6 +84,13 @@ export default function useTaskAnimations(tasks, tasksLoaded, loadTasks) {
           Animated.parallel(animations),
         ]).start();
       }
+
+      // Set animations as complete after the estimated total duration
+      const timer = setTimeout(() => {
+        setAnimationsComplete(true);
+      }, totalDuration);
+
+      return () => clearTimeout(timer);
     }
   }, [animatedValues, tasks, tasksLoaded]);
 
@@ -97,5 +110,6 @@ export default function useTaskAnimations(tasks, tasksLoaded, loadTasks) {
   return {
     listOpacity,
     initializeAnimations,
+    animationsComplete,
   };
 }
