@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { SwipeListView } from 'react-native-swipe-list-view';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, SectionList } from 'react-native';
 import { useTaskStore } from '../../store/taskStore';
 import { Snackbar } from 'react-native-paper';
 import * as Haptics from 'expo-haptics';
@@ -13,10 +12,9 @@ import useSelectionMode from './hooks/useSelectionMode';
 
 // Components
 import TaskModal from '../../components/TaskModal';
-import TaskHiddenActions from './components/TaskHiddenActions';
 import TaskSectionHeader from './components/TaskSectionHeader';
 import TaskFAB from './components/TaskFAB';
-import TaskItem from './components/TaskItem';
+import SwipeableTaskItem from './components/SwipeableTaskItem';
 
 export default function TasksScreen() {
   const {
@@ -30,12 +28,7 @@ export default function TasksScreen() {
     rescheduleOverdueTasks,
   } = useTaskStore();
 
-  // Removed unused tasksLoaded state
   const [viewMode, setViewMode] = useState(0); // 0 for grouped, 1 for consolidated
-
-  // Reference to the swipe list to programmatically close rows
-  const listRef = React.useRef();
-  const [openRowKey, setOpenRowKey] = useState(null);
 
   const {
     isModalVisible,
@@ -93,43 +86,45 @@ export default function TasksScreen() {
     initializeTasks();
   }, []); // Run once on component mount
 
-  const handleTaskPress = (taskId) => {
-    // In selection mode, toggle task selection
-    if (selectionMode) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      handleSelectionToggle(taskId);
-      return;
+  // Get the right sections based on viewMode
+  const getSections = () => {
+    if (viewMode === 0) {
+      // Grouped by priority
+      return [
+        { title: 'High Priority', data: tasks.high },
+        { title: 'Medium Priority', data: tasks.medium },
+        { title: 'Low Priority', data: tasks.low },
+      ];
+    } else {
+      // Consolidated list with a single section
+      return [{ title: 'All Tasks', data: getConsolidatedTasks() }];
     }
-
-    // If rows are open, just close them without toggling completion
-    if (openRowKey !== null) {
-      if (listRef.current) {
-        listRef.current.closeAllOpenRows();
-      }
-      return;
-    }
-
-    // Normal mode - toggle task completion (only when no rows are open)
-    toggleCompleteTask(taskId);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
   };
 
-  // Prepare data for the different view modes
-  const sections = [
-    { title: 'High Priority', data: tasks.high },
-    { title: 'Medium Priority', data: tasks.medium },
-    { title: 'Low Priority', data: tasks.low },
-  ];
-
-  // Create a consolidated list for the single view
-  const consolidatedTasks = getConsolidatedTasks();
-
-  useEffect(() => {
-    // Close any open rows when switching views
-    if (listRef.current) {
-      listRef.current.closeAllOpenRows();
-    }
-  }, [viewMode]);
+  // Render a task item
+  const renderItem = ({ item }) => (
+    <SwipeableTaskItem
+      task={item}
+      onEdit={() => openEditModal(item)}
+      onDelete={() => handleDeleteTask(item.id)}
+      onTap={() => {
+        if (selectionMode) {
+          handleSelectionToggle(item.id);
+        } else {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          toggleCompleteTask(item.id);
+        }
+      }}
+      onLongPress={() => {
+        if (!selectionMode) {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          handleLongPress(item.id);
+        }
+      }}
+      selected={selectedItems.includes(item.id)}
+      selectionMode={selectionMode}
+    />
+  );
 
   return (
     <View testID="tasks-screen" style={styles.container}>
@@ -141,10 +136,6 @@ export default function TasksScreen() {
           selectedIndex={viewMode}
           onChange={(event) => {
             setViewMode(event.nativeEvent.selectedSegmentIndex);
-            // Close any open rows when switching views
-            if (listRef.current) {
-              listRef.current.closeAllOpenRows();
-            }
           }}
         />
       </View>
@@ -166,92 +157,26 @@ export default function TasksScreen() {
         </View>
       )}
 
-      {viewMode === 0 ? (
-        <SwipeListView
-          ref={listRef}
-          useSectionList
-          windowSize={11}
-          maxToRenderPerBatch={15}
-          updateCellsBatchingPeriod={100}
-          style={{ flex: 1 }}
-          sections={sections}
-          keyExtractor={(item) => item.id}
-          // Preview settings
-          previewRowKey={sections[0]?.data[0]?.id}
-          previewOpenValue={-150}
-          previewOpenDelay={1500}
-          previewDuration={1000}
-          onRowOpen={(rowKey) => {
-            setOpenRowKey(rowKey);
-          }}
-          onRowClose={() => {
-            setOpenRowKey(null);
-          }}
-          renderItem={({ item }) => (
-            <TaskItem
-              item={item}
-              onToggleComplete={() => handleTaskPress(item.id)}
-              onLongPress={() => handleLongPress(item.id)}
-              selected={selectedItems.includes(item.id)}
-              selectionMode={selectionMode}
-            />
-          )}
-          renderHiddenItem={({ item }) => (
-            <TaskHiddenActions item={item} onEdit={openEditModal} onDelete={handleDeleteTask} />
-          )}
-          rightOpenValue={-150}
-          renderSectionHeader={({ section }) => <TaskSectionHeader section={section} />}
-          disableRightSwipe={true}
-        />
-      ) : (
-        <SwipeListView
-          ref={listRef}
-          style={{ flex: 1 }}
-          data={consolidatedTasks}
-          windowSize={11}
-          maxToRenderPerBatch={15}
-          updateCellsBatchingPeriod={100}
-          keyExtractor={(item) => item.id}
-          onRowOpen={(rowKey) => {
-            setOpenRowKey(rowKey);
-          }}
-          onRowClose={() => {
-            setOpenRowKey(null);
-          }}
-          renderItem={({ item }) => (
-            <TaskItem
-              item={item}
-              onToggleComplete={() => handleTaskPress(item.id)}
-              onLongPress={() => handleLongPress(item.id)}
-              selected={selectedItems.includes(item.id)}
-              selectionMode={selectionMode}
-            />
-          )}
-          renderHiddenItem={({ item }) => (
-            <TaskHiddenActions item={item} onEdit={openEditModal} onDelete={handleDeleteTask} />
-          )}
-          rightOpenValue={-150}
-          disableRightSwipe={true}
-        />
-      )}
+      <SectionList
+        sections={getSections()}
+        keyExtractor={(item) => item.id}
+        renderItem={renderItem}
+        renderSectionHeader={({ section }) => <TaskSectionHeader section={section} />}
+        stickySectionHeadersEnabled={false}
+        windowSize={11}
+        maxToRenderPerBatch={15}
+        updateCellsBatchingPeriod={100}
+        ListEmptyComponent={
+          <Text style={styles.emptyText}>No tasks yet. Add a task to get started!</Text>
+        }
+      />
 
       {!selectionMode && <TaskFAB onPress={openAddModal} />}
 
       <TaskModal
         visible={isModalVisible}
-        onSave={() => {
-          handleSaveTask();
-          // Close any open swipe rows before saving
-          if (listRef.current) {
-            listRef.current.closeAllOpenRows();
-          }
-        }}
-        onClose={() => {
-          setModalVisible(false);
-          if (listRef.current) {
-            listRef.current.closeAllOpenRows();
-          }
-        }}
+        onSave={handleSaveTask}
+        onClose={() => setModalVisible(false)}
         taskTitle={taskTitle}
         setTaskTitle={setTaskTitle}
         taskPriority={taskPriority}
@@ -313,5 +238,11 @@ const styles = StyleSheet.create({
   },
   deleteButton: {
     backgroundColor: 'red',
+  },
+  emptyText: {
+    textAlign: 'center',
+    marginTop: 40,
+    fontSize: 16,
+    color: '#757575',
   },
 });
