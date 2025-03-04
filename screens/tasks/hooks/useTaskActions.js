@@ -1,15 +1,8 @@
 import { useState, useRef } from 'react';
 import * as Haptics from 'expo-haptics';
 
-export default function useTaskActions(tasks, addTask, editTask, deleteTasks) {
-  const [isModalVisible, setModalVisible] = useState(false);
-  const [taskTitle, setTaskTitle] = useState('');
-  const [taskPriority, setTaskPriority] = useState('Medium');
-  const [taskDueDate, setTaskDueDate] = useState(new Date());
-  const [editingTaskId, setEditingTaskId] = useState(null);
+export default function useTaskActions(tasks, addTask, deleteTasks) {
   const [error, setError] = useState(null);
-
-  // Replace individual snackbar states with a unified state object
   const [snackbarState, setSnackbarState] = useState({
     visible: false,
     message: '',
@@ -17,21 +10,6 @@ export default function useTaskActions(tasks, addTask, editTask, deleteTasks) {
   });
 
   const deletedTasksRef = useRef([]);
-
-  const handleSaveTask = async () => {
-    try {
-      setError(null);
-      if (editingTaskId) {
-        await editTask(editingTaskId, taskTitle, taskPriority, taskDueDate);
-      } else {
-        await addTask(taskTitle, taskPriority, taskDueDate);
-      }
-      setModalVisible(false);
-      resetTaskForm();
-    } catch (error) {
-      setError(error.message);
-    }
-  };
 
   const handleDeleteTask = async (taskId) => {
     try {
@@ -123,6 +101,13 @@ export default function useTaskActions(tasks, addTask, editTask, deleteTasks) {
     }
   };
 
+  // Clear deleted tasks reference when snackbar dismisses
+  const handleSnackbarDismiss = () => {
+    setSnackbarState((prev) => ({ ...prev, visible: false }));
+    // Clear the deleted tasks history since undo is no longer available
+    deletedTasksRef.current = [];
+  };
+
   const handleUndoDelete = async () => {
     if (deletedTasksRef.current.length > 0) {
       try {
@@ -139,44 +124,13 @@ export default function useTaskActions(tasks, addTask, editTask, deleteTasks) {
     }
   };
 
-  const openAddModal = () => {
-    resetTaskForm();
-    setModalVisible(true);
-  };
-
-  const openEditModal = (task) => {
-    setEditingTaskId(task.id);
-    setTaskTitle(task.title);
-    setTaskPriority(task.priority);
-    setTaskDueDate(new Date(task.dueDate));
-    setModalVisible(true);
-  };
-
-  const resetTaskForm = () => {
-    setEditingTaskId(null);
-    setTaskTitle('');
-    setTaskPriority('Medium');
-    setTaskDueDate(new Date());
-  };
-
   return {
-    isModalVisible,
-    setModalVisible,
-    taskTitle,
-    setTaskTitle,
-    taskPriority,
-    setTaskPriority,
-    taskDueDate,
-    setTaskDueDate,
-    editingTaskId,
     error,
     snackbarState,
     setSnackbarState,
-    handleSaveTask,
     handleDeleteTask,
     handleDeleteMultipleTasks,
     handleUndoDelete,
-    openAddModal,
-    openEditModal,
+    handleSnackbarDismiss,
   };
 }

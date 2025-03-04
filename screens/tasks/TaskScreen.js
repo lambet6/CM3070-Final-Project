@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, SectionList } from 'react-native';
 import { useTaskStore } from '../../store/taskStore';
 import { Snackbar } from 'react-native-paper';
@@ -11,9 +11,6 @@ import useTaskActions from './hooks/useTaskActions';
 import useSelectionMode from './hooks/useSelectionMode';
 
 // Components
-import TaskModal from '../../components/TaskModal';
-import TaskSectionHeader from './components/TaskSectionHeader';
-import TaskFAB from './components/TaskFAB';
 import SwipeableTaskItem from './components/SwipeableTaskItem';
 
 export default function TasksScreen() {
@@ -21,7 +18,6 @@ export default function TasksScreen() {
     tasks,
     loadTasks,
     addTask,
-    editTask,
     toggleCompleteTask,
     deleteTasks,
     getConsolidatedTasks,
@@ -31,23 +27,13 @@ export default function TasksScreen() {
   const [viewMode, setViewMode] = useState(0); // 0 for grouped, 1 for consolidated
 
   const {
-    isModalVisible,
-    setModalVisible,
-    taskTitle,
-    setTaskTitle,
-    taskPriority,
-    setTaskPriority,
-    taskDueDate,
-    setTaskDueDate,
     error,
     snackbarState,
     setSnackbarState,
-    handleSaveTask,
     handleDeleteTask,
-    openAddModal,
-    openEditModal,
     handleDeleteMultipleTasks,
-  } = useTaskActions(tasks, addTask, editTask, deleteTasks);
+    handleSnackbarDismiss,
+  } = useTaskActions(tasks, addTask, deleteTasks);
 
   const {
     selectionMode,
@@ -105,7 +91,10 @@ export default function TasksScreen() {
   const renderItem = ({ item }) => (
     <SwipeableTaskItem
       task={item}
-      onEdit={() => openEditModal(item)}
+      onEdit={() => {
+        // openEditModal(item);
+        console.log('editing');
+      }}
       onDelete={() => handleDeleteTask(item.id)}
       onTap={() => {
         if (selectionMode) {
@@ -117,7 +106,7 @@ export default function TasksScreen() {
       }}
       onLongPress={() => {
         if (!selectionMode) {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          // Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
           handleLongPress(item.id);
         }
       }}
@@ -161,7 +150,9 @@ export default function TasksScreen() {
         sections={getSections()}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
-        renderSectionHeader={({ section }) => <TaskSectionHeader section={section} />}
+        renderSectionHeader={({ section }) => (
+          <Text style={styles.priorityHeader}>{section.title}</Text>
+        )}
         stickySectionHeadersEnabled={false}
         windowSize={11}
         maxToRenderPerBatch={15}
@@ -171,25 +162,11 @@ export default function TasksScreen() {
         }
       />
 
-      {!selectionMode && <TaskFAB onPress={openAddModal} />}
-
-      <TaskModal
-        visible={isModalVisible}
-        onSave={handleSaveTask}
-        onClose={() => setModalVisible(false)}
-        taskTitle={taskTitle}
-        setTaskTitle={setTaskTitle}
-        taskPriority={taskPriority}
-        setTaskPriority={setTaskPriority}
-        taskDueDate={taskDueDate}
-        setTaskDueDate={setTaskDueDate}
-      />
-
       {/* Consolidated single snackbar */}
       <Snackbar
         visible={snackbarState.visible}
         wrapperStyle={styles.snackbar}
-        onDismiss={() => setSnackbarState((prev) => ({ ...prev, visible: false }))}
+        onDismiss={handleSnackbarDismiss} // Use the dismissal handler
         duration={5000}
         action={snackbarState.action}>
         {snackbarState.message}
@@ -244,5 +221,11 @@ const styles = StyleSheet.create({
     marginTop: 40,
     fontSize: 16,
     color: '#757575',
+  },
+  priorityHeader: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginTop: 16,
+    marginBottom: 8,
   },
 });

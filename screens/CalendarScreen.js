@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { useCalendarStore } from '../store/calendarStore';
 import { useTaskStore } from '../store/taskStore';
-import TaskModal from '../components/TaskModal';
+// import TaskModal from '../components/TaskModal';
 import { useFocusEffect } from '@react-navigation/native';
 import { startOfWeek, endOfWeek, eachDayOfInterval } from 'date-fns';
 
@@ -109,14 +109,14 @@ export default function CalendarScreen() {
         </ScrollView>
       </View>
 
-      <TouchableOpacity
+      {/* <TouchableOpacity
         testID="fab-add-task"
         style={styles.fab}
         onPress={() => setModalVisible(true)}>
         <Text style={styles.fabText}>+</Text>
-      </TouchableOpacity>
+      </TouchableOpacity> */}
 
-      <TaskModal
+      {/* <TaskModal
         visible={isModalVisible}
         onClose={() => setModalVisible(false)}
         onSave={() => {
@@ -129,7 +129,7 @@ export default function CalendarScreen() {
         setTaskPriority={setTaskPriority}
         taskDueDate={taskDueDate}
         setTaskDueDate={setTaskDueDate}
-      />
+      /> */}
     </View>
   );
 }
