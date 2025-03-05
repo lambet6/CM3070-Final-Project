@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, SectionList } from 'react-native';
 import { useTaskStore } from '../../store/taskStore';
 import { Snackbar } from 'react-native-paper';
@@ -72,20 +72,17 @@ export default function TasksScreen() {
     initializeTasks();
   }, []); // Run once on component mount
 
-  // Get the right sections based on viewMode
-  const getSections = () => {
+  const sections = useMemo(() => {
     if (viewMode === 0) {
-      // Grouped by priority
       return [
         { title: 'High Priority', data: tasks.high },
         { title: 'Medium Priority', data: tasks.medium },
         { title: 'Low Priority', data: tasks.low },
       ];
     } else {
-      // Consolidated list with a single section
       return [{ title: 'All Tasks', data: getConsolidatedTasks() }];
     }
-  };
+  }, [viewMode, tasks, getConsolidatedTasks]);
 
   // Render a task item
   const renderItem = ({ item }) => (
@@ -147,7 +144,7 @@ export default function TasksScreen() {
       )}
 
       <SectionList
-        sections={getSections()}
+        sections={sections}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
         renderSectionHeader={({ section }) => (

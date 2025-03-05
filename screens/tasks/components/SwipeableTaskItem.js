@@ -2,11 +2,12 @@ import React from 'react';
 import { Text, StyleSheet, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
-import Reanimated, { useAnimatedStyle } from 'react-native-reanimated';
+import Reanimated, { SharedValue, useAnimatedStyle } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 
 function RightAction({ prog, drag, onEdit, onDelete }) {
   const styleAnimation = useAnimatedStyle(() => {
+    'worklet';
     return {
       transform: [{ translateX: drag.value + 150 }],
     };

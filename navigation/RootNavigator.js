@@ -5,9 +5,10 @@ import TasksScreen from '../screens/tasks/TaskScreen';
 import CalendarScreen from '../screens/CalendarScreen';
 import GoalsScreen from '../screens/GoalsScreen';
 import WellbeingScreen from '../screens/WellbeingScreen';
-import BottomSheet, { BottomSheetView } from '@gorhom/bottom-sheet';
-import { View, TouchableOpacity, Text } from 'react-native';
+import BottomSheet from '@gorhom/bottom-sheet';
+import { TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { QuickTaskSheet } from '../components/QuickTaskSheet';
 
 const Tab = createBottomTabNavigator();
 
@@ -17,6 +18,10 @@ export function RootNavigator() {
   // Dummy screen component that does nothing except open the sheet
   const OpenSheetScreen = () => {
     return null; // This screen never actually renders anything
+  };
+
+  const handleCloseSheet = () => {
+    bottomSheetRef.current?.close();
   };
 
   return (
@@ -51,16 +56,18 @@ export function RootNavigator() {
         <Tab.Screen name="Wellbeing" component={WellbeingScreen} />
       </Tab.Navigator>
 
-      {/* Global Bottom Sheet */}
+      {/* Global Bottom Sheet with Task Form */}
       <BottomSheet
         ref={bottomSheetRef}
         index={-1}
         bottomInset={49}
-        snapPoints={['25%']}
-        enablePanDownToClose={true}
-        backgroundComponent={null}>
-        <BottomSheetView
-          style={{ flex: 1, backgroundColor: 'blue', padding: 20 }}></BottomSheetView>
+        snapPoints={['50%']}
+        keyboardBehavior="interactive"
+        keyboardBlurBehavior="restore"
+        enableBlurKeyboardOnGesture={true}
+        enableDynamicSizing={false}
+        enablePanDownToClose={true}>
+        <QuickTaskSheet onClose={handleCloseSheet} />
       </BottomSheet>
     </NavigationContainer>
   );
