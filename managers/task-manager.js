@@ -203,7 +203,16 @@ export const createTaskManager = (repository) => {
       ...tasks.high.map((task) => ({ ...task, priority: 'High' })),
       ...tasks.medium.map((task) => ({ ...task, priority: 'Medium' })),
       ...tasks.low.map((task) => ({ ...task, priority: 'Low' })),
-    ].sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+    ].sort((a, b) => {
+      // Compare dates first
+      const dateCompare = new Date(a.dueDate) - new Date(b.dueDate);
+      // If dates are equal, sort by priority (High > Medium > Low)
+      return (
+        dateCompare ||
+        ['High', 'Medium', 'Low'].indexOf(a.priority) -
+          ['High', 'Medium', 'Low'].indexOf(b.priority)
+      );
+    });
   };
 
   /**

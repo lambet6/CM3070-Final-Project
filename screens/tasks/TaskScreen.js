@@ -5,6 +5,7 @@ import { Snackbar } from 'react-native-paper';
 import * as Haptics from 'expo-haptics';
 import { MaterialIcons } from '@expo/vector-icons';
 import SegmentedControl from '@react-native-segmented-control/segmented-control';
+import { useBottomSheet } from '../../contexts/BottomSheetContext';
 
 // Custom hooks
 import useTaskActions from './hooks/useTaskActions';
@@ -43,6 +44,8 @@ export default function TasksScreen() {
     cancelSelection,
     deleteSelectedItems,
   } = useSelectionMode(handleDeleteMultipleTasks);
+
+  const { openSheet } = useBottomSheet();
 
   useEffect(() => {
     const initializeTasks = async () => {
@@ -89,8 +92,8 @@ export default function TasksScreen() {
     <SwipeableTaskItem
       task={item}
       onEdit={() => {
-        // openEditModal(item);
-        console.log('editing');
+        openSheet(item); // Open sheet with the task to edit
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       }}
       onDelete={() => handleDeleteTask(item.id)}
       onTap={() => {

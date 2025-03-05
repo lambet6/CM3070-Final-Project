@@ -1,11 +1,11 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { Text, StyleSheet, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import Reanimated, { SharedValue, useAnimatedStyle } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 
-function RightAction({ prog, drag, onEdit, onDelete }) {
+function RightAction({ prog, drag, onEdit, onDelete, swipeableRef }) {
   const styleAnimation = useAnimatedStyle(() => {
     'worklet';
     return {
@@ -24,6 +24,7 @@ function RightAction({ prog, drag, onEdit, onDelete }) {
     .runOnJS(true)
     .onStart(() => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      swipeableRef.current?.close();
       onEdit();
     });
 
@@ -52,19 +53,18 @@ export default function SwipeableTaskItem({
   selected = false,
   selectionMode = false,
 }) {
+  const swipeableRef = useRef(null);
   // Define a tap gesture that blocks external gestures when active.
   const tap = Gesture.Tap()
     .runOnJS(true)
     .onStart(() => {
       onTap(task);
-      console.log('Tapped!');
     });
 
   const longPress = Gesture.LongPress()
     .runOnJS(true)
     .onStart((e) => {
       onLongPress(task);
-      console.log(`Long pressed for ${e.duration} ms!`);
     });
 
   const taskGestures = Gesture.Exclusive(longPress, tap);
@@ -89,6 +89,7 @@ export default function SwipeableTaskItem({
 
   return (
     <ReanimatedSwipeable
+      ref={swipeableRef}
       containerStyle={styles.swipeable}
       friction={2}
       enableTrackpadTwoFingerGesture
@@ -96,7 +97,13 @@ export default function SwipeableTaskItem({
       childrenContainerStyle={styles.taskItemContainer}
       enabled={!selectionMode}
       renderRightActions={(prog, drag) => (
-        <RightAction prog={prog} drag={drag} onEdit={onEdit} onDelete={onDelete} />
+        <RightAction
+          prog={prog}
+          drag={drag}
+          onEdit={onEdit}
+          onDelete={onDelete}
+          swipeableRef={swipeableRef}
+        />
       )}>
       <GestureDetector gesture={taskGestures}>
         <View collapsable={false} style={styles.contentContainer}>

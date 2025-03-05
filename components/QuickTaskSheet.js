@@ -1,12 +1,13 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { View, TouchableOpacity, Text, StyleSheet, Platform, Keyboard } from 'react-native';
 import { BottomSheetView, BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useTaskStore } from '../store/taskStore';
 import { format } from 'date-fns';
 
-export const QuickTaskSheet = ({ onClose }) => {
-  const { addTask } = useTaskStore();
+export const QuickTaskSheet = ({ onClose, taskToEdit }) => {
+  const { addTask, editTask } = useTaskStore();
+  const isEditMode = !!taskToEdit;
 
   // State for task form
   const [taskTitle, setTaskTitle] = useState('');
@@ -15,27 +16,48 @@ export const QuickTaskSheet = ({ onClose }) => {
   const [titleError, setTitleError] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
 
-  const handleCreateTask = async () => {
+  // Populate form with task data when in edit mode
+  useEffect(() => {
+    if (taskToEdit) {
+      setTaskTitle(taskToEdit.title);
+      setTaskPriority(taskToEdit.priority);
+      setTaskDueDate(new Date(taskToEdit.dueDate));
+    } else {
+      // Reset form when not in edit mode
+      resetForm();
+    }
+  }, [taskToEdit]);
+
+  const handleSaveTask = async () => {
+    console.log('Saving task:', taskTitle, taskPriority, taskDueDate);
     // Validate title
     if (!taskTitle?.trim()) {
+      console.log('Title trim fail');
       setTitleError('Title is required');
       return;
     }
 
     try {
-      Keyboard.dismiss(); // Move to top
-      await addTask(taskTitle, taskPriority, taskDueDate);
+      Keyboard.dismiss();
+
+      if (isEditMode) {
+        // Update existing task
+        await editTask(taskToEdit.id, taskTitle, taskPriority, taskDueDate);
+      } else {
+        // Create new task
+        await addTask(taskTitle, taskPriority, taskDueDate);
+      }
+
       resetForm();
       onClose();
     } catch (error) {
-      console.error('Failed to create task:', error);
-      setTitleError(error.message || 'Failed to create task');
+      console.error(`Failed to ${isEditMode ? 'update' : 'create'} task:`, error);
+      setTitleError(error.message || `Failed to ${isEditMode ? 'update' : 'create'} task`);
     }
   };
 
   const handleCancel = () => {
-    console.log('Cancel task creation');
-    Keyboard.dismiss(); // Move to top
+    Keyboard.dismiss();
     resetForm();
     onClose();
   };
@@ -60,7 +82,7 @@ export const QuickTaskSheet = ({ onClose }) => {
 
   return (
     <BottomSheetView keyboardShouldPersistTaps="handled" style={styles.sheetContainer}>
-      <Text style={styles.sheetTitle}>Quick Add Task</Text>
+      <Text style={styles.sheetTitle}>{isEditMode ? 'Edit Task' : 'Quick Add Task'}</Text>
 
       {/* Task Title Input */}
       <View style={styles.inputContainer}>
@@ -177,9 +199,9 @@ export const QuickTaskSheet = ({ onClose }) => {
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.addButton}
-          onPressIn={handleCreateTask}
+          onPressIn={handleSaveTask}
           testID="quick-add-save">
-          <Text style={styles.buttonText}>Add Task</Text>
+          <Text style={styles.buttonText}>{isEditMode ? 'Save Changes' : 'Add Task'}</Text>
         </TouchableOpacity>
       </View>
     </BottomSheetView>
