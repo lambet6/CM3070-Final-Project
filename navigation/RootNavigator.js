@@ -2,7 +2,7 @@ import React, { useRef, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import TasksScreen from '../screens/tasks/TaskScreen';
-import CalendarScreen from '../screens/CalendarScreen';
+import CalendarScreen from '../screens/calendar/CalendarScreen';
 import GoalsScreen from '../screens/GoalsScreen';
 import WellbeingScreen from '../screens/WellbeingScreen';
 import BottomSheet from '@gorhom/bottom-sheet';
