@@ -1,235 +1,541 @@
-/*global setInterval, clearInterval*/
-import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
-import { useCalendarStore } from '../store/calendarStore';
-import { useTaskStore } from '../store/taskStore';
-// import TaskModal from '../components/TaskModal';
-import { useFocusEffect } from '@react-navigation/native';
-import { startOfWeek, endOfWeek, eachDayOfInterval } from 'date-fns';
+/*global setTimeout*/
+import { Calendar, useCalendar, toDateId, fromDateId } from '@marceloterreiro/flash-calendar';
+import { useState, useMemo, useEffect, useCallback } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import {
+  addMonths,
+  subMonths,
+  startOfMonth,
+  addWeeks,
+  subWeeks,
+  startOfWeek,
+  endOfWeek,
+  format,
+} from 'date-fns';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  Easing,
+} from 'react-native-reanimated';
 
-export default function CalendarScreen() {
-  const { events, loadCalendarEvents } = useCalendarStore();
-  const { getTodayTasks, getWeekTasks, addTask, toggleCompleteTask } = useTaskStore();
+// Extract constants to a separate section
+const CONSTANTS = {
+  ANIMATION: {
+    DURATION: 250,
+    EASING: Easing.bezier(0.25, 0.1, 0.25, 1),
+    SLIDE_DISTANCE: 100,
+  },
+  CALENDAR: {
+    BORDER_RADIUS: 10,
+    TODAY_BORDER_RADIUS: 15,
+    SELECTED_BORDER_RADIUS: 8,
+    DAY_HEIGHT: 48,
+    ROW_SPACING: 0,
+  },
+  COLORS: {
+    primary: '#585ABF',
+    primaryLight: 'rgba(88, 90, 191, 0.1)',
+    textFaded: 'rgba(180, 180, 180, 0.5)',
+    white: '#FFFFFF',
+    background: '#F8F9FC',
+    buttonBackground: '#F0F1FA',
+  },
+};
 
-  // Calculate current date and week boundaries
-  const today = useRef(new Date()).current;
-  const weekStart = useRef(startOfWeek(today, { weekStartsOn: 1 })).current;
-  const weekEnd = useRef(endOfWeek(today, { weekStartsOn: 1 })).current;
-  const weekDays = useRef(eachDayOfInterval({ start: weekStart, end: weekEnd })).current;
+// Extract calendar header component
+const CalendarHeader = ({ calendarRowMonth, onPrev, onNext, onReset, isToday }) => (
+  <Calendar.HStack style={styles.headerContainer}>
+    <TouchableOpacity onPress={onPrev} style={styles.navButton} activeOpacity={0.7}>
+      <Text style={styles.navButtonText}>❮</Text>
+    </TouchableOpacity>
 
-  const [isModalVisible, setModalVisible] = useState(false);
-  const [taskTitle, setTaskTitle] = useState('');
-  const [taskPriority, setTaskPriority] = useState('Medium');
-  const [taskDueDate, setTaskDueDate] = useState(today);
-  const [currentWeek, setCurrentWeek] = useState(weekDays);
+    <View style={styles.titleContainer}>
+      <Text style={styles.monthTitle}>{calendarRowMonth}</Text>
+      <TouchableOpacity
+        onPress={onReset}
+        disabled={isToday}
+        style={styles.todayButton}
+        activeOpacity={0.7}>
+        <Text style={styles.todayButtonText}>Today</Text>
+      </TouchableOpacity>
+    </View>
 
+    <TouchableOpacity onPress={onNext} style={styles.navButton} activeOpacity={0.7}>
+      <Text style={styles.navButtonText}>❯</Text>
+    </TouchableOpacity>
+  </Calendar.HStack>
+);
+
+// Extract weekdays header component
+const WeekdaysHeader = ({ weekDaysList }) => (
+  <Calendar.Row.Week style={styles.weekDaysRow}>
+    {weekDaysList.map((day, index) => (
+      <Calendar.Item.WeekName textProps={{ style: { fontWeight: 'bold' } }} key={`${day}-${index}`}>
+        {day}
+      </Calendar.Item.WeekName>
+    ))}
+  </Calendar.Row.Week>
+);
+
+// Extract calendar week component
+const CalendarWeek = ({ week, isWeekView, calendarTheme, onDatePress }) => (
+  <Calendar.Row.Week key={week[0]?.id || Math.random()} style={styles.weekRow}>
+    {week.map((day) => {
+      // In month view, hide dates from other months
+      if (!isWeekView && day.isDifferentMonth) {
+        return <Calendar.Item.Empty key={day.id} />;
+      }
+
+      // Otherwise show day as normal
+      return (
+        <Calendar.Item.Day.Container
+          dayHeight={CONSTANTS.CALENDAR.DAY_HEIGHT}
+          daySpacing={CONSTANTS.CALENDAR.ROW_SPACING}
+          key={day.id}
+          theme={calendarTheme.itemDayContainer}>
+          <Calendar.Item.Day
+            height={CONSTANTS.CALENDAR.DAY_HEIGHT}
+            metadata={day}
+            onPress={onDatePress}
+            theme={calendarTheme.itemDay}>
+            {day.displayLabel}
+          </Calendar.Item.Day>
+        </Calendar.Item.Day.Container>
+      );
+    })}
+  </Calendar.Row.Week>
+);
+
+// Main component
+export default function CustomCalendar() {
+  // State management
+  const today = new Date();
+  const todayId = toDateId(today);
+  const [selectedDate, setSelectedDate] = useState(todayId);
+  const [isWeekView, setIsWeekView] = useState(true);
+  const [currentDate, setCurrentDate] = useState(today);
+
+  // Animation values
+  const slideAnimation = useSharedValue(0);
+  const horizontalSlide = useSharedValue(0);
+
+  // Create animation styles
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: slideAnimation.value }],
+  }));
+
+  const weekRowAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: horizontalSlide.value }],
+  }));
+
+  // Handle view mode changes
   useEffect(() => {
-    setCurrentWeek(weekDays);
-  }, [weekDays]);
+    slideAnimation.value = isWeekView ? 20 : -20;
+    slideAnimation.value = withTiming(0, {
+      duration: CONSTANTS.ANIMATION.DURATION,
+      easing: Easing.out(Easing.cubic),
+    });
+  }, [isWeekView, slideAnimation]);
 
-  useFocusEffect(
-    React.useCallback(() => {
-      loadCalendarEvents();
-      const interval = setInterval(() => {
-        console.log('🔄 Checking for new events...');
-        loadCalendarEvents();
-      }, 5000);
-      return () => clearInterval(interval);
-    }, [loadCalendarEvents]),
+  // Calculate active date ranges
+  const activeDateRanges = useMemo(() => {
+    const selectedDateObj = fromDateId(selectedDate);
+    const selectedWeekStart = startOfWeek(selectedDateObj);
+    const selectedWeekEnd = endOfWeek(selectedDateObj);
+
+    return [
+      {
+        startId: toDateId(selectedWeekStart),
+        endId: toDateId(selectedWeekEnd),
+      },
+    ];
+  }, [selectedDate]);
+
+  // Use the calendar hook
+  const { calendarRowMonth, weekDaysList, weeksList } = useCalendar({
+    calendarMonthId: toDateId(currentDate),
+    calendarActiveDateRanges: activeDateRanges,
+  });
+
+  // Define calendar theme
+  const calendarTheme = useMemo(
+    () => createCalendarTheme(selectedDate, todayId),
+    [selectedDate, todayId],
   );
 
-  const todayTasks = getTodayTasks();
-  const weekTasks = getWeekTasks();
+  // Filter weeks based on view mode
+  const visibleWeeks = useMemo(() => {
+    const currentDateId = toDateId(currentDate);
+
+    if (!isWeekView) return weeksList;
+
+    const weekIndex = weeksList.findIndex((week) =>
+      week.some((day) => {
+        if (day.id === currentDateId) return true;
+        if (day.isStartOfWeek) {
+          const parsedDay = fromDateId(day.id);
+          return format(currentDate, 'yyyy-MM-dd') === format(parsedDay, 'yyyy-MM-dd');
+        }
+        return false;
+      }),
+    );
+
+    return weekIndex !== -1 ? [weeksList[weekIndex]] : [weeksList[0]];
+  }, [weeksList, isWeekView, currentDate]);
+
+  // Handler functions
+  const handleDatePress = useCallback(
+    (dateId) => {
+      setSelectedDate(dateId);
+
+      if (isWeekView) {
+        const selectedDateObj = fromDateId(dateId);
+        const weekStart = startOfWeek(selectedDateObj);
+        setCurrentDate(weekStart);
+      }
+    },
+    [isWeekView],
+  );
+
+  const animateHorizontalSlide = useCallback(
+    (initialValue, finalValue, updateFn) => {
+      horizontalSlide.value = initialValue;
+      horizontalSlide.value = withTiming(finalValue, {
+        duration: CONSTANTS.ANIMATION.DURATION,
+        easing: CONSTANTS.ANIMATION.EASING,
+      });
+
+      setTimeout(() => {
+        updateFn();
+
+        horizontalSlide.value = -finalValue;
+        horizontalSlide.value = withTiming(0, {
+          duration: CONSTANTS.ANIMATION.DURATION,
+          easing: CONSTANTS.ANIMATION.EASING,
+        });
+      }, 50);
+    },
+    [horizontalSlide],
+  );
+
+  const handleReset = useCallback(() => {
+    if (selectedDate === todayId) return;
+
+    const currentSelectedDate = fromDateId(selectedDate);
+    let shouldAnimate = false;
+
+    if (isWeekView) {
+      const selectedWeekStart = startOfWeek(currentSelectedDate);
+      const todayWeekStart = startOfWeek(today);
+      shouldAnimate =
+        format(selectedWeekStart, 'yyyy-MM-dd') !== format(todayWeekStart, 'yyyy-MM-dd');
+    } else {
+      const selectedMonth = format(currentSelectedDate, 'yyyy-MM');
+      const todayMonth = format(today, 'yyyy-MM');
+      shouldAnimate = selectedMonth !== todayMonth;
+    }
+
+    if (shouldAnimate) {
+      const direction = today > currentSelectedDate ? -1 : 1;
+      horizontalSlide.value = withTiming(direction * CONSTANTS.ANIMATION.SLIDE_DISTANCE, {
+        duration: CONSTANTS.ANIMATION.DURATION,
+        easing: CONSTANTS.ANIMATION.EASING,
+      });
+
+      setTimeout(() => {
+        setSelectedDate(todayId);
+        setCurrentDate(today);
+        horizontalSlide.value = -direction * CONSTANTS.ANIMATION.SLIDE_DISTANCE;
+        horizontalSlide.value = withTiming(0, {
+          duration: CONSTANTS.ANIMATION.DURATION,
+          easing: CONSTANTS.ANIMATION.EASING,
+        });
+      }, CONSTANTS.ANIMATION.DURATION);
+    } else {
+      setSelectedDate(todayId);
+      setCurrentDate(today);
+    }
+  }, [selectedDate, todayId, isWeekView, horizontalSlide, today]);
+
+  const handlePrev = useCallback(() => {
+    animateHorizontalSlide(0, CONSTANTS.ANIMATION.SLIDE_DISTANCE, () => {
+      if (isWeekView) {
+        const prevWeek = subWeeks(currentDate, 1);
+        setCurrentDate(prevWeek);
+        const prevWeekStart = startOfWeek(prevWeek);
+        setSelectedDate(toDateId(prevWeekStart));
+      } else {
+        const prevMonth = subMonths(currentDate, 1);
+        setCurrentDate(prevMonth);
+        const firstDayOfMonth = startOfMonth(prevMonth);
+        setSelectedDate(toDateId(firstDayOfMonth));
+      }
+    });
+  }, [animateHorizontalSlide, isWeekView, currentDate]);
+
+  const handleNext = useCallback(() => {
+    animateHorizontalSlide(0, -CONSTANTS.ANIMATION.SLIDE_DISTANCE, () => {
+      if (isWeekView) {
+        const nextWeek = addWeeks(currentDate, 1);
+        setCurrentDate(nextWeek);
+        const nextWeekStart = startOfWeek(nextWeek);
+        setSelectedDate(toDateId(nextWeekStart));
+      } else {
+        const nextMonth = addMonths(currentDate, 1);
+        setCurrentDate(nextMonth);
+        const firstDayOfMonth = startOfMonth(nextMonth);
+        setSelectedDate(toDateId(firstDayOfMonth));
+      }
+    });
+  }, [animateHorizontalSlide, isWeekView, currentDate]);
+
+  const toggleViewMode = useCallback(() => {
+    if (isWeekView) {
+      const selectedDateObj = fromDateId(selectedDate);
+      setCurrentDate(startOfMonth(selectedDateObj));
+    } else {
+      const selectedDateObj = fromDateId(selectedDate);
+      const selectedWeekStart = startOfWeek(selectedDateObj);
+      setCurrentDate(selectedWeekStart);
+    }
+    setIsWeekView(!isWeekView);
+  }, [isWeekView, selectedDate]);
 
   return (
-    <View testID="calendar-screen" style={styles.container}>
-      {/* Weekly View */}
-      <Text style={styles.header}>This Week</Text>
-      <View style={styles.weekGrid}>
-        {currentWeek.map((day, index) => {
-          const isToday = day.toDateString() === today.toDateString();
-          const dayEvents = events.filter(
-            (event) => event.startDate.toDateString() === day.toDateString(),
-          );
-          const dayTasks = weekTasks.filter(
-            (task) => new Date(task.dueDate).toDateString() === day.toDateString(),
-          );
+    <View style={styles.container}>
+      <View style={styles.calendarContainer}>
+        <Calendar.VStack>
+          {/* Calendar header */}
+          <CalendarHeader
+            calendarRowMonth={calendarRowMonth}
+            onPrev={handlePrev}
+            onNext={handleNext}
+            onReset={handleReset}
+            isToday={selectedDate === todayId}
+          />
 
-          return (
-            <View key={index} style={[styles.dayBox, isToday && styles.todayBox]}>
-              <Text style={[styles.dayLabel, isToday && styles.todayLabel]}>
-                {day.toLocaleDateString('en-US', { weekday: 'short' })}
-              </Text>
-              <View style={styles.dayBoxItems}>
-                {dayEvents.map((event, idx) => (
-                  <Text
-                    key={`event-${idx}`}
-                    style={styles.eventItem}
-                    numberOfLines={1}
-                    ellipsizeMode="tail">
-                    {event.title}
-                  </Text>
+          {/* Week days header */}
+          <WeekdaysHeader weekDaysList={weekDaysList} />
+
+          {/* Calendar days */}
+          <Animated.View style={[styles.animatedContainer, animatedStyle]}>
+            <View style={styles.daysContainer}>
+              <Animated.View style={[styles.animatedContainer, weekRowAnimatedStyle]}>
+                {visibleWeeks.map((week) => (
+                  <CalendarWeek
+                    key={week[0]?.id || Math.random()}
+                    week={week}
+                    isWeekView={isWeekView}
+                    calendarTheme={calendarTheme}
+                    onDatePress={handleDatePress}
+                  />
                 ))}
-                {dayTasks.map((task, idx) => (
-                  <Text
-                    key={`task-${idx}`}
-                    style={styles.taskItem}
-                    numberOfLines={1}
-                    ellipsizeMode="tail">
-                    {task.title}
-                  </Text>
-                ))}
-              </View>
+              </Animated.View>
             </View>
-          );
-        })}
+
+            {/* View toggle button */}
+            <TouchableOpacity
+              onPress={toggleViewMode}
+              style={styles.toggleButton}
+              activeOpacity={0.7}>
+              <Text style={styles.navButtonText}>{isWeekView ? '∨' : '∧'} </Text>
+            </TouchableOpacity>
+          </Animated.View>
+        </Calendar.VStack>
       </View>
-
-      {/* Daily Tasks */}
-      <Text style={styles.header}>Today</Text>
-      <View style={styles.timelineContainer}>
-        <ScrollView>
-          {todayTasks.length === 0 ? (
-            <Text style={styles.noTasksText}>No tasks scheduled for today.</Text>
-          ) : (
-            todayTasks.map((task, index) => (
-              <TouchableOpacity
-                key={index}
-                style={[styles.timelineItem, task.completed && styles.completedTask]}
-                onPress={() => toggleCompleteTask(task.id)}>
-                <Text style={[styles.timelineText, task.completed && styles.strikethrough]}>
-                  {task.title}
-                </Text>
-                <Text style={[styles.statusIcon, task.completed && styles.completedText]}>
-                  {task.completed ? '☑' : '☐'}
-                </Text>
-              </TouchableOpacity>
-            ))
-          )}
-        </ScrollView>
-      </View>
-
-      {/* <TouchableOpacity
-        testID="fab-add-task"
-        style={styles.fab}
-        onPress={() => setModalVisible(true)}>
-        <Text style={styles.fabText}>+</Text>
-      </TouchableOpacity> */}
-
-      {/* <TaskModal
-        visible={isModalVisible}
-        onClose={() => setModalVisible(false)}
-        onSave={() => {
-          addTask(taskTitle, taskPriority, taskDueDate);
-          setModalVisible(false);
-        }}
-        taskTitle={taskTitle}
-        setTaskTitle={setTaskTitle}
-        taskPriority={taskPriority}
-        setTaskPriority={setTaskPriority}
-        taskDueDate={taskDueDate}
-        setTaskDueDate={setTaskDueDate}
-      /> */}
     </View>
   );
 }
 
+// Helper function to create calendar theme
+function createCalendarTheme(selectedDate, todayId) {
+  return {
+    itemDay: {
+      // Base style for all days
+      base: () => ({
+        container: {
+          borderRadius: CONSTANTS.CALENDAR.BORDER_RADIUS,
+        },
+      }),
+
+      // Style for the active days in the week range
+      active: (params) => {
+        const { isEndOfRange, isStartOfRange, id, isPressed } = params;
+        const isSelected = id === selectedDate;
+        const isToday = id === todayId;
+
+        if (isSelected) {
+          return {
+            container: {
+              borderRadius: CONSTANTS.CALENDAR.SELECTED_BORDER_RADIUS,
+              backgroundColor: CONSTANTS.COLORS.primary,
+            },
+            content: {
+              color: CONSTANTS.COLORS.white,
+              fontWeight: 'bold',
+            },
+          };
+        }
+
+        if (isToday) {
+          return {
+            container: {
+              borderColor: CONSTANTS.COLORS.primary,
+              borderWidth: 1,
+              backgroundColor: CONSTANTS.COLORS.primaryLight,
+              borderRadius: CONSTANTS.CALENDAR.TODAY_BORDER_RADIUS,
+              borderTopLeftRadius: isStartOfRange ? CONSTANTS.CALENDAR.BORDER_RADIUS : 0,
+              borderBottomLeftRadius: isStartOfRange ? CONSTANTS.CALENDAR.BORDER_RADIUS : 0,
+              borderTopRightRadius: isEndOfRange ? CONSTANTS.CALENDAR.BORDER_RADIUS : 0,
+              borderBottomRightRadius: isEndOfRange ? CONSTANTS.CALENDAR.BORDER_RADIUS : 0,
+            },
+            content: {
+              color: isPressed ? CONSTANTS.COLORS.white : CONSTANTS.COLORS.primary,
+              fontWeight: 'bold',
+            },
+          };
+        }
+
+        return {
+          container: {
+            backgroundColor: CONSTANTS.COLORS.primaryLight,
+            borderTopLeftRadius: isStartOfRange ? CONSTANTS.CALENDAR.BORDER_RADIUS : 0,
+            borderBottomLeftRadius: isStartOfRange ? CONSTANTS.CALENDAR.BORDER_RADIUS : 0,
+            borderTopRightRadius: isEndOfRange ? CONSTANTS.CALENDAR.BORDER_RADIUS : 0,
+            borderBottomRightRadius: isEndOfRange ? CONSTANTS.CALENDAR.BORDER_RADIUS : 0,
+          },
+          content: {
+            color: isPressed ? CONSTANTS.COLORS.white : CONSTANTS.COLORS.primary,
+            fontWeight: 'bold',
+          },
+        };
+      },
+
+      // Style for today
+      today: (params) => {
+        const { isPressed } = params;
+        return {
+          container: {
+            borderColor: CONSTANTS.COLORS.primary,
+            borderWidth: 1,
+            borderRadius: CONSTANTS.CALENDAR.TODAY_BORDER_RADIUS,
+            backgroundColor: isPressed ? CONSTANTS.COLORS.primary : 'transparent',
+          },
+          content: {
+            color: isPressed ? CONSTANTS.COLORS.white : CONSTANTS.COLORS.primary,
+            fontWeight: 'bold',
+          },
+        };
+      },
+
+      idle: (params) => {
+        const { isDifferentMonth, id } = params;
+        const isSelected = id === selectedDate;
+
+        if (isSelected) {
+          return {
+            container: {
+              backgroundColor: CONSTANTS.COLORS.primary,
+              borderRadius: CONSTANTS.CALENDAR.BORDER_RADIUS,
+            },
+            content: {
+              color: CONSTANTS.COLORS.white,
+              fontWeight: 'bold',
+            },
+          };
+        }
+
+        return {
+          content: isDifferentMonth
+            ? {
+                color: CONSTANTS.COLORS.textFaded,
+              }
+            : undefined,
+        };
+      },
+    },
+  };
+}
+
+// Styles
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    padding: 10,
-    backgroundColor: '#F5F5F5',
-  },
-  header: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginBottom: 10,
-  },
-  weekGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginBottom: 20,
-  },
-  dayBox: {
-    width: '25%',
-    aspectRatio: 1,
-    backgroundColor: '#ddd',
-    borderWidth: 1,
-    borderColor: 'gray',
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  todayBox: {
-    backgroundColor: '#bbb',
-    borderWidth: 5,
-  },
-  dayLabel: {
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  dayBoxItems: {
-    width: '100%',
-    flex: 1,
-  },
-  eventItem: {
-    backgroundColor: '#777',
-    color: 'white',
-    fontSize: 10,
-    padding: 2,
-    marginTop: 1,
-    borderRadius: 3,
-  },
-  taskItem: {
-    backgroundColor: 'lightblue',
-    color: 'black',
-    fontSize: 10,
-    padding: 2,
-    marginTop: 1,
-    borderRadius: 3,
-  },
-  timelineContainer: {
-    backgroundColor: '#EAEAEA',
-    borderRadius: 8,
-    padding: 10,
-  },
-  timelineItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    backgroundColor: '#eee',
     padding: 12,
+    backgroundColor: CONSTANTS.COLORS.background,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  calendarContainer: {
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  headerContainer: {
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  titleContainer: {
+    flexDirection: 'column',
+    alignItems: 'center',
+  },
+  monthTitle: {
+    fontSize: 18,
+    fontWeight: '600',
     marginBottom: 4,
-    borderRadius: 4,
   },
-  timelineText: {
-    fontSize: 16,
-  },
-  completedTask: {
-    backgroundColor: '#d3d3d3',
-  },
-  strikethrough: {
-    textDecorationLine: 'line-through',
-    color: '#777',
-  },
-  statusIcon: {
-    fontSize: 20,
-  },
-  completedText: {
-    color: '#777',
-  },
-  fab: {
-    position: 'absolute',
-    bottom: 40,
-    right: 20,
-    backgroundColor: 'blue',
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+  navButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: CONSTANTS.COLORS.buttonBackground,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  fabText: {
-    color: '#fff',
-    fontSize: 30,
+  navButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: CONSTANTS.COLORS.primary,
+  },
+  todayButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+    backgroundColor: CONSTANTS.COLORS.buttonBackground,
+  },
+  todayButtonText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: CONSTANTS.COLORS.primary,
+  },
+  weekDaysRow: {
+    marginBottom: 8,
+  },
+  daysContainer: {
+    overflow: 'hidden',
+  },
+  animatedContainer: {
+    width: '100%',
+  },
+  weekRow: {
+    marginBottom: 4,
+  },
+  toggleButton: {
+    marginTop: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 20,
+    backgroundColor: CONSTANTS.COLORS.buttonBackground,
+    alignSelf: 'center',
+  },
+  toggleButtonText: {
+    color: CONSTANTS.COLORS.white,
+    fontSize: 50,
   },
 });

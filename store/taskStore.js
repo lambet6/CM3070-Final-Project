@@ -109,26 +109,12 @@ export const createTaskStore = (customTaskManager = null) => {
       return taskManager.consolidateTasks(tasks);
     },
 
-    // Utility functions to filter tasks
-    getTodayTasks: () => {
+    getTasksOnDate: (date) => {
       const { tasks } = get();
-      const today = new Date();
       const allTasks = [...tasks.high, ...tasks.medium, ...tasks.low];
       return allTasks.filter((task) => {
         const taskDate = new Date(task.dueDate);
-        return isSameDay(taskDate, today);
-      });
-    },
-
-    getWeekTasks: () => {
-      const { tasks } = get();
-      const today = new Date();
-      const weekStart = startOfWeek(today, { weekStartsOn: 1 });
-      const weekEnd = endOfWeek(today, { weekStartsOn: 1 });
-      const allTasks = [...tasks.high, ...tasks.medium, ...tasks.low];
-      return allTasks.filter((task) => {
-        const taskDate = new Date(task.dueDate);
-        return isWithinInterval(taskDate, { start: weekStart, end: weekEnd });
+        return isSameDay(taskDate, date);
       });
     },
   }));
