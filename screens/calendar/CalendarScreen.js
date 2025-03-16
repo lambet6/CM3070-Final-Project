@@ -1,5 +1,5 @@
 /*global setTimeout*/
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Calendar, useCalendar, toDateId, fromDateId } from '@marceloterreiro/flash-calendar';
 import {
@@ -15,7 +15,8 @@ import {
 import Animated, { withTiming } from 'react-native-reanimated';
 
 // Import components, styles, and hooks
-import { useCalendarStore } from '../../store/CalendarStore';
+import { useCalendarStore } from '../../store/calendarStore';
+import { useTaskStore } from '../../store/taskStore';
 import { CalendarHeader } from './components/CalendarHeader';
 import { WeekdaysHeader } from './components/WeekdaysHeader';
 import { CalendarWeek } from './components/CalendarWeek';
@@ -27,7 +28,22 @@ import { useCalendarAnimations } from './hooks/useCalendarAnimations';
 const today = new Date();
 
 export default function CustomCalendar() {
-  const { events, loadEvents } = useCalendarStore();
+  const { events, loadCalendarEvents } = useCalendarStore();
+  const { tasks, loadTasks } = useTaskStore();
+  const isProcessingDateSelection = useRef(false);
+
+  useEffect(() => {
+    loadCalendarEvents();
+    console.log('loadCalendarEvents');
+  }, [loadCalendarEvents]);
+
+  useEffect(() => {
+    console.log('events', events);
+  }, [events]);
+
+  useEffect(() => {
+    loadTasks();
+  }, [loadTasks]);
 
   // State management
   const todayId = toDateId(today);
@@ -88,6 +104,11 @@ export default function CustomCalendar() {
   // Handler functions
   const handleDatePress = useCallback(
     (dateId) => {
+      // Prevent multiple rapid selections
+      if (isProcessingDateSelection.current) return;
+      isProcessingDateSelection.current = true;
+
+      // Update the selection immediately for UI feedback
       setSelectedDate(dateId);
 
       if (isWeekView) {
@@ -95,6 +116,11 @@ export default function CustomCalendar() {
         const weekStart = startOfWeek(selectedDateObj);
         setCurrentDate(weekStart);
       }
+
+      // Reset the processing flag after a short delay
+      setTimeout(() => {
+        isProcessingDateSelection.current = false;
+      }, 100);
     },
     [isWeekView],
   );
@@ -136,7 +162,7 @@ export default function CustomCalendar() {
       setSelectedDate(todayId);
       setCurrentDate(today);
     }
-  }, [selectedDate, todayId, isWeekView, horizontalSlide, today]);
+  }, [selectedDate, todayId, isWeekView, horizontalSlide]);
 
   const handlePrev = useCallback(() => {
     animateHorizontalSlide(0, CONSTANTS.ANIMATION.SLIDE_DISTANCE, () => {
@@ -209,6 +235,9 @@ export default function CustomCalendar() {
                     isWeekView={isWeekView}
                     calendarTheme={calendarTheme}
                     onDatePress={handleDatePress}
+                    events={events}
+                    tasks={tasks}
+                    selectedDate={selectedDate}
                   />
                 ))}
               </Animated.View>

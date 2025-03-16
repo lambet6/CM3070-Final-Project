@@ -80,4 +80,29 @@ export const styles = StyleSheet.create({
     color: CONSTANTS.COLORS.white,
     fontSize: 50,
   },
+  dayContent: {
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    height: '100%',
+    paddingVertical: 4, // Add some padding to ensure spacing
+  },
+  eventLine: {
+    width: 20,
+    height: 4,
+    borderRadius: 2,
+    // backgroundColor: '#ff00ff',
+    // marginBottom: 2, // Space between event line and date
+  },
+  TaskDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+  },
+  dotContainer: {
+    flexDirection: 'row',
+    height: 4,
+    // justifyContent: 'center',
+    // alignItems: 'center',
+    gap: 2, // adds small spacing between dots
+  },
 });

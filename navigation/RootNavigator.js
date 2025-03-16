@@ -35,7 +35,7 @@ export function RootNavigator() {
   return (
     <BottomSheetContext.Provider value={{ openSheet: handleOpenSheet }}>
       <NavigationContainer>
-        <Tab.Navigator initialRouteName="Calendar">
+        <Tab.Navigator initialRouteName="Tasks">
           <Tab.Screen name="Tasks" component={TasksScreen} />
           <Tab.Screen name="Calendar" component={CalendarScreen} />
 

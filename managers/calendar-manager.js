@@ -1,4 +1,4 @@
-import { endOfWeek, startOfWeek } from 'date-fns';
+import { endOfWeek, startOfWeek, addYears, subYears } from 'date-fns';
 import { CalendarEvent } from '../domain/CalendarEvent';
 
 /**
@@ -19,6 +19,22 @@ export const createCalendarManager = (repository) => {
     } catch (error) {
       console.error('Error getting weekly calendar data:', error);
       throw new Error(`Failed to get weekly calendar events: ${error.message}`);
+    }
+  };
+
+  /**
+   * Fetches calendar events for the previous and next year from current date.
+   * @returns {Promise<CalendarEvent[]>}
+   */
+  const getYearlyCalendarEvents = async () => {
+    try {
+      const currentDate = new Date();
+      const startDate = subYears(currentDate, 1);
+      const endDate = addYears(currentDate, 1);
+      return await repository.getStoredCalendarEvents(startDate, endDate);
+    } catch (error) {
+      console.error('Error getting yearly calendar data:', error);
+      throw new Error(`Failed to get yearly calendar events: ${error.message}`);
     }
   };
 
@@ -47,6 +63,7 @@ export const createCalendarManager = (repository) => {
 
   return {
     getWeeklyCalendarEvents,
+    getYearlyCalendarEvents,
     createNewCalendarEvent,
   };
 };

@@ -19,7 +19,7 @@ export const createCalendarStore = (customCalendarManager = null) => {
     loadCalendarEvents: async () => {
       set({ isLoading: true, error: null });
       try {
-        const fetchedEvents = await calendarManager.getWeeklyCalendarEvents();
+        const fetchedEvents = await calendarManager.getYearlyCalendarEvents();
         set({ events: fetchedEvents, error: null, isLoading: false });
       } catch (error) {
         console.error('Calendar store error:', error);
