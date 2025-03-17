@@ -3,7 +3,7 @@ import { CONSTANTS } from './CalendarConstants';
 
 export const styles = StyleSheet.create({
   container: {
-    padding: 12,
+    padding: 10,
     backgroundColor: CONSTANTS.COLORS.background,
     borderRadius: 16,
     shadowColor: '#000',
@@ -13,7 +13,8 @@ export const styles = StyleSheet.create({
     elevation: 2,
   },
   calendarContainer: {
-    borderRadius: 12,
+    padding: 3,
+    // backgroundColor: 'red',
     overflow: 'hidden',
   },
   headerContainer: {
