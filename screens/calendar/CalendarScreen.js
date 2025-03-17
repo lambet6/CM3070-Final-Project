@@ -297,7 +297,7 @@ export default function CalenarScreen() {
         </View>
       </View>
       <View style={styles.dragList}>
-        <TaskReorderableList />
+        <TaskReorderableList selectedDate={selectedDate} />
       </View>
     </View>
   );
