@@ -2,11 +2,11 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { View, TouchableOpacity, Text, StyleSheet, Platform, Keyboard } from 'react-native';
 import { BottomSheetView, BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { useTaskStore } from '../store/taskStore';
+import { useTaskManager } from '../hooks/useTaskManager';
 import { format } from 'date-fns';
 
 export const QuickTaskSheet = ({ onClose, taskToEdit }) => {
-  const { addTask, editTask } = useTaskStore();
+  const taskManager = useTaskManager();
   const isEditMode = !!taskToEdit;
 
   // State for task form
@@ -41,11 +41,11 @@ export const QuickTaskSheet = ({ onClose, taskToEdit }) => {
       Keyboard.dismiss();
 
       if (isEditMode) {
-        // Update existing task
-        await editTask(taskToEdit.id, taskTitle, taskPriority, taskDueDate);
+        // Update existing task using the task manager
+        await taskManager.editExistingTask(taskToEdit.id, taskTitle, taskPriority, taskDueDate);
       } else {
-        // Create new task
-        await addTask(taskTitle, taskPriority, taskDueDate);
+        // Create new task using the task manager
+        await taskManager.createNewTask(taskTitle, taskPriority, taskDueDate);
       }
 
       resetForm();

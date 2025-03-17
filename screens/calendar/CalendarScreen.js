@@ -51,7 +51,7 @@ export default function CustomCalendar() {
 
   // Log events when they change
   useEffect(() => {
-    console.log('events', events);
+    console.log('events changed');
   }, [events]);
 
   // State management
@@ -235,64 +235,67 @@ export default function CustomCalendar() {
 
   return (
     <View style={styles.container}>
-      {isLoading && (
-        <View style={styles.loadingIndicator}>
-          <Text>Loading calendar events...</Text>
-        </View>
-      )}
-
-      {error && (
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>{error}</Text>
-        </View>
-      )}
-
       <View style={styles.calendarContainer}>
-        <Calendar.VStack>
-          {/* Calendar header */}
-          <CalendarHeader
-            calendarRowMonth={calendarRowMonth}
-            onPrev={handlePrev}
-            onNext={handleNext}
-            onReset={handleReset}
-            isToday={selectedDate === todayId}
-          />
+        {isLoading && (
+          <View style={styles.loadingIndicator}>
+            <Text>Loading calendar events...</Text>
+          </View>
+        )}
 
-          {/* Week days header */}
-          <WeekdaysHeader weekDaysList={weekDaysList} />
+        {error && (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        )}
 
-          {/* Calendar days */}
-          <Animated.View style={[styles.animatedContainer, animatedStyle]}>
-            <View style={styles.daysContainer}>
-              <Animated.View style={[styles.animatedContainer, weekRowAnimatedStyle]}>
-                {visibleWeeks.map((week) => {
-                  const weekKey = week.map((day) => day.id).join('-');
-                  return (
-                    <CalendarWeek
-                      key={weekKey}
-                      week={week}
-                      isWeekView={isWeekView}
-                      calendarTheme={calendarTheme}
-                      onDatePress={handleDatePress}
-                      events={events}
-                      tasks={tasks}
-                      selectedDate={selectedDate}
-                    />
-                  );
-                })}
-              </Animated.View>
-            </View>
+        <View style={styles.calendar}>
+          <Calendar.VStack>
+            {/* Calendar header */}
+            <CalendarHeader
+              calendarRowMonth={calendarRowMonth}
+              onPrev={handlePrev}
+              onNext={handleNext}
+              onReset={handleReset}
+              isToday={selectedDate === todayId}
+            />
 
-            {/* View toggle button */}
-            <TouchableOpacity
-              onPress={toggleViewMode}
-              style={styles.toggleButton}
-              activeOpacity={0.7}>
-              <Text style={styles.navButtonText}>{isWeekView ? '∨' : '∧'} </Text>
-            </TouchableOpacity>
-          </Animated.View>
-        </Calendar.VStack>
+            {/* Week days header */}
+            <WeekdaysHeader weekDaysList={weekDaysList} />
+
+            {/* Calendar days */}
+            <Animated.View style={[styles.animatedContainer, animatedStyle]}>
+              <View style={styles.daysContainer}>
+                <Animated.View style={[styles.animatedContainer, weekRowAnimatedStyle]}>
+                  {visibleWeeks.map((week) => {
+                    const weekKey = week.map((day) => day.id).join('-');
+                    return (
+                      <CalendarWeek
+                        key={weekKey}
+                        week={week}
+                        isWeekView={isWeekView}
+                        calendarTheme={calendarTheme}
+                        onDatePress={handleDatePress}
+                        events={events}
+                        tasks={tasks}
+                        selectedDate={selectedDate}
+                      />
+                    );
+                  })}
+                </Animated.View>
+              </View>
+
+              {/* View toggle button */}
+              <TouchableOpacity
+                onPress={toggleViewMode}
+                style={styles.toggleButton}
+                activeOpacity={0.7}>
+                <Text style={styles.navButtonText}>{isWeekView ? '∨' : '∧'} </Text>
+              </TouchableOpacity>
+            </Animated.View>
+          </Calendar.VStack>
+        </View>
       </View>
+      <View style={styles.dragList}></View>
     </View>
   );
 }

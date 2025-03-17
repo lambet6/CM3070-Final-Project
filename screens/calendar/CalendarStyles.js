@@ -3,6 +3,9 @@ import { CONSTANTS } from './CalendarConstants';
 
 export const styles = StyleSheet.create({
   container: {
+    flex: 1,
+  },
+  calendarContainer: {
     padding: 10,
     backgroundColor: CONSTANTS.COLORS.background,
     borderRadius: 16,
@@ -12,7 +15,7 @@ export const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
   },
-  calendarContainer: {
+  calendar: {
     padding: 3,
     // backgroundColor: 'red',
     overflow: 'hidden',
@@ -105,5 +108,9 @@ export const styles = StyleSheet.create({
     // justifyContent: 'center',
     // alignItems: 'center',
     gap: 2, // adds small spacing between dots
+  },
+  dragList: {
+    backgroundColor: 'blue',
+    flex: 1,
   },
 });
