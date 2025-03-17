@@ -2,39 +2,58 @@ import { endOfWeek, startOfWeek, addYears, subYears } from 'date-fns';
 import { CalendarEvent } from '../domain/CalendarEvent';
 
 /**
- * Creates a calendar manager that uses the provided repository
+ * Creates a calendar manager that uses the provided repository and store
  * @param {Object} repository - Repository with calendar operations
+ * @param {Function} getStore - Function to get the current store state and actions
  * @returns {Object} Calendar manager functions
  */
-export const createCalendarManager = (repository) => {
+export const createCalendarManager = (repository, getStore) => {
   /**
    * Fetches calendar events for the current week.
-   * @returns {Promise<CalendarEvent[]>}
+   * @returns {Promise<void>}
    */
-  const getWeeklyCalendarEvents = async () => {
+  const loadWeeklyCalendarEvents = async () => {
+    const store = getStore();
+    store.setLoading(true);
+
     try {
       const startDate = startOfWeek(new Date(), { weekStartsOn: 1 });
       const endDate = endOfWeek(new Date(), { weekStartsOn: 1 });
-      return await repository.getStoredCalendarEvents(startDate, endDate);
+      const events = await repository.getStoredCalendarEvents(startDate, endDate);
+
+      store.setEvents(events);
+      store.setError(null);
     } catch (error) {
       console.error('Error getting weekly calendar data:', error);
-      throw new Error(`Failed to get weekly calendar events: ${error.message}`);
+      store.setError(`Failed to get weekly calendar events: ${error.message}`);
+      store.setEvents([]);
+    } finally {
+      store.setLoading(false);
     }
   };
 
   /**
    * Fetches calendar events for the previous and next year from current date.
-   * @returns {Promise<CalendarEvent[]>}
+   * @returns {Promise<void>}
    */
-  const getYearlyCalendarEvents = async () => {
+  const loadYearlyCalendarEvents = async () => {
+    const store = getStore();
+    store.setLoading(true);
+
     try {
       const currentDate = new Date();
       const startDate = subYears(currentDate, 1);
       const endDate = addYears(currentDate, 1);
-      return await repository.getStoredCalendarEvents(startDate, endDate);
+      const events = await repository.getStoredCalendarEvents(startDate, endDate);
+
+      store.setEvents(events);
+      store.setError(null);
     } catch (error) {
       console.error('Error getting yearly calendar data:', error);
-      throw new Error(`Failed to get yearly calendar events: ${error.message}`);
+      store.setError(`Failed to get yearly calendar events: ${error.message}`);
+      store.setEvents([]);
+    } finally {
+      store.setLoading(false);
     }
   };
 
@@ -45,7 +64,9 @@ export const createCalendarManager = (repository) => {
    * @param {Date|string} endDate - The event end date.
    * @returns {Promise<CalendarEvent>}
    */
-  const createNewCalendarEvent = async (title, startDate, endDate) => {
+  const createCalendarEvent = async (title, startDate, endDate) => {
+    const store = getStore();
+
     try {
       // Let the domain model handle validation
       const event = new CalendarEvent({
@@ -54,16 +75,24 @@ export const createCalendarManager = (repository) => {
         startDate,
         endDate,
       });
-      return await repository.addCalendarEvent(event);
+
+      const newEvent = await repository.addCalendarEvent(event);
+
+      // Update store with the new event
+      store.addEvent(newEvent);
+      store.setError(null);
+
+      return newEvent;
     } catch (error) {
       console.error('Error creating calendar event:', error);
-      throw new Error(`Failed to create calendar event: ${error.message}`);
+      store.setError(`Failed to create calendar event: ${error.message}`);
+      throw error;
     }
   };
 
   return {
-    getWeeklyCalendarEvents,
-    getYearlyCalendarEvents,
-    createNewCalendarEvent,
+    loadWeeklyCalendarEvents,
+    loadYearlyCalendarEvents,
+    createCalendarEvent,
   };
 };

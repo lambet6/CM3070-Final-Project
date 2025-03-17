@@ -1,55 +1,36 @@
 import { create } from 'zustand';
-import { createCalendarManager } from '../managers/calendar-manager';
-import { calendarRepository } from '../repositories/calendar-repository';
 
 /**
- * Creates a calendar store with the provided calendar manager
- * @param {Object} customCalendarManager - Optional custom calendar manager to use
+ * Creates a calendar store that only manages state with simple setters/getters
  * @returns {Function} Zustand store hook
  */
-export const createCalendarStore = (customCalendarManager = null) => {
-  // Use provided calendar manager or create default one
-  const calendarManager = customCalendarManager || createCalendarManager(calendarRepository);
-
+export const createCalendarStore = () => {
   return create((set) => ({
+    // State
     events: [],
     error: null,
     isLoading: false,
 
-    loadCalendarEvents: async () => {
-      set({ isLoading: true, error: null });
-      try {
-        const fetchedEvents = await calendarManager.getYearlyCalendarEvents();
-        set({ events: fetchedEvents, error: null, isLoading: false });
-      } catch (error) {
-        console.error('Calendar store error:', error);
-        set({
-          error: error.message || 'Failed to load calendar events',
-          events: [],
-          isLoading: false,
-        });
-      }
-    },
+    // Simple setters
+    setEvents: (events) => set({ events }),
+    setError: (error) => set({ error }),
+    setLoading: (isLoading) => set({ isLoading }),
 
-    createEvent: async (title, startDate, endDate) => {
-      set({ error: null });
-      try {
-        const newEvent = await calendarManager.createNewCalendarEvent(title, startDate, endDate);
-        set((state) => ({
-          events: [...state.events, newEvent],
-          error: null,
-        }));
-        return newEvent;
-      } catch (error) {
-        set({ error: error.message });
-        throw error;
-      }
-    },
+    // Combined state setters
+    setLoadingState: (isLoading, error = null) => set({ isLoading, error }),
+
+    // Add a single event to the existing events array
+    addEvent: (newEvent) =>
+      set((state) => ({
+        events: [...state.events, newEvent],
+      })),
+
+    // Reset the store to its initial state
+    reset: () => set({ events: [], error: null, isLoading: false }),
   }));
 };
 
 /**
  * Default calendar store instance for use in components
- * This maintains backward compatibility with existing code
  */
 export const useCalendarStore = createCalendarStore();

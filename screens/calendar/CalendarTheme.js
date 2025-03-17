@@ -82,10 +82,10 @@ export function createCalendarTheme(selectedDate, todayId) {
           return {
             container: {
               ...staticStyles.todayContainer,
-              borderTopLeftRadius: isStartOfRange ? CONSTANTS.CALENDAR.BORDER_RADIUS : 0,
-              borderBottomLeftRadius: isStartOfRange ? CONSTANTS.CALENDAR.BORDER_RADIUS : 0,
-              borderTopRightRadius: isEndOfRange ? CONSTANTS.CALENDAR.BORDER_RADIUS : 0,
-              borderBottomRightRadius: isEndOfRange ? CONSTANTS.CALENDAR.BORDER_RADIUS : 0,
+              borderTopLeftRadius: isStartOfRange ? CONSTANTS.CALENDAR.BORDER_RADIUS : 4,
+              borderBottomLeftRadius: isStartOfRange ? CONSTANTS.CALENDAR.BORDER_RADIUS : 4,
+              borderTopRightRadius: isEndOfRange ? CONSTANTS.CALENDAR.BORDER_RADIUS : 4,
+              borderBottomRightRadius: isEndOfRange ? CONSTANTS.CALENDAR.BORDER_RADIUS : 4,
             },
             content: isPressed ? staticStyles.todayPressedContent : staticStyles.todayContent,
           };

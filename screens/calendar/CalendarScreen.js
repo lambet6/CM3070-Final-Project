@@ -16,6 +16,7 @@ import Animated, { withTiming } from 'react-native-reanimated';
 
 // Import components, styles, and hooks
 import { useCalendarStore } from '../../store/calendarStore';
+import { useCalendarManager } from '../../hooks/useCalendarManager';
 import { useTaskStore } from '../../store/taskStore';
 import { CalendarHeader } from './components/CalendarHeader';
 import { WeekdaysHeader } from './components/WeekdaysHeader';
@@ -28,17 +29,27 @@ import { useCalendarAnimations } from './hooks/useCalendarAnimations';
 const today = new Date();
 
 export default function CustomCalendar() {
-  const { events, loadCalendarEvents } = useCalendarStore();
-  // Get state from store
+  // Get state from store using selector pattern
+  const events = useCalendarStore((state) => state.events);
+  const error = useCalendarStore((state) => state.error);
+  const isLoading = useCalendarStore((state) => state.isLoading);
+
+  // Get manager functions
+  const calendarManager = useCalendarManager();
+
+  // Get tasks from task store
   const tasks = useTaskStore((state) => state.tasks);
-  const error = useTaskStore((state) => state.error);
+  const taskError = useTaskStore((state) => state.error);
+
   const isProcessingDateSelection = useRef(false);
 
+  // Load calendar events on component mount
   useEffect(() => {
-    loadCalendarEvents();
-    console.log('loadCalendarEvents');
-  }, [loadCalendarEvents]);
+    calendarManager.loadYearlyCalendarEvents();
+    console.log('loadYearlyCalendarEvents');
+  }, [calendarManager]);
 
+  // Log events when they change
   useEffect(() => {
     console.log('events', events);
   }, [events]);
@@ -206,8 +217,36 @@ export default function CustomCalendar() {
     setIsWeekView(!isWeekView);
   }, [isWeekView, selectedDate]);
 
+  // // New function to create an event using the manager
+  // const handleCreateEvent = useCallback(
+  //   async (title, startDate, endDate) => {
+  //     try {
+  //       const newEvent = await calendarManager.createCalendarEvent(title, startDate, endDate);
+  //       console.log('New event created:', newEvent);
+  //       return newEvent;
+  //     } catch (error) {
+  //       console.error('Failed to create event:', error);
+  //       // Error handling UI logic could go here
+  //       return null;
+  //     }
+  //   },
+  //   [calendarManager],
+  // );
+
   return (
     <View style={styles.container}>
+      {isLoading && (
+        <View style={styles.loadingIndicator}>
+          <Text>Loading calendar events...</Text>
+        </View>
+      )}
+
+      {error && (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      )}
+
       <View style={styles.calendarContainer}>
         <Calendar.VStack>
           {/* Calendar header */}
@@ -226,18 +265,21 @@ export default function CustomCalendar() {
           <Animated.View style={[styles.animatedContainer, animatedStyle]}>
             <View style={styles.daysContainer}>
               <Animated.View style={[styles.animatedContainer, weekRowAnimatedStyle]}>
-                {visibleWeeks.map((week) => (
-                  <CalendarWeek
-                    key={week[0]?.id || Math.random()}
-                    week={week}
-                    isWeekView={isWeekView}
-                    calendarTheme={calendarTheme}
-                    onDatePress={handleDatePress}
-                    events={events}
-                    tasks={tasks}
-                    selectedDate={selectedDate}
-                  />
-                ))}
+                {visibleWeeks.map((week) => {
+                  const weekKey = week.map((day) => day.id).join('-');
+                  return (
+                    <CalendarWeek
+                      key={weekKey}
+                      week={week}
+                      isWeekView={isWeekView}
+                      calendarTheme={calendarTheme}
+                      onDatePress={handleDatePress}
+                      events={events}
+                      tasks={tasks}
+                      selectedDate={selectedDate}
+                    />
+                  );
+                })}
               </Animated.View>
             </View>
 
