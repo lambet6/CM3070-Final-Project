@@ -25,10 +25,11 @@ import { CONSTANTS } from './CalendarConstants';
 import { styles } from './CalendarStyles';
 import { createCalendarTheme } from './CalendarTheme';
 import { useCalendarAnimations } from './hooks/useCalendarAnimations';
+import TaskReorderableList from './components/TaskReorderableList';
 
 const today = new Date();
 
-export default function CustomCalendar() {
+export default function CalenarScreen() {
   // Get state from store using selector pattern
   const events = useCalendarStore((state) => state.events);
   const error = useCalendarStore((state) => state.error);
@@ -295,7 +296,9 @@ export default function CustomCalendar() {
           </Calendar.VStack>
         </View>
       </View>
-      <View style={styles.dragList}></View>
+      <View style={styles.dragList}>
+        <TaskReorderableList />
+      </View>
     </View>
   );
 }

@@ -45,7 +45,7 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
   },
   navButtonText: {
-    fontSize: 16,
+    fontSize: 10,
     fontWeight: 'bold',
     color: CONSTANTS.COLORS.primary,
   },
