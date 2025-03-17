@@ -44,15 +44,19 @@ export const createTaskManager = (repository, getStore) => {
    * @param {string} title
    * @param {string} priority
    * @param {Date} dueDate
+   * @param {number} [duration=30]
+   * @param {Date|null} [scheduledTime=null]
    * @returns {Task}
    */
-  const createTask = (title, priority, dueDate) => {
+  const createTask = (title, priority, dueDate, duration = 30, scheduledTime = null) => {
     return new Task({
       id: Date.now().toString(),
       title,
       priority,
       dueDate,
       completed: false,
+      duration,
+      scheduledTime,
     });
   };
 
@@ -62,12 +66,16 @@ export const createTaskManager = (repository, getStore) => {
    * @param {string} newTitle
    * @param {string} newPriority
    * @param {Date} newDueDate
+   * @param {number} [newDuration]
+   * @param {Date|null} [newScheduledTime]
    * @returns {Task}
    */
-  const editTask = (task, newTitle, newPriority, newDueDate) => {
+  const editTask = (task, newTitle, newPriority, newDueDate, newDuration, newScheduledTime) => {
     task.setTitle(newTitle);
     task.setPriority(newPriority);
     task.setDueDate(newDueDate);
+    if (newDuration) task.setDuration(newDuration);
+    if (newScheduledTime !== undefined) task.setScheduledTime(newScheduledTime);
     return task;
   };
 
@@ -97,9 +105,11 @@ export const createTaskManager = (repository, getStore) => {
    * @param {string} title
    * @param {string} priority
    * @param {Date} dueDate
+   * @param {number} [duration=30]
+   * @param {Date|null} [scheduledTime=null]
    * @returns {Promise<GroupedTasks>}
    */
-  const createNewTask = async (title, priority, dueDate) => {
+  const createNewTask = async (title, priority, dueDate, duration = 30, scheduledTime = null) => {
     const store = getStore();
 
     // Pre-validation for clear error messages
@@ -115,10 +125,18 @@ export const createTaskManager = (repository, getStore) => {
       store.setError('Valid due date is required');
       throw new Error('Valid due date is required');
     }
+    if (!Number.isInteger(duration) || duration <= 0) {
+      store.setError('Duration must be a positive integer');
+      throw new Error('Duration must be a positive integer');
+    }
+    if (scheduledTime && (!(scheduledTime instanceof Date) || isNaN(scheduledTime.getTime()))) {
+      store.setError('Invalid scheduled time');
+      throw new Error('Invalid scheduled time');
+    }
 
     try {
       const tasks = await repository.getTasks();
-      const newTask = createTask(title, priority, dueDate);
+      const newTask = createTask(title, priority, dueDate, duration, scheduledTime);
       tasks.push(newTask);
       await repository.saveTasks(tasks);
 
@@ -139,9 +157,18 @@ export const createTaskManager = (repository, getStore) => {
    * @param {string} newTitle
    * @param {string} newPriority
    * @param {Date} newDueDate
+   * @param {number} [newDuration]
+   * @param {Date|null} [newScheduledTime]
    * @returns {Promise<GroupedTasks>}
    */
-  const editExistingTask = async (taskId, newTitle, newPriority, newDueDate) => {
+  const editExistingTask = async (
+    taskId,
+    newTitle,
+    newPriority,
+    newDueDate,
+    newDuration,
+    newScheduledTime,
+  ) => {
     const store = getStore();
 
     if (!taskId) {
@@ -160,6 +187,17 @@ export const createTaskManager = (repository, getStore) => {
       store.setError('Valid due date is required');
       throw new Error('Valid due date is required');
     }
+    if (newDuration && (!Number.isInteger(newDuration) || newDuration <= 0)) {
+      store.setError('Duration must be a positive integer');
+      throw new Error('Duration must be a positive integer');
+    }
+    if (
+      newScheduledTime &&
+      (!(newScheduledTime instanceof Date) || isNaN(newScheduledTime.getTime()))
+    ) {
+      store.setError('Invalid scheduled time');
+      throw new Error('Invalid scheduled time');
+    }
 
     try {
       const tasks = await repository.getTasks();
@@ -171,7 +209,9 @@ export const createTaskManager = (repository, getStore) => {
       }
 
       const updatedTasks = tasks.map((t) =>
-        t.id === taskId ? editTask(t, newTitle, newPriority, newDueDate) : t,
+        t.id === taskId
+          ? editTask(t, newTitle, newPriority, newDueDate, newDuration, newScheduledTime)
+          : t,
       );
 
       await repository.saveTasks(updatedTasks);

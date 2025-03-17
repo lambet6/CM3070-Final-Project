@@ -1,7 +1,9 @@
+/* global setTimeout */
 import React, { useState, useCallback, useEffect } from 'react';
-import { View, TouchableOpacity, Text, StyleSheet, Platform, Keyboard } from 'react-native';
-import { BottomSheetView, BottomSheetTextInput } from '@gorhom/bottom-sheet';
+import { View, Text, StyleSheet, Platform, Keyboard } from 'react-native';
+import { BottomSheetView, BottomSheetTextInput, TouchableOpacity } from '@gorhom/bottom-sheet';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { TimerPickerModal } from 'react-native-timer-picker';
 import { useTaskManager } from '../hooks/useTaskManager';
 import { format } from 'date-fns';
 
@@ -15,6 +17,9 @@ export const QuickTaskSheet = ({ onClose, taskToEdit }) => {
   const [taskDueDate, setTaskDueDate] = useState(new Date());
   const [titleError, setTitleError] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showDurationPicker, setShowDurationPicker] = useState(false);
+  const [taskDuration, setTaskDuration] = useState('30');
+  const [durationError, setDurationError] = useState('');
 
   // Populate form with task data when in edit mode
   useEffect(() => {
@@ -22,36 +27,39 @@ export const QuickTaskSheet = ({ onClose, taskToEdit }) => {
       setTaskTitle(taskToEdit.title);
       setTaskPriority(taskToEdit.priority);
       setTaskDueDate(new Date(taskToEdit.dueDate));
+      setTaskDuration(taskToEdit.duration ? String(taskToEdit.duration) : '');
     } else {
-      // Reset form when not in edit mode
       resetForm();
     }
-  }, [taskToEdit]);
+  }, [taskToEdit, resetForm]);
 
   const handleSaveTask = async () => {
-    console.log('Saving task:', taskTitle, taskPriority, taskDueDate);
-    // Validate title
     if (!taskTitle?.trim()) {
-      console.log('Title trim fail');
       setTitleError('Title is required');
+      return;
+    }
+    const durationNumber = parseInt(taskDuration, 10);
+    if (taskDuration === '' || isNaN(durationNumber) || durationNumber <= 0) {
+      setDurationError('A valid duration is required');
       return;
     }
 
     try {
       Keyboard.dismiss();
-
       if (isEditMode) {
-        // Update existing task using the task manager
-        await taskManager.editExistingTask(taskToEdit.id, taskTitle, taskPriority, taskDueDate);
+        await taskManager.editExistingTask(
+          taskToEdit.id,
+          taskTitle,
+          taskPriority,
+          taskDueDate,
+          durationNumber,
+        );
       } else {
-        // Create new task using the task manager
-        await taskManager.createNewTask(taskTitle, taskPriority, taskDueDate);
+        await taskManager.createNewTask(taskTitle, taskPriority, taskDueDate, durationNumber);
       }
-
       resetForm();
       onClose();
     } catch (error) {
-      console.error(`Failed to ${isEditMode ? 'update' : 'create'} task:`, error);
       setTitleError(error.message || `Failed to ${isEditMode ? 'update' : 'create'} task`);
     }
   };
@@ -66,8 +74,11 @@ export const QuickTaskSheet = ({ onClose, taskToEdit }) => {
     setTaskTitle('');
     setTaskPriority('Medium');
     setTaskDueDate(new Date());
+    setTaskDuration('30');
     setTitleError('');
+    setDurationError('');
     setShowDatePicker(false);
+    setShowDurationPicker(false);
   }, []);
 
   const handleDateChange = (event, selectedDate) => {
@@ -76,12 +87,17 @@ export const QuickTaskSheet = ({ onClose, taskToEdit }) => {
     setTaskDueDate(currentDate);
   };
 
-  const showDatepicker = () => {
-    setShowDatePicker(true);
+  const showDatepicker = () => setShowDatePicker(true);
+
+  const formatDuration = (minutes) => {
+    if (!minutes) return 'Not set';
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return hours > 0 ? `${hours}h ${mins > 0 ? `${mins}m` : ''}` : `${mins}m`;
   };
 
   return (
-    <BottomSheetView keyboardShouldPersistTaps="handled" style={styles.sheetContainer}>
+    <BottomSheetView style={styles.sheetContainer}>
       <Text style={styles.sheetTitle}>{isEditMode ? 'Edit Task' : 'Quick Add Task'}</Text>
 
       {/* Task Title Input */}
@@ -98,7 +114,7 @@ export const QuickTaskSheet = ({ onClose, taskToEdit }) => {
           }}
         />
         {titleError ? (
-          <Text testID="error-message" style={styles.errorText}>
+          <Text testID="title-error-message" style={styles.errorText}>
             {titleError}
           </Text>
         ) : null}
@@ -109,11 +125,10 @@ export const QuickTaskSheet = ({ onClose, taskToEdit }) => {
         <Text style={styles.inputLabel}>Due Date:</Text>
         <TouchableOpacity
           style={styles.dateButton}
-          onPressIn={showDatepicker}
+          onPress={showDatepicker}
           testID="date-picker-button">
           <Text style={styles.dateButtonText}>{format(taskDueDate, 'MMMM d, yyyy')}</Text>
         </TouchableOpacity>
-
         {showDatePicker && (
           <DateTimePicker
             testID="date-time-picker"
@@ -126,83 +141,137 @@ export const QuickTaskSheet = ({ onClose, taskToEdit }) => {
         )}
       </View>
 
+      {/* Duration Picker */}
+      <View style={styles.inputContainer}>
+        <Text style={styles.inputLabel}>Duration:</Text>
+        <TouchableOpacity
+          style={styles.dateButton}
+          onPress={() => setShowDurationPicker(true)}
+          testID="duration-picker-button">
+          <Text style={styles.dateButtonText}>
+            {taskDuration ? formatDuration(parseInt(taskDuration, 10)) : 'Set duration'}
+          </Text>
+        </TouchableOpacity>
+        {durationError ? (
+          <Text testID="duration-error-message" style={styles.errorText}>
+            {durationError}
+          </Text>
+        ) : null}
+        <TimerPickerModal
+          visible={showDurationPicker}
+          setIsVisible={setShowDurationPicker}
+          onConfirm={(pickedDuration) => {
+            const totalMinutes = (pickedDuration.hours || 0) * 60 + (pickedDuration.minutes || 0);
+            if (totalMinutes > 0) {
+              setTaskDuration(String(totalMinutes));
+              setDurationError('');
+            } else {
+              setDurationError('Duration must be greater than 0 minutes');
+            }
+            setShowDurationPicker(false);
+          }}
+          modalTitle="Set Task Duration"
+          onCancel={() => setShowDurationPicker(false)}
+          closeOnOverlayPress
+          use12HourPicker={false}
+          initialHours={Math.floor(parseInt(taskDuration, 10) / 60)}
+          initialMinutes={parseInt(taskDuration, 10) % 60}
+          hideSeconds={true}
+          styles={{ theme: 'light' }}
+        />
+      </View>
+
       {/* Priority Buttons */}
       <View style={styles.inputContainer}>
         <Text style={styles.inputLabel}>Priority:</Text>
         <View style={styles.priorityButtonsContainer}>
-          <TouchableOpacity
-            testID="priority-low-button"
-            style={[
-              styles.priorityButton,
-              styles.lowPriorityButton,
-              taskPriority === 'Low' && [styles.priorityButtonSelected, styles.lowPrioritySelected],
-            ]}
-            onPressIn={() => setTaskPriority('Low')}>
-            <Text
+          <View style={styles.priorityButtonWrapper}>
+            <TouchableOpacity
+              testID="priority-low-button"
               style={[
-                styles.priorityButtonText,
-                styles.lowPriorityButtonText,
-                taskPriority === 'Low' && styles.lowPriorityTextSelected,
-              ]}>
-              Low
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            testID="priority-medium-button"
-            style={[
-              styles.priorityButton,
-              styles.mediumPriorityButton,
-              taskPriority === 'Medium' && [
-                styles.priorityButtonSelected,
-                styles.mediumPrioritySelected,
-              ],
-            ]}
-            onPressIn={() => setTaskPriority('Medium')}>
-            <Text
+                styles.priorityButton,
+                styles.lowPriorityButton,
+                taskPriority === 'Low' && [
+                  styles.priorityButtonSelected,
+                  styles.lowPrioritySelected,
+                ],
+              ]}
+              onPress={() => setTaskPriority('Low')}
+              onPressOut={() => {
+                Keyboard.dismiss();
+              }}>
+              <Text
+                style={[
+                  styles.priorityButtonText,
+                  styles.lowPriorityButtonText,
+                  taskPriority === 'Low' && styles.lowPriorityTextSelected,
+                ]}>
+                Low
+              </Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.priorityButtonWrapper}>
+            <TouchableOpacity
+              testID="priority-medium-button"
               style={[
-                styles.priorityButtonText,
-                styles.mediumPriorityButtonText,
-                taskPriority === 'Medium' && styles.mediumPriorityTextSelected,
-              ]}>
-              Medium
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            testID="priority-high-button"
-            style={[
-              styles.priorityButton,
-              styles.highPriorityButton,
-              taskPriority === 'High' && [
-                styles.priorityButtonSelected,
-                styles.highPrioritySelected,
-              ],
-            ]}
-            onPressIn={() => setTaskPriority('High')}>
-            <Text
+                styles.priorityButton,
+                styles.mediumPriorityButton,
+                taskPriority === 'Medium' && [
+                  styles.priorityButtonSelected,
+                  styles.mediumPrioritySelected,
+                ],
+              ]}
+              onPress={() => setTaskPriority('Medium')}>
+              <Text
+                style={[
+                  styles.priorityButtonText,
+                  styles.mediumPriorityButtonText,
+                  taskPriority === 'Medium' && styles.mediumPriorityTextSelected,
+                ]}>
+                Medium
+              </Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.priorityButtonWrapper}>
+            <TouchableOpacity
+              testID="priority-high-button"
               style={[
-                styles.priorityButtonText,
-                styles.highPriorityButtonText,
-                taskPriority === 'High' && styles.highPriorityTextSelected,
-              ]}>
-              High
-            </Text>
-          </TouchableOpacity>
+                styles.priorityButton,
+                styles.highPriorityButton,
+                taskPriority === 'High' && [
+                  styles.priorityButtonSelected,
+                  styles.highPrioritySelected,
+                ],
+              ]}
+              onPress={() => setTaskPriority('High')}>
+              <Text
+                style={[
+                  styles.priorityButtonText,
+                  styles.highPriorityButtonText,
+                  taskPriority === 'High' && styles.highPriorityTextSelected,
+                ]}>
+                High
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
 
       {/* Action Buttons */}
       <View style={styles.buttonContainer}>
-        <TouchableOpacity style={styles.cancelButton} onPressIn={handleCancel}>
-          <Text style={styles.buttonText}>Cancel</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.addButton}
-          onPressIn={handleSaveTask}
-          testID="quick-add-save">
-          <Text style={styles.buttonText}>{isEditMode ? 'Save Changes' : 'Add Task'}</Text>
-        </TouchableOpacity>
+        <View style={styles.actionButtonWrapper}>
+          <TouchableOpacity style={styles.cancelButton} onPress={() => handleCancel()}>
+            <Text style={styles.buttonText}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+        <View style={styles.actionButtonWrapper}>
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => handleSaveTask()}
+            testID="quick-add-save">
+            <Text style={styles.buttonText}>{isEditMode ? 'Save Changes' : 'Add Task'}</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </BottomSheetView>
   );
@@ -211,6 +280,7 @@ export const QuickTaskSheet = ({ onClose, taskToEdit }) => {
 const styles = StyleSheet.create({
   sheetContainer: {
     flex: 1,
+    minHeight: 410, // ensure a minimum height so the sheet expands with the keyboard
     padding: 20,
     backgroundColor: 'white',
   },
@@ -247,14 +317,18 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginTop: 5,
   },
-  priorityButton: {
+  priorityButtonWrapper: {
     flex: 1,
-    paddingVertical: 12,
+    paddingHorizontal: 4,
+  },
+  priorityButton: {
+    padding: 12,
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    marginHorizontal: 4,
+    height: 45,
+    width: '100%',
   },
   lowPriorityButton: {
     backgroundColor: '#f0f9f0',
@@ -268,9 +342,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff0f0',
     borderColor: '#f0d0d0',
   },
-  priorityButtonSelected: {
-    // borderWidth: 2,
-  },
+  priorityButtonSelected: {},
   lowPrioritySelected: {
     borderColor: '#4CAF50',
     backgroundColor: '#e0f2e0',
@@ -288,13 +360,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   lowPriorityButtonText: {
-    color: '#2E7D32', // Changed to match selected color
+    color: '#2E7D32',
   },
   mediumPriorityButtonText: {
-    color: '#FF8F00', // Changed to match selected color
+    color: '#FF8F00',
   },
   highPriorityButtonText: {
-    color: '#C62828', // Changed to match selected color
+    color: '#C62828',
   },
   lowPriorityTextSelected: {
     color: '#2E7D32',
@@ -320,24 +392,28 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     marginTop: 20,
+    gap: 16,
+  },
+  actionButtonWrapper: {
+    width: '30%',
   },
   cancelButton: {
-    flex: 1,
     backgroundColor: '#ccc',
     padding: 12,
     borderRadius: 8,
-    marginRight: 8,
     alignItems: 'center',
+    height: 48,
+    width: '100%',
   },
   addButton: {
-    flex: 1,
     backgroundColor: '#007AFF',
     padding: 12,
     borderRadius: 8,
-    marginLeft: 8,
     alignItems: 'center',
+    height: 48,
+    width: '100%',
   },
   buttonText: {
     color: 'white',
@@ -345,3 +421,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
 });
+
+export default QuickTaskSheet;

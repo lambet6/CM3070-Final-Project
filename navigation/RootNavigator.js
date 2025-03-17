@@ -70,7 +70,8 @@ export function RootNavigator() {
           ref={bottomSheetRef}
           index={-1}
           bottomInset={49}
-          snapPoints={['50%']}
+          snapPoints={['60%']}
+          keyboardShouldPersistTaps="always"
           keyboardBehavior="interactive"
           keyboardBlurBehavior="restore"
           enableBlurKeyboardOnGesture={true}
