@@ -29,7 +29,9 @@ const today = new Date();
 
 export default function CustomCalendar() {
   const { events, loadCalendarEvents } = useCalendarStore();
-  const { tasks, loadTasks } = useTaskStore();
+  // Get state from store
+  const tasks = useTaskStore((state) => state.tasks);
+  const error = useTaskStore((state) => state.error);
   const isProcessingDateSelection = useRef(false);
 
   useEffect(() => {
@@ -40,10 +42,6 @@ export default function CustomCalendar() {
   useEffect(() => {
     console.log('events', events);
   }, [events]);
-
-  useEffect(() => {
-    loadTasks();
-  }, [loadTasks]);
 
   // State management
   const todayId = toDateId(today);

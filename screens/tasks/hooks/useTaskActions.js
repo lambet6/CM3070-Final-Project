@@ -1,7 +1,13 @@
-import { useState, useRef } from 'react';
-import * as Haptics from 'expo-haptics';
+import { useState, useCallback } from 'react';
 
-export default function useTaskActions(tasks, addTask, deleteTasks) {
+/**
+ * Hook for handling task-related actions with appropriate feedback
+ * @param {Object} tasks - The current tasks object
+ * @param {Function} createNewTask - Function to create a new task
+ * @param {Function} deleteTasks - Function to delete tasks
+ * @returns {Object} Task action handlers and state
+ */
+const useTaskActions = (tasks, createNewTask, deleteTasks) => {
   const [error, setError] = useState(null);
   const [snackbarState, setSnackbarState] = useState({
     visible: false,
@@ -9,120 +15,85 @@ export default function useTaskActions(tasks, addTask, deleteTasks) {
     action: null,
   });
 
-  const deletedTasksRef = useRef([]);
+  // Handle snackbar dismissal
+  const handleSnackbarDismiss = useCallback(() => {
+    setSnackbarState((prev) => ({ ...prev, visible: false }));
+  }, []);
 
-  const handleDeleteTask = async (taskId) => {
-    try {
-      const taskPriority = tasks.high.find((t) => t.id === taskId)
-        ? 'High'
-        : tasks.medium.find((t) => t.id === taskId)
-          ? 'Medium'
-          : 'Low';
-      const taskObj = tasks[taskPriority.toLowerCase()].find((t) => t.id === taskId);
+  // Delete a single task with confirmation feedback
+  const handleDeleteTask = useCallback(
+    async (taskId) => {
+      try {
+        // Find the task to get its title for the confirmation message
+        let taskTitle = 'this task';
+        const allTasks = [...tasks.high, ...tasks.medium, ...tasks.low];
+        const task = allTasks.find((t) => t.id === taskId);
+        if (task) {
+          taskTitle = `"${task.title}"`;
+        }
 
-      if (taskObj) {
-        deletedTasksRef.current = [
-          {
-            ...taskObj,
-            priority: taskPriority,
-          },
-        ];
-        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-
+        // Delete the task
         await deleteTasks([taskId]);
 
-        // Use the unified snackbar state
+        // Show success message
         setSnackbarState({
           visible: true,
-          message: `"${taskObj.title}" deleted`,
+          message: `Deleted ${taskTitle}`,
           action: {
-            label: 'Undo',
-            onPress: handleUndoDelete,
+            label: 'UNDO',
+            onPress: () => {
+              if (task) {
+                // Re-create the task if user wants to undo
+                createNewTask(task.title, task.priority, new Date(task.dueDate));
+                setSnackbarState((prev) => ({ ...prev, visible: false }));
+              }
+            },
+          },
+        });
+      } catch (error) {
+        console.error('Error deleting task:', error);
+        setSnackbarState({
+          visible: true,
+          message: `Failed to delete task: ${error.message}`,
+          action: {
+            label: 'OK',
+            onPress: () => setSnackbarState((prev) => ({ ...prev, visible: false })),
           },
         });
       }
-    } catch (error) {
-      setError(error.message);
+    },
+    [tasks, deleteTasks, createNewTask],
+  );
+
+  // Delete multiple tasks
+  const handleDeleteMultipleTasks = useCallback(
+    async (taskIds) => {
+      if (!taskIds.length) return;
+
       try {
-        await deleteTasks([taskId]);
-      } catch (retryError) {
-        setError('Failed to delete task. Please try again.');
-      }
-    }
-  };
-
-  const handleDeleteMultipleTasks = async (taskIds) => {
-    try {
-      if (taskIds.length === 1) {
-        return handleDeleteTask(taskIds[0]);
-      }
-
-      const tasksToDelete = [];
-
-      taskIds.forEach((id) => {
-        let taskObj = null;
-        let taskPriority = null;
-
-        if (tasks.high.some((t) => t.id === id)) {
-          taskObj = tasks.high.find((t) => t.id === id);
-          taskPriority = 'High';
-        } else if (tasks.medium.some((t) => t.id === id)) {
-          taskObj = tasks.medium.find((t) => t.id === id);
-          taskPriority = 'Medium';
-        } else if (tasks.low.some((t) => t.id === id)) {
-          taskObj = tasks.low.find((t) => t.id === id);
-          taskPriority = 'Low';
-        }
-
-        if (taskObj) {
-          tasksToDelete.push({
-            ...taskObj,
-            priority: taskPriority,
-          });
-        }
-      });
-
-      deletedTasksRef.current = tasksToDelete;
-
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-      await deleteTasks(taskIds);
-
-      // Use the unified snackbar state
-      setSnackbarState({
-        visible: true,
-        message: `${taskIds.length} tasks deleted`,
-        action: {
-          label: 'Undo',
-          onPress: handleUndoDelete,
-        },
-      });
-    } catch (error) {
-      setError(error.message);
-    }
-  };
-
-  // Clear deleted tasks reference when snackbar dismisses
-  const handleSnackbarDismiss = () => {
-    setSnackbarState((prev) => ({ ...prev, visible: false }));
-    // Clear the deleted tasks history since undo is no longer available
-    deletedTasksRef.current = [];
-  };
-
-  const handleUndoDelete = async () => {
-    if (deletedTasksRef.current.length > 0) {
-      try {
-        for (const task of deletedTasksRef.current) {
-          const { title, dueDate, priority } = task;
-          await addTask(title, priority, new Date(dueDate));
-        }
-
-        deletedTasksRef.current = [];
-        setSnackbarState((prev) => ({ ...prev, visible: false }));
+        await deleteTasks(taskIds);
+        setSnackbarState({
+          visible: true,
+          message: `Deleted ${taskIds.length} ${taskIds.length === 1 ? 'task' : 'tasks'}`,
+          action: {
+            label: 'OK',
+            onPress: () => setSnackbarState((prev) => ({ ...prev, visible: false })),
+          },
+        });
       } catch (error) {
-        setError('Failed to restore task(s). Please try again.');
+        console.error('Error deleting tasks:', error);
+        setSnackbarState({
+          visible: true,
+          message: `Failed to delete tasks: ${error.message}`,
+          action: {
+            label: 'OK',
+            onPress: () => setSnackbarState((prev) => ({ ...prev, visible: false })),
+          },
+        });
       }
-    }
-  };
+    },
+    [deleteTasks],
+  );
 
   return {
     error,
@@ -130,7 +101,8 @@ export default function useTaskActions(tasks, addTask, deleteTasks) {
     setSnackbarState,
     handleDeleteTask,
     handleDeleteMultipleTasks,
-    handleUndoDelete,
     handleSnackbarDismiss,
   };
-}
+};
+
+export default useTaskActions;

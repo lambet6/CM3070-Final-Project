@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, SectionList } from 'react-native';
 import { useTaskStore } from '../../store/taskStore';
+import { useTaskManager } from '../../hooks/useTaskManager';
 import { Snackbar } from 'react-native-paper';
 import * as Haptics from 'expo-haptics';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -15,26 +16,23 @@ import useSelectionMode from './hooks/useSelectionMode';
 import SwipeableTaskItem from './components/SwipeableTaskItem';
 
 export default function TasksScreen() {
-  const {
-    tasks,
-    loadTasks,
-    addTask,
-    toggleCompleteTask,
-    deleteTasks,
-    getConsolidatedTasks,
-    rescheduleOverdueTasks,
-  } = useTaskStore();
+  // Get state from store
+  const tasks = useTaskStore((state) => state.tasks);
+  const error = useTaskStore((state) => state.error);
+  const getConsolidatedTasks = useTaskStore((state) => state.getConsolidatedTasks);
+
+  // Get methods from manager
+  const taskManager = useTaskManager();
 
   const [viewMode, setViewMode] = useState(0); // 0 for grouped, 1 for consolidated
 
   const {
-    error,
     snackbarState,
     setSnackbarState,
     handleDeleteTask,
     handleDeleteMultipleTasks,
     handleSnackbarDismiss,
-  } = useTaskActions(tasks, addTask, deleteTasks);
+  } = useTaskActions(tasks, taskManager.createNewTask, taskManager.deleteTasks);
 
   const {
     selectionMode,
@@ -51,10 +49,10 @@ export default function TasksScreen() {
     const initializeTasks = async () => {
       try {
         // Load all tasks first
-        await loadTasks();
+        await taskManager.loadTasks();
 
         // Then handle any overdue tasks
-        const { count } = await rescheduleOverdueTasks();
+        const { count } = await taskManager.rescheduleOverdueTasks();
 
         // Show notification immediately if needed
         if (count > 0) {
@@ -101,7 +99,7 @@ export default function TasksScreen() {
           handleSelectionToggle(item.id);
         } else {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-          toggleCompleteTask(item.id);
+          taskManager.toggleTaskCompletion(item.id);
         }
       }}
       onLongPress={() => {
