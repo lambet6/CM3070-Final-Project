@@ -26,6 +26,7 @@ import { styles } from './CalendarStyles';
 import { createCalendarTheme } from './CalendarTheme';
 import { useCalendarAnimations } from './hooks/useCalendarAnimations';
 import TaskReorderableList from './components/TaskReorderableList';
+import TimelineComponent from './components/DailySchedule';
 
 const today = new Date();
 
@@ -297,7 +298,8 @@ export default function CalenarScreen() {
         </View>
       </View>
       <View style={styles.dragList}>
-        <TaskReorderableList selectedDate={selectedDate} />
+        {/* <TaskReorderableList selectedDate={selectedDate} /> */}
+        <TimelineComponent />
       </View>
     </View>
   );
