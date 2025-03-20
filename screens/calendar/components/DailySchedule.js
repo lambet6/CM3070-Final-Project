@@ -63,8 +63,16 @@ const positionToTime = (position) => {
   return MIN_HOUR + totalQuarters / 4;
 };
 
-// New component for drag action buttons
-const DragActionButtons = ({ isVisible, removeButtonRef, cancelButtonRef, onLayout }) => {
+// cancel and remove buttons
+const DragActionButtons = ({
+  isVisible,
+  removeButtonRef,
+  cancelButtonRef,
+  onLayoutChange,
+  isRemoveHovered,
+  isCancelHovered,
+  isDraggingScheduled,
+}) => {
   const animatedStyle = useAnimatedStyle(() => {
     return {
       position: 'absolute',
@@ -79,15 +87,62 @@ const DragActionButtons = ({ isVisible, removeButtonRef, cancelButtonRef, onLayo
     };
   });
 
+  const cancelButtonStyle = useAnimatedStyle(() => {
+    return {
+      backgroundColor: isCancelHovered.value ? 'rgb(224, 133, 0)' : 'transparent',
+    };
+  });
+
+  const removeButtonStyle = useAnimatedStyle(() => {
+    return {
+      backgroundColor: isRemoveHovered.value ? 'rgb(224, 133, 0)' : 'transparent',
+      // opacity: isDraggingScheduled.value ? 1 : 0,
+      width: isDraggingScheduled.value ? 120 : 0,
+      marginLeft: isDraggingScheduled.value ? 10 : 0,
+    };
+  });
+
+  // Center cancel button when remove button is hidden
+  const cancelContainerStyle = useAnimatedStyle(() => {
+    return {
+      width: isDraggingScheduled.value ? '50%' : '100%',
+      alignItems: isDraggingScheduled.value ? 'flex-end' : 'center',
+      paddingRight: isDraggingScheduled.value ? 10 : 0,
+    };
+  });
+
+  const removeButtonTextStyle = useAnimatedStyle(() => {
+    return {
+      color: isRemoveHovered.value ? 'white' : 'rgb(224, 133, 0)',
+    };
+  });
+  const cancelButtonTextStyle = useAnimatedStyle(() => {
+    return {
+      color: isCancelHovered.value ? 'white' : 'rgb(224, 133, 0)',
+    };
+  });
+
   return (
-    <Animated.View style={animatedStyle} onLayout={onLayout}>
-      <Animated.View ref={cancelButtonRef} style={styles.actionButton}>
-        <Text style={styles.actionButtonIcon}>↩</Text>
-        <Text style={styles.actionButtonText}>Cancel</Text>
+    <Animated.View style={animatedStyle}>
+      <Animated.View style={cancelContainerStyle}>
+        <Animated.View
+          ref={cancelButtonRef}
+          style={[styles.actionButton, cancelButtonStyle]}
+          onLayout={onLayoutChange}>
+          <Animated.Text style={[styles.actionButtonIcon, cancelButtonTextStyle]}>↩</Animated.Text>
+          <Animated.Text style={[styles.actionButtonText, cancelButtonTextStyle]}>
+            Cancel
+          </Animated.Text>
+        </Animated.View>
       </Animated.View>
-      <Animated.View ref={removeButtonRef} style={styles.actionButton}>
-        <Text style={styles.actionButtonIcon}>🗑</Text>
-        <Text style={styles.actionButtonText}>Remove</Text>
+      <Animated.View
+        ref={removeButtonRef}
+        style={[styles.actionButton, removeButtonStyle]}
+        onLayout={onLayoutChange}>
+        <Animated.Text style={[styles.actionButtonIcon, removeButtonTextStyle]}>🗑</Animated.Text>
+        <Animated.Text style={[styles.actionButtonText, removeButtonTextStyle]}>
+          Remove
+        </Animated.Text>
       </Animated.View>
     </Animated.View>
   );
@@ -140,11 +195,14 @@ const TaskItem = ({
   previewPosition,
   previewHeight,
   isDragging,
+  isDraggingScheduled,
   removeButtonLayout,
   cancelButtonLayout,
   ghostVisible,
   ghostPosition,
   ghostHeight,
+  isRemoveHovered,
+  isCancelHovered,
 }) => {
   // Shared animation values
   const translateX = useSharedValue(0);
@@ -196,6 +254,11 @@ const TaskItem = ({
       isPressed.value = true;
       scale.value = withSpring(task.scheduled ? 1.05 : 1.1);
       isDragging.value = true; // Set dragging state to show action buttons
+      isDraggingScheduled.value = task.scheduled;
+
+      // Reset hover states at the start
+      isRemoveHovered.value = false;
+      isCancelHovered.value = false;
 
       // Store original position for cancel action
       originalPosition.value = {
@@ -219,9 +282,22 @@ const TaskItem = ({
       }
     })
     .onUpdate((event) => {
-      // if (isPointInRect(event.absoluteX, event.absoluteY, removeButtonLayout.value)) {
-      // } else if (isPointInRect(event.absoluteX, event.absoluteY, cancelButtonLayout.value)) {
-      // }
+      // Check if hovering over remove or cancel buttons and update hover states
+      const isOverRemove = isPointInRect(
+        event.absoluteX,
+        event.absoluteY,
+        removeButtonLayout.value,
+      );
+      const isOverCancel = isPointInRect(
+        event.absoluteX,
+        event.absoluteY,
+        cancelButtonLayout.value,
+      );
+
+      // Update hover states
+      isRemoveHovered.value = isOverRemove;
+      isCancelHovered.value = isOverCancel;
+
       if (task.scheduled) {
         // Scheduled task: vertical movement only (reordering within timeline)
         translateX.value = event.translationX;
@@ -261,6 +337,10 @@ const TaskItem = ({
       }
     })
     .onEnd((event) => {
+      // Reset hover states
+      isRemoveHovered.value = false;
+      isCancelHovered.value = false;
+
       // Check if drag ended over remove button
       if (isPointInRect(event.absoluteX, event.absoluteY, removeButtonLayout.value)) {
         // Unschedule task - removed from timeline
@@ -408,10 +488,15 @@ const TimelineComponent = () => {
 
   // Drag action buttons related values
   const isDragging = useSharedValue(false);
+  const isDraggingScheduled = useSharedValue(false);
   const removeButtonRef = useAnimatedRef();
   const cancelButtonRef = useAnimatedRef();
   const removeButtonLayout = useSharedValue(null);
   const cancelButtonLayout = useSharedValue(null);
+
+  // New shared values for button hover states
+  const isRemoveHovered = useSharedValue(false);
+  const isCancelHovered = useSharedValue(false);
 
   // Measure buttons layout
   const measureButtons = useCallback(() => {
@@ -440,10 +525,10 @@ const TimelineComponent = () => {
     } catch (e) {
       console.log('Button measurement error:', e);
     }
-  }, [removeButtonRef, cancelButtonRef]);
+  }, [removeButtonRef, cancelButtonRef, removeButtonLayout, cancelButtonLayout]);
 
-  // Handle button layout
-  const handleButtonsLayout = useCallback(() => {
+  // Handle button layout - now this will be called for each individual button
+  const handleButtonLayout = useCallback(() => {
     if (Platform.OS === 'ios') {
       requestAnimationFrame(() => {
         runOnUI(measureButtons)();
@@ -495,6 +580,24 @@ const TimelineComponent = () => {
       }
     },
     [measureTimelineOnUI],
+  );
+
+  // We can keep this reaction to ensure measurements are updated when drag state changes
+  useAnimatedReaction(
+    () => ({
+      isDragging: isDragging.value,
+      isDraggingScheduled: isDraggingScheduled.value,
+    }),
+    (current, previous) => {
+      if (
+        !previous ||
+        current.isDragging !== previous.isDragging ||
+        current.isDraggingScheduled !== previous.isDraggingScheduled
+      ) {
+        measureButtons();
+      }
+    },
+    [measureButtons],
   );
 
   // Task state change handler
@@ -571,8 +674,11 @@ const TimelineComponent = () => {
                 previewPosition={previewPosition}
                 previewHeight={previewHeight}
                 isDragging={isDragging}
+                isDraggingScheduled={isDraggingScheduled}
                 removeButtonLayout={removeButtonLayout}
                 cancelButtonLayout={cancelButtonLayout}
+                isRemoveHovered={isRemoveHovered}
+                isCancelHovered={isCancelHovered}
               />
             ))}
         </View>
@@ -614,23 +720,29 @@ const TimelineComponent = () => {
                   previewPosition={previewPosition}
                   previewHeight={previewHeight}
                   isDragging={isDragging}
+                  isDraggingScheduled={isDraggingScheduled}
                   removeButtonLayout={removeButtonLayout}
                   cancelButtonLayout={cancelButtonLayout}
                   ghostVisible={ghostVisible}
                   ghostPosition={ghostPosition}
                   ghostHeight={ghostHeight}
+                  isRemoveHovered={isRemoveHovered}
+                  isCancelHovered={isCancelHovered}
                 />
               ))}
           </View>
         </Animated.ScrollView>
       </Animated.View>
 
-      {/* Drag action buttons */}
+      {/* Drag action buttons - now passing individual button layout handler */}
       <DragActionButtons
         isVisible={isDragging}
+        isDraggingScheduled={isDraggingScheduled}
         removeButtonRef={removeButtonRef}
         cancelButtonRef={cancelButtonRef}
-        onLayout={handleButtonsLayout}
+        onLayoutChange={handleButtonLayout}
+        isRemoveHovered={isRemoveHovered}
+        isCancelHovered={isCancelHovered}
       />
     </View>
   );
@@ -750,7 +862,6 @@ const styles = StyleSheet.create({
     height: 50,
     borderRadius: 25,
     borderWidth: 2,
-    // backgroundColor: 'rgba(224, 133, 0, 0.1)',
     borderColor: 'rgb(224, 133, 0)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -758,14 +869,12 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   actionButtonText: {
-    color: 'rgb(224, 133, 0)',
     fontWeight: 'bold',
     fontSize: 14,
     marginLeft: 5,
   },
   actionButtonIcon: {
     fontSize: 18,
-    color: 'rgb(224, 133, 0)',
   },
 });
 
