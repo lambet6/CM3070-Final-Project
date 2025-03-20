@@ -14,31 +14,21 @@ import Animated, {
   runOnUI,
 } from 'react-native-reanimated';
 
-// Helper function to format a decimal hour (e.g., 9.25) into a time string.
-const formatTimeFromDecimal = (decimalHour) => {
-  const hour = Math.floor(decimalHour);
-  const minute = Math.round((decimalHour - hour) * 60);
-  const period = hour >= 12 ? 'PM' : 'AM';
-  const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
-  return `${displayHour}:${minute.toString().padStart(2, '0')} ${period}`;
-};
-
+// Constants remain the same
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const HOUR_HEIGHT = 80;
 const QUARTER_HEIGHT = HOUR_HEIGHT / 4; // 15-minute increments
 const TASK_ITEM_HEIGHT = 50;
 const TASK_ITEM_WIDTH = 120;
-// We retain these constants for styling purposes, but our drop logic will be based on measured layouts.
 const TIMELINE_OFFSET = SCREEN_WIDTH * 0.25;
-const UNSCHEDULED_AREA_HEIGHT = 150;
 
-// Sample data – in a real app this might come from props or remote data.
+// Sample data transformed to have a scheduled property
 const INITIAL_TASKS = [
-  { id: '1', title: 'Meeting', duration: 1 },
-  { id: '2', title: 'Lunch', duration: 1.5 },
-  { id: '3', title: 'Workout', duration: 2 },
-  { id: '4', title: 'Call Mom', duration: 0.5 },
-  { id: '5', title: 'Project Work', duration: 0.75 },
+  { id: '1', title: 'Meeting', duration: 1, scheduled: false },
+  { id: '2', title: 'Lunch', duration: 1.5, scheduled: false },
+  { id: '3', title: 'Workout', duration: 2, scheduled: false },
+  { id: '4', title: 'Call Mom', duration: 0.5, scheduled: false },
+  { id: '5', title: 'Project Work', duration: 0.75, scheduled: false },
 ];
 
 const HOURS = Array.from({ length: 13 }, (_, i) => {
@@ -48,20 +38,184 @@ const HOURS = Array.from({ length: 13 }, (_, i) => {
 
 const QUARTERS = ['00', '15', '30', '45'];
 
+// Helper function to format time (unchanged)
+const formatTimeFromDecimal = (decimalHour) => {
+  const hour = Math.floor(decimalHour);
+  const minute = Math.round((decimalHour - hour) * 60);
+  const period = hour >= 12 ? 'PM' : 'AM';
+  const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
+  return `${displayHour}:${minute.toString().padStart(2, '0')} ${period}`;
+};
+
+const TaskItem = ({
+  task,
+  index,
+  onSchedule,
+  onUnschedule,
+  onUpdatePosition,
+  scrollY,
+  timelineLayout,
+  calculateAlignedPosition,
+}) => {
+  // Shared animation values
+  const translateX = useSharedValue(0);
+  const translateY = useSharedValue(0);
+  const scale = useSharedValue(1);
+  const opacity = useSharedValue(1);
+  const isPressed = useSharedValue(false);
+
+  // Values primarily used for unscheduled tasks
+  const originalX = useSharedValue(0);
+  const originalY = useSharedValue(0);
+  const isOverTimeline = useSharedValue(false);
+
+  // Calculate values based on scheduled state
+  const { scheduled } = task;
+  const durationQuarters = Math.round(task.duration * 4);
+  const taskHeight = scheduled ? durationQuarters * QUARTER_HEIGHT : TASK_ITEM_HEIGHT;
+  const topPosition = scheduled ? task.position || 0 : 0;
+
+  // Reset values when scheduled state changes
+  useEffect(() => {
+    translateX.value = 0;
+    translateY.value = 0;
+    scale.value = 1;
+    opacity.value = 1;
+    isPressed.value = false;
+    isOverTimeline.value = false;
+  }, [scheduled]);
+
+  // Pan gesture with conditional logic based on scheduled state
+  const panGesture = Gesture.Pan()
+    .onStart(() => {
+      isPressed.value = true;
+      scale.value = withSpring(scheduled ? 1.05 : 1.1);
+      // No need to track original position for unscheduled tasks
+    })
+    .onUpdate((event) => {
+      if (scheduled) {
+        // Scheduled task: vertical movement only (reordering within timeline)
+        translateY.value = event.translationY;
+      } else {
+        // Unscheduled task: free movement - can use event.translationX/Y directly
+        translateX.value = event.translationX;
+        translateY.value = event.translationY;
+
+        // Check if over timeline
+        if (timelineLayout && timelineLayout.value) {
+          const isOver =
+            event.absoluteY >= timelineLayout.value.y &&
+            event.absoluteY <= timelineLayout.value.y + timelineLayout.value.height &&
+            event.absoluteX >= timelineLayout.value.x &&
+            event.absoluteX <= timelineLayout.value.x + timelineLayout.value.width;
+
+          if (isOver !== isOverTimeline.value) {
+            isOverTimeline.value = isOver;
+            scale.value = withSpring(isOver ? 1.2 : 1.1);
+          }
+        }
+      }
+    })
+    .onEnd((event) => {
+      if (scheduled) {
+        console.log('scheduled originalY', originalY.value);
+        // Scheduled task logic
+        const newPosition = topPosition + event.translationY;
+
+        // Check if dragged off timeline (to the left)
+        if (event.absoluteX < TIMELINE_OFFSET) {
+          runOnJS(onUnschedule)(task.id);
+        } else {
+          // Update position on timeline
+          runOnJS(onUpdatePosition)(task.id, newPosition);
+          translateY.value = withSpring(0);
+        }
+      } else {
+        console.log('unscheduled originalY', originalY.value);
+        // Unscheduled task logic
+        if (isOverTimeline.value) {
+          // Calculate drop position on timeline
+          const relativePosition = event.absoluteY - timelineLayout.value.y;
+          runOnJS(onSchedule)(task.id, relativePosition, scrollY ? scrollY.value : 0);
+          opacity.value = withTiming(0); // Fade out as it transitions to scheduled
+        } else {
+          // Snap back to original position
+          translateX.value = withSpring(0);
+          translateY.value = withSpring(0);
+        }
+      }
+
+      scale.value = withSpring(1);
+      isPressed.value = false;
+    });
+
+  // Conditional animated styles
+  const animatedStyles = useAnimatedStyle(() => {
+    if (scheduled) {
+      // Styles for scheduled tasks
+      return {
+        transform: [{ translateY: translateY.value }, { scale: scale.value }],
+        height: taskHeight,
+        top: topPosition,
+        zIndex: isPressed.value ? 1000 : index + 1,
+        backgroundColor: '#a8e6cf',
+        position: 'absolute',
+        left: 0,
+        right: 0,
+        margin: 5,
+      };
+    } else {
+      // Styles for unscheduled tasks
+      return {
+        transform: [
+          { translateX: translateX.value },
+          { translateY: translateY.value },
+          { scale: scale.value },
+        ],
+        opacity: opacity.value,
+        width: TASK_ITEM_WIDTH,
+        height: TASK_ITEM_HEIGHT,
+        backgroundColor: isOverTimeline.value ? '#a8e6cf' : '#ffd3b6',
+        zIndex: isPressed.value ? 1000 : 1,
+      };
+    }
+  });
+
+  // Render with content based on scheduled state
+  return (
+    <GestureDetector gesture={panGesture}>
+      <Animated.View style={[styles.taskItem, animatedStyles]}>
+        <Text style={scheduled ? styles.scheduledTaskTitle : styles.taskTitle} numberOfLines={1}>
+          {task.title}
+        </Text>
+
+        {scheduled ? (
+          // Scheduled task details with time display
+          <View style={styles.scheduledTaskDetails}>
+            <Text style={styles.scheduledTaskTime}>{task.displayTime || ''}</Text>
+            <Text style={styles.scheduledTaskDuration}>{task.duration}h</Text>
+          </View>
+        ) : (
+          // Unscheduled task just shows duration
+          <Text style={styles.taskDuration}>{task.duration}h</Text>
+        )}
+      </Animated.View>
+    </GestureDetector>
+  );
+};
+
+// Main timeline component with unified task management
 const TimelineComponent = () => {
-  const [scheduledTasks, setScheduledTasks] = useState([]);
-  const [unscheduledTasks, setUnscheduledTasks] = useState(INITIAL_TASKS);
+  // Single array of tasks
+  const [tasks, setTasks] = useState(INITIAL_TASKS);
 
   const scrollViewRef = useAnimatedRef();
   const timelineLayoutRef = useAnimatedRef();
   const scrollY = useScrollViewOffset(scrollViewRef);
-
-  // This shared value will store our timeline layout measurements
   const timelineLayout = useSharedValue({ x: 0, y: 0, width: 0, height: 0 });
-  // Track when layout changes to trigger measurements
   const layoutChanged = useSharedValue(0);
 
-  // Use a Reanimated worklet to measure the timeline
+  // Timeline measurement logic remains the same
   const measureTimelineOnUI = useCallback(() => {
     'worklet';
     try {
@@ -80,13 +234,10 @@ const TimelineComponent = () => {
     }
   }, [timelineLayoutRef, timelineLayout]);
 
-  // Handle the onLayout event
+  // Handle layout events (unchanged)
   const handleTimelineLayout = useCallback(
     (event) => {
-      const { width, height } = event.nativeEvent.layout;
       layoutChanged.value += 1;
-
-      // For iOS, we need to wait a frame for accurate measurements
       if (Platform.OS === 'ios') {
         requestAnimationFrame(() => {
           runOnUI(measureTimelineOnUI)();
@@ -98,7 +249,7 @@ const TimelineComponent = () => {
     [measureTimelineOnUI, layoutChanged],
   );
 
-  // React to layout changes with useAnimatedReaction
+  // Animated reaction to layout changes
   useAnimatedReaction(
     () => layoutChanged.value,
     (currentValue, previousValue) => {
@@ -111,14 +262,85 @@ const TimelineComponent = () => {
 
   // Measure on mount
   useEffect(() => {
-    // Small delay to ensure the component is fully rendered
     const timer = requestAnimationFrame(() => {
       runOnUI(measureTimelineOnUI)();
     });
     return () => cancelAnimationFrame(timer);
   }, [measureTimelineOnUI]);
 
-  // Render hour markers and quarter-hour markers for the timeline.
+  // Aligns position to nearest 15-minute interval
+  const calculateAlignedPosition = (rawPosition) => {
+    const totalQuarters = Math.floor(rawPosition / QUARTER_HEIGHT);
+    const hourQuarters = totalQuarters % 4;
+    const baseHour = Math.floor(totalQuarters / 4) + 8; // Starting at 8 AM
+
+    const startTime = baseHour + hourQuarters * 0.25;
+    const alignedPosition = (baseHour - 8) * HOUR_HEIGHT + hourQuarters * QUARTER_HEIGHT;
+
+    return {
+      startHour: startTime,
+      position: alignedPosition,
+      displayTime: formatTimeFromDecimal(startTime),
+    };
+  };
+
+  // Schedule a task (move to timeline)
+  const handleScheduleTask = (taskId, relativeY, scrollYValue) => {
+    console.log(
+      'Scheduling task:',
+      taskId,
+      'at relative Y:',
+      relativeY,
+      'with scroll Y:',
+      scrollYValue,
+    );
+
+    setTasks((prev) => {
+      return prev.map((task) => {
+        if (task.id === taskId) {
+          const positionData = calculateAlignedPosition(relativeY + scrollYValue);
+          return {
+            ...task,
+            scheduled: true,
+            ...positionData,
+          };
+        }
+        return task;
+      });
+    });
+  };
+
+  // Unschedule a task (move back to task list)
+  const handleUnscheduleTask = (taskId) => {
+    setTasks((prev) => {
+      return prev.map((task) => {
+        if (task.id === taskId) {
+          // Reset position properties but keep task data
+          const { position, startHour, displayTime, ...baseTask } = task;
+          return {
+            ...baseTask,
+            scheduled: false,
+          };
+        }
+        return task;
+      });
+    });
+  };
+
+  // Update task position on timeline
+  const handleUpdateTaskPosition = (taskId, newPosition) => {
+    setTasks((prev) => {
+      return prev.map((task) => {
+        if (task.id === taskId) {
+          const positionData = calculateAlignedPosition(newPosition);
+          return { ...task, ...positionData };
+        }
+        return task;
+      });
+    });
+  };
+
+  // Render hour markers (unchanged)
   const renderHours = () => {
     const hourMarkers = [];
     HOURS.forEach((hour, hourIndex) => {
@@ -147,65 +369,29 @@ const TimelineComponent = () => {
     return hourMarkers;
   };
 
-  // Aligns the dropped position to the nearest 15-minute interval.
-  const calculateAlignedPosition = (rawPosition) => {
-    console.log('Calculating aligned position for raw position:', rawPosition);
-    const totalQuarters = Math.floor(rawPosition / QUARTER_HEIGHT);
-    const hourQuarters = totalQuarters % 4;
-    const baseHour = Math.floor(totalQuarters / 4) + 8; // Starting at 8 AM
-
-    const startTime = baseHour + hourQuarters * 0.25;
-    const alignedPosition = (baseHour - 8) * HOUR_HEIGHT + hourQuarters * QUARTER_HEIGHT;
-
-    return {
-      startHour: startTime,
-      position: alignedPosition,
-      displayTime: formatTimeFromDecimal(startTime),
-    };
-  };
-
-  // When a task is dropped over the timeline, this handler is called.
-  const handleScheduleTask = (taskId, relativeY, scrollYValue) => {
-    console.log(
-      'Scheduling task:',
-      taskId,
-      'at relative Y:',
-      relativeY,
-      'with scroll Y:',
-      scrollYValue,
-    );
-    const task = unscheduledTasks.find((t) => t.id === taskId);
-    if (!task) return;
-
-    // Use the relative Y (measured from timelineLayout) plus any scroll offset.
-    const positionData = calculateAlignedPosition(relativeY + scrollYValue);
-
-    const newScheduledTask = {
-      ...task,
-      ...positionData,
-    };
-
-    setScheduledTasks((prev) => [...prev, newScheduledTask]);
-    setUnscheduledTasks((prev) => prev.filter((t) => t.id !== taskId));
-  };
-
+  // Render the UI
   return (
     <View style={styles.container}>
       {/* Unscheduled Tasks Area */}
       <View style={styles.unscheduledArea}>
         <Text style={styles.sectionTitle}>Tasks</Text>
         <View style={styles.unscheduledTasksContainer}>
-          {unscheduledTasks.map((task) => (
-            <UnscheduledTaskItem
-              key={task.id}
-              task={task}
-              onScheduleTask={handleScheduleTask}
-              scrollY={scrollY}
-              timelineLayout={timelineLayout}
-            />
-          ))}
+          {tasks
+            .filter((task) => !task.scheduled)
+            .map((task) => (
+              <TaskItem
+                key={task.id}
+                task={task}
+                index={0}
+                onSchedule={handleScheduleTask}
+                scrollY={scrollY}
+                timelineLayout={timelineLayout}
+                calculateAlignedPosition={calculateAlignedPosition}
+              />
+            ))}
         </View>
       </View>
+
       {/* Timeline */}
       <Animated.View
         ref={timelineLayoutRef}
@@ -214,18 +400,19 @@ const TimelineComponent = () => {
         <Animated.ScrollView ref={scrollViewRef} scrollEventThrottle={16}>
           <View style={styles.timelineSideBar}>{renderHours()}</View>
           <View style={styles.timelineContent}>
-            {scheduledTasks.map((task, index) => (
-              <ScheduledTaskItem
-                key={task.id}
-                task={task}
-                index={index}
-                calculateAlignedPosition={calculateAlignedPosition}
-                scheduledTasks={scheduledTasks}
-                setScheduledTasks={setScheduledTasks}
-                unscheduledTasks={unscheduledTasks}
-                setUnscheduledTasks={setUnscheduledTasks}
-              />
-            ))}
+            {tasks
+              .filter((task) => task.scheduled)
+              .map((task, index) => (
+                <TaskItem
+                  key={task.id}
+                  task={task}
+                  index={index}
+                  onUnschedule={handleUnscheduleTask}
+                  onUpdatePosition={handleUpdateTaskPosition}
+                  timelineLayout={timelineLayout}
+                  calculateAlignedPosition={calculateAlignedPosition}
+                />
+              ))}
           </View>
         </Animated.ScrollView>
       </Animated.View>
@@ -233,184 +420,9 @@ const TimelineComponent = () => {
   );
 };
 
-// Unscheduled task items that can be dragged onto the timeline.
-const UnscheduledTaskItem = ({ task, onScheduleTask, scrollY, timelineLayout }) => {
-  const translateX = useSharedValue(0);
-  const translateY = useSharedValue(0);
-  const scale = useSharedValue(1);
-  const isActive = useSharedValue(false);
-  const opacity = useSharedValue(1);
-
-  // Save the original position to return to if not dropped on the timeline.
-  const originalX = useSharedValue(0);
-  const originalY = useSharedValue(0);
-  // Track if the dragged item is over the timeline.
-  const isOverTimeline = useSharedValue(false);
-
-  const panGesture = Gesture.Pan()
-    .onStart(() => {
-      isActive.value = true;
-      scale.value = withSpring(1.1);
-      originalX.value = translateX.value;
-      originalY.value = translateY.value;
-    })
-    .onUpdate((event) => {
-      translateX.value = originalX.value + event.translationX;
-      translateY.value = originalY.value + event.translationY;
-
-      // Use the dynamically measured timelineLayout to check boundaries.
-      let isOver = false;
-
-      isOver =
-        event.absoluteY >= timelineLayout.value.y &&
-        event.absoluteY <= timelineLayout.value.y + timelineLayout.value.height &&
-        event.absoluteX >= timelineLayout.value.x &&
-        event.absoluteX <= timelineLayout.value.x + timelineLayout.value.width;
-
-      if (isOver !== isOverTimeline.value) {
-        console.log('event.absoluteY', event.absoluteY);
-        console.log('timelineLayout.y', timelineLayout.value.y);
-        isOverTimeline.value = isOver;
-        scale.value = withSpring(isOver ? 1.2 : 1.1);
-      }
-    })
-    .onEnd((event) => {
-      if (isOverTimeline.value) {
-        // Compute the drop position relative to the timeline.
-        const relativePosition = event.absoluteY - timelineLayout.value.y;
-        runOnJS(onScheduleTask)(task.id, relativePosition, scrollY.value);
-        opacity.value = withTiming(0);
-      } else {
-        // Snap back to the original position.
-        translateX.value = withSpring(0);
-        translateY.value = withSpring(0);
-        scale.value = withSpring(1);
-      }
-      isActive.value = false;
-    });
-
-  const animatedStyles = useAnimatedStyle(() => {
-    return {
-      transform: [
-        { translateX: translateX.value },
-        { translateY: translateY.value },
-        { scale: scale.value },
-      ],
-      opacity: opacity.value,
-      backgroundColor: isOverTimeline.value ? '#a8e6cf' : '#ffd3b6',
-      zIndex: isActive.value ? 1000 : 1,
-    };
-  });
-
-  return (
-    <GestureDetector gesture={panGesture}>
-      <Animated.View style={[styles.taskItem, animatedStyles]}>
-        <Text style={styles.taskTitle} numberOfLines={1}>
-          {task.title}
-        </Text>
-        <Text style={styles.taskDuration}>{task.duration}h</Text>
-      </Animated.View>
-    </GestureDetector>
-  );
-};
-
-// Scheduled tasks on the timeline that can be reordered.
-const ScheduledTaskItem = ({
-  task,
-  index,
-  calculateAlignedPosition,
-  scheduledTasks,
-  setScheduledTasks,
-  unscheduledTasks,
-  setUnscheduledTasks,
-}) => {
-  const translateX = useSharedValue(0);
-  const translateY = useSharedValue(0);
-  const scale = useSharedValue(1);
-  const isActive = useSharedValue(false);
-
-  const durationQuarters = Math.round(task.duration * 4);
-  const taskHeight = durationQuarters * QUARTER_HEIGHT;
-  const topPosition = task.position || 0;
-
-  const updateTaskPosition = useCallback(
-    (taskId, newPosition) => {
-      setScheduledTasks((prev) => {
-        const taskIndex = prev.findIndex((t) => t.id === taskId);
-        if (taskIndex === -1) return prev;
-        const positionData = calculateAlignedPosition(newPosition);
-        const newTasks = [...prev];
-        newTasks[taskIndex] = {
-          ...newTasks[taskIndex],
-          ...positionData,
-        };
-        return newTasks;
-      });
-    },
-    [setScheduledTasks, calculateAlignedPosition],
-  );
-
-  const removeFromTimeline = useCallback(
-    (taskId) => {
-      const task = scheduledTasks.find((t) => t.id === taskId);
-      if (!task) return;
-      setUnscheduledTasks((prev) => [
-        ...prev,
-        {
-          id: task.id,
-          title: task.title,
-          duration: task.duration,
-        },
-      ]);
-      setScheduledTasks((prev) => prev.filter((t) => t.id !== taskId));
-    },
-    [scheduledTasks, setScheduledTasks, setUnscheduledTasks],
-  );
-
-  const panGesture = Gesture.Pan()
-    .onStart(() => {
-      isActive.value = true;
-      scale.value = withSpring(1.05);
-    })
-    .onUpdate((event) => {
-      translateY.value = event.translationY;
-    })
-    .onEnd((event) => {
-      const newPosition = topPosition + event.translationY;
-      // Optionally, you might also transition to a dynamic boundary here.
-      if (event.absoluteX < TIMELINE_OFFSET) {
-        runOnJS(removeFromTimeline)(task.id);
-      } else {
-        runOnJS(updateTaskPosition)(task.id, newPosition);
-        translateY.value = withSpring(0);
-      }
-      scale.value = withSpring(1);
-      isActive.value = false;
-    });
-
-  const animatedStyles = useAnimatedStyle(() => {
-    return {
-      transform: [{ translateY: translateY.value }, { scale: scale.value }],
-      zIndex: isActive.value ? 1000 : index + 1,
-      height: taskHeight,
-      top: topPosition,
-    };
-  });
-
-  return (
-    <GestureDetector gesture={panGesture}>
-      <Animated.View style={[styles.scheduledTaskItem, animatedStyles]}>
-        <Text style={styles.scheduledTaskTitle}>{task.title}</Text>
-        <View style={styles.scheduledTaskDetails}>
-          <Text style={styles.scheduledTaskTime}>{task.displayTime || ''}</Text>
-          <Text style={styles.scheduledTaskDuration}>{task.duration}h</Text>
-        </View>
-      </Animated.View>
-    </GestureDetector>
-  );
-};
-
+// Styles remain mostly the same with some adjustments for unified task items
 const styles = StyleSheet.create({
+  // Base styles (container, timeline, etc. remain the same)
   container: {
     flex: 1,
     backgroundColor: '#f8f9fa',
@@ -441,27 +453,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 10,
   },
-  taskItem: {
-    width: TASK_ITEM_WIDTH,
-    height: TASK_ITEM_HEIGHT,
-    borderRadius: 8,
-    padding: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#ffd3b6',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
-  },
-  taskTitle: { fontWeight: '600', fontSize: 16 },
-  taskDuration: { fontSize: 14, color: '#555' },
-  timelineContainer: {
-    flex: 1,
-    backgroundColor: 'blue',
-    // paddingTop: 400,
-  },
+
   timelineSideBar: {
     position: 'absolute',
     left: 0,
@@ -477,6 +469,7 @@ const styles = StyleSheet.create({
     position: 'relative',
     // minHeight: '100%',
     minHeight: HOURS.length * HOUR_HEIGHT,
+    // flex: 1,
   },
   hourContainer: {
     height: HOUR_HEIGHT,
@@ -515,20 +508,22 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: '#e8e8e8',
   },
-  scheduledTaskItem: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    margin: 5,
-    backgroundColor: '#a8e6cf',
+  // Base task item shared styles
+  taskItem: {
     borderRadius: 8,
     padding: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
     elevation: 3,
   },
+
+  // Text styles
+  taskTitle: { fontWeight: '600', fontSize: 16 },
+  taskDuration: { fontSize: 14, color: '#555' },
   scheduledTaskTitle: { fontWeight: '600', fontSize: 16 },
   scheduledTaskDetails: {
     flexDirection: 'row',
