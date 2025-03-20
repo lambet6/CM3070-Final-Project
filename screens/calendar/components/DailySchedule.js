@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useEffect } from 'react';
+import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, Dimensions, Platform } from 'react-native';
 import { GestureDetector, Gesture } from 'react-native-gesture-handler';
 import Animated, {
@@ -12,6 +12,7 @@ import Animated, {
   measure,
   useAnimatedReaction,
   runOnUI,
+  Easing,
 } from 'react-native-reanimated';
 
 // Constants remain the same
@@ -21,24 +22,27 @@ const QUARTER_HEIGHT = HOUR_HEIGHT / 4; // 15-minute increments
 const TASK_ITEM_HEIGHT = 50;
 const TASK_ITEM_WIDTH = 120;
 const TIMELINE_OFFSET = SCREEN_WIDTH * 0.25;
+const MIN_HOUR = 8; // 8 AM
+const MAX_HOUR = 20; // 8 PM
 
-// Sample data transformed to have a scheduled property
+// Sample data with duration only (no position)
 const INITIAL_TASKS = [
-  { id: '1', title: 'Meeting', duration: 1, scheduled: false },
-  { id: '2', title: 'Lunch', duration: 1.5, scheduled: false },
-  { id: '3', title: 'Workout', duration: 2, scheduled: false },
-  { id: '4', title: 'Call Mom', duration: 0.5, scheduled: false },
-  { id: '5', title: 'Project Work', duration: 0.75, scheduled: false },
+  { id: '1', title: 'Meeting', duration: 1, scheduled: false, startTime: null },
+  { id: '2', title: 'Lunch', duration: 1.5, scheduled: false, startTime: null },
+  { id: '3', title: 'Workout', duration: 2, scheduled: false, startTime: null },
+  { id: '4', title: 'Call Mom', duration: 0.5, scheduled: false, startTime: null },
+  { id: '5', title: 'Project Work', duration: 0.75, scheduled: false, startTime: null },
 ];
 
 const HOURS = Array.from({ length: 13 }, (_, i) => {
   const hour = i + 8;
-  return hour <= 12 ? `${hour} AM` : `${hour - 12} PM`;
+  // 12 PM is noon, hours after noon are PM
+  return hour < 12 ? `${hour} AM` : hour === 12 ? `12 PM` : `${hour - 12} PM`;
 });
 
 const QUARTERS = ['00', '15', '30', '45'];
 
-// Helper function to format time (unchanged)
+// Helper function to format time from decimal hour
 const formatTimeFromDecimal = (decimalHour) => {
   const hour = Math.floor(decimalHour);
   const minute = Math.round((decimalHour - hour) * 60);
@@ -47,15 +51,49 @@ const formatTimeFromDecimal = (decimalHour) => {
   return `${displayHour}:${minute.toString().padStart(2, '0')} ${period}`;
 };
 
+// Conversion functions between time and position
+const timeToPosition = (time) => {
+  'worklet';
+  return (time - MIN_HOUR) * HOUR_HEIGHT;
+};
+
+const positionToTime = (position) => {
+  'worklet';
+  const totalQuarters = Math.round(position / QUARTER_HEIGHT);
+  return MIN_HOUR + totalQuarters / 4;
+};
+
+// Preview component for task placement
+const TimelinePreview = ({ previewVisible, previewPosition, previewHeight }) => {
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      top: previewPosition.value,
+      height: previewHeight.value,
+      backgroundColor: 'rgba(0, 123, 255, 0.4)',
+      borderRadius: 8,
+      borderWidth: 2,
+      borderColor: 'rgba(0, 123, 255, 0.6)',
+      marginHorizontal: 5,
+      opacity: previewVisible.value ? 1 : 0,
+      zIndex: 500,
+    };
+  });
+
+  return <Animated.View style={animatedStyle} />;
+};
+
 const TaskItem = ({
   task,
   index,
-  onSchedule,
-  onUnschedule,
-  onUpdatePosition,
+  onStateChange,
   scrollY,
   timelineLayout,
-  calculateAlignedPosition,
+  previewVisible,
+  previewPosition,
+  previewHeight,
 }) => {
   // Shared animation values
   const translateX = useSharedValue(0);
@@ -63,41 +101,59 @@ const TaskItem = ({
   const scale = useSharedValue(1);
   const opacity = useSharedValue(1);
   const isPressed = useSharedValue(false);
-
-  // Values primarily used for unscheduled tasks
-  const originalX = useSharedValue(0);
-  const originalY = useSharedValue(0);
   const isOverTimeline = useSharedValue(false);
 
-  // Calculate values based on scheduled state
-  const { scheduled } = task;
+  // Task-specific animation value that represents its time position
+  // This will be the source of truth for positioning
+  const taskTime = useSharedValue(task.startTime || MIN_HOUR);
+
+  // Calculate height based on duration
   const durationQuarters = Math.round(task.duration * 4);
-  const taskHeight = scheduled ? durationQuarters * QUARTER_HEIGHT : TASK_ITEM_HEIGHT;
-  const topPosition = scheduled ? task.position || 0 : 0;
+  const taskHeight = task.scheduled ? durationQuarters * QUARTER_HEIGHT : TASK_ITEM_HEIGHT;
 
-  // Reset values when scheduled state changes
-  useEffect(() => {
-    translateX.value = 0;
-    translateY.value = 0;
-    scale.value = 1;
-    opacity.value = 1;
-    isPressed.value = false;
-    isOverTimeline.value = false;
-  }, [scheduled]);
+  // Update preview position during drag
+  const updatePreviewPosition = (rawPosition, isDraggingOnTimeline) => {
+    'worklet';
+    if (!isDraggingOnTimeline) return;
 
-  // Pan gesture with conditional logic based on scheduled state
+    // Calculate quarter position (snap to nearest quarter)
+    const totalQuarters = Math.round(rawPosition / QUARTER_HEIGHT);
+    const snappedPosition = totalQuarters * QUARTER_HEIGHT;
+
+    // Update preview values
+    previewPosition.value = snappedPosition;
+    previewHeight.value = durationQuarters * QUARTER_HEIGHT;
+    previewVisible.value = true;
+  };
+
+  // Pan gesture with unified logic for both scheduled and unscheduled tasks
   const panGesture = Gesture.Pan()
     .onStart(() => {
       isPressed.value = true;
-      scale.value = withSpring(scheduled ? 1.05 : 1.1);
-      // No need to track original position for unscheduled tasks
+      scale.value = withSpring(task.scheduled ? 1.05 : 1.1);
+
+      // Initialize preview for scheduled tasks
+      if (task.scheduled) {
+        const position = timeToPosition(taskTime.value);
+        previewVisible.value = true;
+        previewPosition.value = position;
+        previewHeight.value = taskHeight;
+      } else {
+        previewVisible.value = false;
+      }
     })
     .onUpdate((event) => {
-      if (scheduled) {
+      if (task.scheduled) {
         // Scheduled task: vertical movement only (reordering within timeline)
+        translateX.value = event.translationX;
         translateY.value = event.translationY;
+
+        // Update preview position based on current task time and translation
+        const basePosition = timeToPosition(taskTime.value);
+        const newPosition = basePosition + event.translationY;
+        updatePreviewPosition(newPosition, true);
       } else {
-        // Unscheduled task: free movement - can use event.translationX/Y directly
+        // Unscheduled task: free movement
         translateX.value = event.translationX;
         translateY.value = event.translationY;
 
@@ -113,59 +169,91 @@ const TaskItem = ({
             isOverTimeline.value = isOver;
             scale.value = withSpring(isOver ? 1.2 : 1.1);
           }
+
+          // Show preview when over timeline
+          if (isOver) {
+            const relativePosition =
+              event.absoluteY - timelineLayout.value.y + (scrollY ? scrollY.value : 0);
+            updatePreviewPosition(relativePosition, true);
+          } else {
+            previewVisible.value = false;
+          }
         }
       }
     })
     .onEnd((event) => {
-      if (scheduled) {
-        console.log('scheduled originalY', originalY.value);
-        // Scheduled task logic
-        const newPosition = topPosition + event.translationY;
+      if (task.scheduled) {
+        // Calculate new position
+        const basePosition = timeToPosition(taskTime.value);
+        const newPosition = basePosition + event.translationY;
 
-        // Check if dragged off timeline (to the left)
         if (event.absoluteX < TIMELINE_OFFSET) {
-          runOnJS(onUnschedule)(task.id);
+          // Unschedule task - removed from timeline
+          runOnJS(onStateChange)(task.id, false, null);
+          previewVisible.value = false;
         } else {
-          // Update position on timeline
-          runOnJS(onUpdatePosition)(task.id, newPosition);
-          translateY.value = withSpring(0);
+          // Calculate new time from preview position
+          const newTime = positionToTime(previewPosition.value);
+
+          // Update task's time value
+          taskTime.value = newTime;
+
+          // Update task state
+          runOnJS(onStateChange)(task.id, true, newTime);
+
+          // // Reset translation since we updated the base position
+          translateY.value = 0;
+          translateX.value = 0;
+
+          previewVisible.value = false;
         }
       } else {
-        console.log('unscheduled originalY', originalY.value);
         // Unscheduled task logic
         if (isOverTimeline.value) {
-          // Calculate drop position on timeline
-          const relativePosition = event.absoluteY - timelineLayout.value.y;
-          runOnJS(onSchedule)(task.id, relativePosition, scrollY ? scrollY.value : 0);
-          opacity.value = withTiming(0); // Fade out as it transitions to scheduled
+          // Calculate time from preview position
+          const newTime = positionToTime(previewPosition.value);
+
+          // translateY.value = withTiming(previewPosition.value);
+          // taskTime.value = newTime;
+
+          // Schedule task with the calculated time
+          runOnJS(onStateChange)(task.id, true, newTime);
         } else {
           // Snap back to original position
           translateX.value = withSpring(0);
           translateY.value = withSpring(0);
         }
+
+        // Hide preview
+        previewVisible.value = false;
       }
 
       scale.value = withSpring(1);
       isPressed.value = false;
     });
 
-  // Conditional animated styles
+  // Unified animated styles
   const animatedStyles = useAnimatedStyle(() => {
-    if (scheduled) {
-      // Styles for scheduled tasks
+    if (task.scheduled) {
+      // Calculate position from task time
+      const position = timeToPosition(taskTime.value);
+
       return {
-        transform: [{ translateY: translateY.value }, { scale: scale.value }],
+        transform: [
+          { translateX: translateX.value },
+          { translateY: translateY.value },
+          { scale: scale.value },
+        ],
         height: taskHeight,
-        top: topPosition,
+        top: position,
         zIndex: isPressed.value ? 1000 : index + 1,
         backgroundColor: '#a8e6cf',
         position: 'absolute',
         left: 0,
         right: 0,
-        margin: 5,
+        marginHorizontal: 5,
       };
     } else {
-      // Styles for unscheduled tasks
       return {
         transform: [
           { translateX: translateX.value },
@@ -181,18 +269,20 @@ const TaskItem = ({
     }
   });
 
-  // Render with content based on scheduled state
+  // Render task item
   return (
     <GestureDetector gesture={panGesture}>
       <Animated.View style={[styles.taskItem, animatedStyles]}>
-        <Text style={scheduled ? styles.scheduledTaskTitle : styles.taskTitle} numberOfLines={1}>
+        <Text
+          style={task.scheduled ? styles.scheduledTaskTitle : styles.taskTitle}
+          numberOfLines={1}>
           {task.title}
         </Text>
 
-        {scheduled ? (
+        {task.scheduled ? (
           // Scheduled task details with time display
           <View style={styles.scheduledTaskDetails}>
-            <Text style={styles.scheduledTaskTime}>{task.displayTime || ''}</Text>
+            <Text style={styles.scheduledTaskTime}>{formatTimeFromDecimal(task.startTime)}</Text>
             <Text style={styles.scheduledTaskDuration}>{task.duration}h</Text>
           </View>
         ) : (
@@ -204,7 +294,6 @@ const TaskItem = ({
   );
 };
 
-// Main timeline component with unified task management
 const TimelineComponent = () => {
   // Single array of tasks
   const [tasks, setTasks] = useState(INITIAL_TASKS);
@@ -215,7 +304,12 @@ const TimelineComponent = () => {
   const timelineLayout = useSharedValue({ x: 0, y: 0, width: 0, height: 0 });
   const layoutChanged = useSharedValue(0);
 
-  // Timeline measurement logic remains the same
+  // Preview animation values
+  const previewVisible = useSharedValue(false);
+  const previewPosition = useSharedValue(0);
+  const previewHeight = useSharedValue(0);
+
+  // Measure timeline layout
   const measureTimelineOnUI = useCallback(() => {
     'worklet';
     try {
@@ -227,14 +321,13 @@ const TimelineComponent = () => {
           width: measured.width,
           height: measured.height,
         };
-        console.log('Timeline measured on UI thread:', timelineLayout.value);
       }
     } catch (e) {
       console.log('Measurement error:', e);
     }
   }, [timelineLayoutRef, timelineLayout]);
 
-  // Handle layout events (unchanged)
+  // Handle layout events
   const handleTimelineLayout = useCallback(
     (event) => {
       layoutChanged.value += 1;
@@ -260,87 +353,31 @@ const TimelineComponent = () => {
     [measureTimelineOnUI],
   );
 
-  // Measure on mount
-  useEffect(() => {
-    const timer = requestAnimationFrame(() => {
-      runOnUI(measureTimelineOnUI)();
-    });
-    return () => cancelAnimationFrame(timer);
-  }, [measureTimelineOnUI]);
-
-  // Aligns position to nearest 15-minute interval
-  const calculateAlignedPosition = (rawPosition) => {
-    const totalQuarters = Math.floor(rawPosition / QUARTER_HEIGHT);
-    const hourQuarters = totalQuarters % 4;
-    const baseHour = Math.floor(totalQuarters / 4) + 8; // Starting at 8 AM
-
-    const startTime = baseHour + hourQuarters * 0.25;
-    const alignedPosition = (baseHour - 8) * HOUR_HEIGHT + hourQuarters * QUARTER_HEIGHT;
-
-    return {
-      startHour: startTime,
-      position: alignedPosition,
-      displayTime: formatTimeFromDecimal(startTime),
-    };
-  };
-
-  // Schedule a task (move to timeline)
-  const handleScheduleTask = (taskId, relativeY, scrollYValue) => {
-    console.log(
-      'Scheduling task:',
-      taskId,
-      'at relative Y:',
-      relativeY,
-      'with scroll Y:',
-      scrollYValue,
-    );
-
+  // Task state change handler
+  const handleTaskStateChange = (taskId, isScheduled, newStartTime) => {
     setTasks((prev) => {
       return prev.map((task) => {
         if (task.id === taskId) {
-          const positionData = calculateAlignedPosition(relativeY + scrollYValue);
-          return {
-            ...task,
-            scheduled: true,
-            ...positionData,
-          };
+          if (isScheduled) {
+            return {
+              ...task,
+              scheduled: true,
+              startTime: newStartTime,
+            };
+          } else {
+            return {
+              ...task,
+              scheduled: false,
+              startTime: null,
+            };
+          }
         }
         return task;
       });
     });
   };
 
-  // Unschedule a task (move back to task list)
-  const handleUnscheduleTask = (taskId) => {
-    setTasks((prev) => {
-      return prev.map((task) => {
-        if (task.id === taskId) {
-          // Reset position properties but keep task data
-          const { position, startHour, displayTime, ...baseTask } = task;
-          return {
-            ...baseTask,
-            scheduled: false,
-          };
-        }
-        return task;
-      });
-    });
-  };
-
-  // Update task position on timeline
-  const handleUpdateTaskPosition = (taskId, newPosition) => {
-    setTasks((prev) => {
-      return prev.map((task) => {
-        if (task.id === taskId) {
-          const positionData = calculateAlignedPosition(newPosition);
-          return { ...task, ...positionData };
-        }
-        return task;
-      });
-    });
-  };
-
-  // Render hour markers (unchanged)
+  // Render hour markers
   const renderHours = () => {
     const hourMarkers = [];
     HOURS.forEach((hour, hourIndex) => {
@@ -378,15 +415,17 @@ const TimelineComponent = () => {
         <View style={styles.unscheduledTasksContainer}>
           {tasks
             .filter((task) => !task.scheduled)
-            .map((task) => (
+            .map((task, idx) => (
               <TaskItem
                 key={task.id}
                 task={task}
-                index={0}
-                onSchedule={handleScheduleTask}
+                index={idx}
+                onStateChange={handleTaskStateChange}
                 scrollY={scrollY}
                 timelineLayout={timelineLayout}
-                calculateAlignedPosition={calculateAlignedPosition}
+                previewVisible={previewVisible}
+                previewPosition={previewPosition}
+                previewHeight={previewHeight}
               />
             ))}
         </View>
@@ -400,6 +439,13 @@ const TimelineComponent = () => {
         <Animated.ScrollView ref={scrollViewRef} scrollEventThrottle={16}>
           <View style={styles.timelineSideBar}>{renderHours()}</View>
           <View style={styles.timelineContent}>
+            {/* Preview component */}
+            <TimelinePreview
+              previewVisible={previewVisible}
+              previewPosition={previewPosition}
+              previewHeight={previewHeight}
+            />
+
             {tasks
               .filter((task) => task.scheduled)
               .map((task, index) => (
@@ -407,10 +453,11 @@ const TimelineComponent = () => {
                   key={task.id}
                   task={task}
                   index={index}
-                  onUnschedule={handleUnscheduleTask}
-                  onUpdatePosition={handleUpdateTaskPosition}
+                  onStateChange={handleTaskStateChange}
                   timelineLayout={timelineLayout}
-                  calculateAlignedPosition={calculateAlignedPosition}
+                  previewVisible={previewVisible}
+                  previewPosition={previewPosition}
+                  previewHeight={previewHeight}
                 />
               ))}
           </View>
@@ -420,9 +467,8 @@ const TimelineComponent = () => {
   );
 };
 
-// Styles remain mostly the same with some adjustments for unified task items
+// Styles remain mostly the same with some adjustments
 const styles = StyleSheet.create({
-  // Base styles (container, timeline, etc. remain the same)
   container: {
     flex: 1,
     backgroundColor: '#f8f9fa',
@@ -434,7 +480,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   unscheduledArea: {
-    // flex: 1,
     height: '15%',
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
@@ -453,23 +498,21 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 10,
   },
-
+  timelineContainer: {
+    flex: 1,
+  },
   timelineSideBar: {
     position: 'absolute',
     left: 0,
     top: 0,
     width: TIMELINE_OFFSET,
     height: '100%',
-    // backgroundColor: 'green',
     zIndex: 10,
   },
   timelineContent: {
-    backgroundColor: 'orange',
     marginLeft: TIMELINE_OFFSET,
     position: 'relative',
-    // minHeight: '100%',
     minHeight: HOURS.length * HOUR_HEIGHT,
-    // flex: 1,
   },
   hourContainer: {
     height: HOUR_HEIGHT,
@@ -478,7 +521,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
   },
-  hourText: { fontSize: 14, color: '#333' },
+  hourText: { fontSize: 12, color: '#333' },
   hourLine: {
     position: 'absolute',
     right: 0,
@@ -491,8 +534,9 @@ const styles = StyleSheet.create({
     left: 0,
     width: TIMELINE_OFFSET,
     height: QUARTER_HEIGHT,
-    justifyContent: 'center',
+    justifyContent: 'top',
     paddingHorizontal: 10,
+    // backgroundColor: 'blue',
   },
   quarterText: {
     fontSize: 10,
@@ -520,7 +564,6 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 3,
   },
-
   // Text styles
   taskTitle: { fontWeight: '600', fontSize: 16 },
   taskDuration: { fontSize: 14, color: '#555' },
