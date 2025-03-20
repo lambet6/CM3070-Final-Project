@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, Dimensions, Platform } from 'react-native';
-import { GestureDetector, Gesture } from 'react-native-gesture-handler';
+import { GestureDetector, Gesture, BaseButton } from 'react-native-gesture-handler';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -63,22 +63,67 @@ const positionToTime = (position) => {
   return MIN_HOUR + totalQuarters / 4;
 };
 
-// Preview component for task placement
-const TimelinePreview = ({ previewVisible, previewPosition, previewHeight }) => {
+// New component for drag action buttons
+const DragActionButtons = ({ isVisible, removeButtonRef, cancelButtonRef, onLayout }) => {
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      position: 'absolute',
+      bottom: 40,
+      left: 0,
+      right: 0,
+      flexDirection: 'row',
+      justifyContent: 'space-around',
+      zIndex: 2000,
+      opacity: isVisible.value ? 1 : 0,
+      pointerEvents: isVisible.value ? 'auto' : 'none',
+    };
+  });
+
+  return (
+    <Animated.View style={animatedStyle} onLayout={onLayout}>
+      <Animated.View ref={cancelButtonRef} style={styles.actionButton}>
+        <Text style={styles.actionButtonIcon}>↩</Text>
+        <Text style={styles.actionButtonText}>Cancel</Text>
+      </Animated.View>
+      <Animated.View ref={removeButtonRef} style={styles.actionButton}>
+        <Text style={styles.actionButtonIcon}>🗑</Text>
+        <Text style={styles.actionButtonText}>Remove</Text>
+      </Animated.View>
+    </Animated.View>
+  );
+};
+
+const TimelineIndicator = ({ visible, position, height, style }) => {
   const animatedStyle = useAnimatedStyle(() => {
     return {
       position: 'absolute',
       left: 0,
       right: 0,
-      top: previewPosition.value,
-      height: previewHeight.value,
-      backgroundColor: 'rgba(0, 123, 255, 0.4)',
-      borderRadius: 8,
-      borderWidth: 2,
-      borderColor: 'rgba(0, 123, 255, 0.6)',
+      top: position.value,
+      height: height.value,
       marginHorizontal: 5,
-      opacity: previewVisible.value ? 1 : 0,
-      zIndex: 500,
+      opacity: visible.value ? 1 : 0,
+      zIndex: style.zIndex || 500,
+      ...style,
+    };
+  });
+
+  return <Animated.View style={animatedStyle} />;
+};
+const GhostSquare = ({ visible, position, height, style }) => {
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      top: position.value,
+      height: height.value,
+      marginHorizontal: 5,
+      opacity: visible.value ? 0.5 : 0,
+      zIndex: 400,
+      backgroundColor: 'rgba(156, 156, 156, 0.43)',
+      borderRadius: 8,
+      ...style,
     };
   });
 
@@ -94,6 +139,12 @@ const TaskItem = ({
   previewVisible,
   previewPosition,
   previewHeight,
+  isDragging,
+  removeButtonLayout,
+  cancelButtonLayout,
+  ghostVisible,
+  ghostPosition,
+  ghostHeight,
 }) => {
   // Shared animation values
   const translateX = useSharedValue(0);
@@ -102,6 +153,7 @@ const TaskItem = ({
   const opacity = useSharedValue(1);
   const isPressed = useSharedValue(false);
   const isOverTimeline = useSharedValue(false);
+  const originalPosition = useSharedValue({ x: 0, y: 0 });
 
   // Task-specific animation value that represents its time position
   // This will be the source of truth for positioning
@@ -110,6 +162,18 @@ const TaskItem = ({
   // Calculate height based on duration
   const durationQuarters = Math.round(task.duration * 4);
   const taskHeight = task.scheduled ? durationQuarters * QUARTER_HEIGHT : TASK_ITEM_HEIGHT;
+
+  // Helper function to check if a point is inside a rectangle
+  const isPointInRect = (pointX, pointY, rect) => {
+    'worklet';
+    return (
+      rect &&
+      pointX >= rect.x &&
+      pointX <= rect.x + rect.width &&
+      pointY >= rect.y &&
+      pointY <= rect.y + rect.height
+    );
+  };
 
   // Update preview position during drag
   const updatePreviewPosition = (rawPosition, isDraggingOnTimeline) => {
@@ -128,9 +192,16 @@ const TaskItem = ({
 
   // Pan gesture with unified logic for both scheduled and unscheduled tasks
   const panGesture = Gesture.Pan()
-    .onStart(() => {
+    .onStart((event) => {
       isPressed.value = true;
       scale.value = withSpring(task.scheduled ? 1.05 : 1.1);
+      isDragging.value = true; // Set dragging state to show action buttons
+
+      // Store original position for cancel action
+      originalPosition.value = {
+        x: event.absoluteX - event.x,
+        y: event.absoluteY - event.y,
+      };
 
       // Initialize preview for scheduled tasks
       if (task.scheduled) {
@@ -138,11 +209,19 @@ const TaskItem = ({
         previewVisible.value = true;
         previewPosition.value = position;
         previewHeight.value = taskHeight;
+
+        // Show ghost square at original position
+        ghostVisible.value = true;
+        ghostPosition.value = position;
+        ghostHeight.value = taskHeight;
       } else {
         previewVisible.value = false;
       }
     })
     .onUpdate((event) => {
+      // if (isPointInRect(event.absoluteX, event.absoluteY, removeButtonLayout.value)) {
+      // } else if (isPointInRect(event.absoluteX, event.absoluteY, cancelButtonLayout.value)) {
+      // }
       if (task.scheduled) {
         // Scheduled task: vertical movement only (reordering within timeline)
         translateX.value = event.translationX;
@@ -182,39 +261,53 @@ const TaskItem = ({
       }
     })
     .onEnd((event) => {
-      if (task.scheduled) {
-        // Calculate new position
-        const basePosition = timeToPosition(taskTime.value);
-        const newPosition = basePosition + event.translationY;
-
-        if (event.absoluteX < TIMELINE_OFFSET) {
-          // Unschedule task - removed from timeline
-          runOnJS(onStateChange)(task.id, false, null);
-          previewVisible.value = false;
+      // Check if drag ended over remove button
+      if (isPointInRect(event.absoluteX, event.absoluteY, removeButtonLayout.value)) {
+        // Unschedule task - removed from timeline
+        runOnJS(onStateChange)(task.id, false, null);
+        previewVisible.value = false;
+        translateX.value = withSpring(0);
+        translateY.value = withSpring(0);
+        if (task.scheduled) {
+          // Hide ghost square
+          ghostVisible.value = false;
         } else {
-          // Calculate new time from preview position
-          const newTime = positionToTime(previewPosition.value);
-
-          // Update task's time value
-          taskTime.value = newTime;
-
-          // Update task state
-          runOnJS(onStateChange)(task.id, true, newTime);
-
-          // // Reset translation since we updated the base position
-          translateY.value = 0;
-          translateX.value = 0;
-
-          previewVisible.value = false;
+          isOverTimeline.value = false;
         }
+      }
+      // Check if drag ended over cancel button
+      else if (isPointInRect(event.absoluteX, event.absoluteY, cancelButtonLayout.value)) {
+        // Cancel drag action - return to original position
+        translateX.value = 0;
+        translateY.value = 0;
+        previewVisible.value = false;
+        if (task.scheduled) {
+          // Hide ghost square
+          ghostVisible.value = false;
+        } else {
+          isOverTimeline.value = false;
+        }
+      } else if (task.scheduled) {
+        // Calculate new time from preview position
+        const newTime = positionToTime(previewPosition.value);
+
+        // Update task's time value
+        taskTime.value = newTime;
+
+        // Update task state
+        runOnJS(onStateChange)(task.id, true, newTime);
+
+        // Reset translation since we updated the base position
+        translateY.value = 0;
+        translateX.value = 0;
+
+        previewVisible.value = false;
+        ghostVisible.value = false;
       } else {
         // Unscheduled task logic
         if (isOverTimeline.value) {
           // Calculate time from preview position
           const newTime = positionToTime(previewPosition.value);
-
-          // translateY.value = withTiming(previewPosition.value);
-          // taskTime.value = newTime;
 
           // Schedule task with the calculated time
           runOnJS(onStateChange)(task.id, true, newTime);
@@ -230,6 +323,7 @@ const TaskItem = ({
 
       scale.value = withSpring(1);
       isPressed.value = false;
+      isDragging.value = false; // Reset dragging state to hide action buttons
     });
 
   // Unified animated styles
@@ -308,6 +402,56 @@ const TimelineComponent = () => {
   const previewVisible = useSharedValue(false);
   const previewPosition = useSharedValue(0);
   const previewHeight = useSharedValue(0);
+  const ghostVisible = useSharedValue(false);
+  const ghostPosition = useSharedValue(0);
+  const ghostHeight = useSharedValue(0);
+
+  // Drag action buttons related values
+  const isDragging = useSharedValue(false);
+  const removeButtonRef = useAnimatedRef();
+  const cancelButtonRef = useAnimatedRef();
+  const removeButtonLayout = useSharedValue(null);
+  const cancelButtonLayout = useSharedValue(null);
+
+  // Measure buttons layout
+  const measureButtons = useCallback(() => {
+    'worklet';
+    try {
+      const removeMeasured = measure(removeButtonRef);
+      const cancelMeasured = measure(cancelButtonRef);
+
+      if (removeMeasured) {
+        removeButtonLayout.value = {
+          x: removeMeasured.pageX,
+          y: removeMeasured.pageY,
+          width: removeMeasured.width,
+          height: removeMeasured.height,
+        };
+      }
+
+      if (cancelMeasured) {
+        cancelButtonLayout.value = {
+          x: cancelMeasured.pageX,
+          y: cancelMeasured.pageY,
+          width: cancelMeasured.width,
+          height: cancelMeasured.height,
+        };
+      }
+    } catch (e) {
+      console.log('Button measurement error:', e);
+    }
+  }, [removeButtonRef, cancelButtonRef]);
+
+  // Handle button layout
+  const handleButtonsLayout = useCallback(() => {
+    if (Platform.OS === 'ios') {
+      requestAnimationFrame(() => {
+        runOnUI(measureButtons)();
+      });
+    } else {
+      runOnUI(measureButtons)();
+    }
+  }, [measureButtons]);
 
   // Measure timeline layout
   const measureTimelineOnUI = useCallback(() => {
@@ -426,6 +570,9 @@ const TimelineComponent = () => {
                 previewVisible={previewVisible}
                 previewPosition={previewPosition}
                 previewHeight={previewHeight}
+                isDragging={isDragging}
+                removeButtonLayout={removeButtonLayout}
+                cancelButtonLayout={cancelButtonLayout}
               />
             ))}
         </View>
@@ -440,11 +587,19 @@ const TimelineComponent = () => {
           <View style={styles.timelineSideBar}>{renderHours()}</View>
           <View style={styles.timelineContent}>
             {/* Preview component */}
-            <TimelinePreview
-              previewVisible={previewVisible}
-              previewPosition={previewPosition}
-              previewHeight={previewHeight}
+            <TimelineIndicator
+              visible={previewVisible}
+              position={previewPosition}
+              height={previewHeight}
+              style={{
+                backgroundColor: 'rgba(0, 123, 255, 0.4)',
+                borderRadius: 8,
+                borderWidth: 2,
+                borderColor: 'rgba(0, 123, 255, 0.6)',
+              }}
             />
+            {/* Ghost square component */}
+            <GhostSquare visible={ghostVisible} position={ghostPosition} height={ghostHeight} />
 
             {tasks
               .filter((task) => task.scheduled)
@@ -458,16 +613,30 @@ const TimelineComponent = () => {
                   previewVisible={previewVisible}
                   previewPosition={previewPosition}
                   previewHeight={previewHeight}
+                  isDragging={isDragging}
+                  removeButtonLayout={removeButtonLayout}
+                  cancelButtonLayout={cancelButtonLayout}
+                  ghostVisible={ghostVisible}
+                  ghostPosition={ghostPosition}
+                  ghostHeight={ghostHeight}
                 />
               ))}
           </View>
         </Animated.ScrollView>
       </Animated.View>
+
+      {/* Drag action buttons */}
+      <DragActionButtons
+        isVisible={isDragging}
+        removeButtonRef={removeButtonRef}
+        cancelButtonRef={cancelButtonRef}
+        onLayout={handleButtonsLayout}
+      />
     </View>
   );
 };
 
-// Styles remain mostly the same with some adjustments
+// Styles with additions for action buttons
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -536,7 +705,6 @@ const styles = StyleSheet.create({
     height: QUARTER_HEIGHT,
     justifyContent: 'top',
     paddingHorizontal: 10,
-    // backgroundColor: 'blue',
   },
   quarterText: {
     fontSize: 10,
@@ -576,6 +744,29 @@ const styles = StyleSheet.create({
   },
   scheduledTaskTime: { fontSize: 12, color: '#444', fontWeight: '500' },
   scheduledTaskDuration: { fontSize: 12, color: '#555' },
+  // Action buttons styles
+  actionButton: {
+    width: 120,
+    height: 50,
+    borderRadius: 25,
+    borderWidth: 2,
+    // backgroundColor: 'rgba(224, 133, 0, 0.1)',
+    borderColor: 'rgb(224, 133, 0)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexDirection: 'row',
+    padding: 10,
+  },
+  actionButtonText: {
+    color: 'rgb(224, 133, 0)',
+    fontWeight: 'bold',
+    fontSize: 14,
+    marginLeft: 5,
+  },
+  actionButtonIcon: {
+    fontSize: 18,
+    color: 'rgb(224, 133, 0)',
+  },
 });
 
 export default TimelineComponent;
