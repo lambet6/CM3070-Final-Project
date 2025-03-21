@@ -1,29 +1,32 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Dimensions, Platform } from 'react-native';
-import { GestureDetector, Gesture, BaseButton } from 'react-native-gesture-handler';
+import { GestureDetector, Gesture } from 'react-native-gesture-handler';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   useScrollViewOffset,
   useAnimatedRef,
-  withTiming,
   withSpring,
   runOnJS,
   measure,
   useAnimatedReaction,
   runOnUI,
-  Easing,
+  scrollTo,
+  useAnimatedScrollHandler,
 } from 'react-native-reanimated';
 
 // Constants remain the same
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const HOUR_HEIGHT = 80;
 const QUARTER_HEIGHT = HOUR_HEIGHT / 4; // 15-minute increments
 const TASK_ITEM_HEIGHT = 50;
 const TASK_ITEM_WIDTH = 120;
 const TIMELINE_OFFSET = SCREEN_WIDTH * 0.25;
 const MIN_HOUR = 8; // 8 AM
-const MAX_HOUR = 20; // 8 PM
+const MAX_HOUR = 21; // 9 PM
+// Auto-scroll constants
+const EDGE_THRESHOLD = 100; // Distance from edge to trigger auto-scroll
+const MAX_SCROLL_SPEED = 8; // Maximum scroll speed
 
 // Sample data with duration only (no position)
 const INITIAL_TASKS = [
@@ -139,7 +142,7 @@ const DragActionButtons = ({
         ref={removeButtonRef}
         style={[styles.actionButton, removeButtonStyle]}
         onLayout={onLayoutChange}>
-        <Animated.Text style={[styles.actionButtonIcon, removeButtonTextStyle]}>🗑</Animated.Text>
+        <Animated.Text style={[styles.actionButtonIcon, removeButtonTextStyle]}>✕</Animated.Text>
         <Animated.Text style={[styles.actionButtonText, removeButtonTextStyle]}>
           Remove
         </Animated.Text>
@@ -203,6 +206,10 @@ const TaskItem = ({
   ghostHeight,
   isRemoveHovered,
   isCancelHovered,
+  // Auto-scrolling props
+  autoScrollActive,
+  scrollViewRef,
+  timelineViewHeight,
 }) => {
   // Shared animation values
   const translateX = useSharedValue(0);
@@ -213,8 +220,15 @@ const TaskItem = ({
   const isOverTimeline = useSharedValue(false);
   const originalPosition = useSharedValue({ x: 0, y: 0 });
 
+  // Auto-scroll values
+  const pointerPositionY = useSharedValue(0);
+  const scrollDirection = useSharedValue(0);
+  const scrollSpeed = useSharedValue(0);
+  const rawTranslationY = useSharedValue(0);
+  const scrollOffset = useSharedValue(0);
+  const accumulatedScrollOffset = useSharedValue(0);
+
   // Task-specific animation value that represents its time position
-  // This will be the source of truth for positioning
   const taskTime = useSharedValue(task.startTime || MIN_HOUR);
 
   // Calculate height based on duration
@@ -233,14 +247,82 @@ const TaskItem = ({
     );
   };
 
-  // Update preview position during drag
+  // Auto-scroll logic
+  useAnimatedReaction(
+    () => {
+      return {
+        isActive: isPressed.value && (isOverTimeline.value || task.scheduled),
+        pointerY: pointerPositionY.value,
+        direction: scrollDirection.value,
+        speed: scrollSpeed.value,
+      };
+    },
+    (current, previous) => {
+      if (current.isActive && current.direction !== 0) {
+        // Apply auto-scrolling
+        autoScrollActive.value = true;
+
+        // Calculate the new scroll position
+        const currentScrollY = scrollY.value;
+        const scrollAmount = current.speed * current.direction;
+
+        // Get the content height and calculate the maximum possible scroll
+        const timelineHeight = HOURS.length * HOUR_HEIGHT;
+        const maxScrollY = Math.max(0, timelineHeight - timelineViewHeight.value);
+
+        // Check scroll boundaries before applying scroll
+        let newScrollY = currentScrollY;
+        if (current.direction < 0 && currentScrollY > 0) {
+          // Scrolling up is only allowed if not at the top
+          newScrollY = Math.max(0, currentScrollY + scrollAmount);
+        } else if (current.direction > 0 && currentScrollY < maxScrollY) {
+          // Scrolling down is only allowed if not at the bottom
+          newScrollY = Math.min(maxScrollY, currentScrollY + scrollAmount);
+        }
+
+        // Only scroll if there's a change in position
+        if (newScrollY !== currentScrollY) {
+          // Perform the scroll
+          scrollTo(scrollViewRef, 0, newScrollY, false);
+
+          if (task.scheduled) {
+            // For scheduled tasks, accumulate the scroll offset
+            accumulatedScrollOffset.value += newScrollY - currentScrollY;
+          }
+        }
+      } else {
+        autoScrollActive.value = false;
+      }
+    },
+    [scrollY, timelineLayout],
+  );
+
+  // Update preview position during drag with boundary constraints
   const updatePreviewPosition = (rawPosition, isDraggingOnTimeline) => {
     'worklet';
     if (!isDraggingOnTimeline) return;
 
+    // Calculate the total timeline height
+    const timelineHeight = (MAX_HOUR - MIN_HOUR) * HOUR_HEIGHT;
+
     // Calculate quarter position (snap to nearest quarter)
     const totalQuarters = Math.round(rawPosition / QUARTER_HEIGHT);
-    const snappedPosition = totalQuarters * QUARTER_HEIGHT;
+
+    // Calculate the snapped position
+    let snappedPosition = totalQuarters * QUARTER_HEIGHT;
+
+    // Calculate the maximum allowed position based on preview height
+    // This ensures the end of the preview doesn't go past the end of the timeline
+    const maxPosition = timelineHeight - previewHeight.value;
+
+    // Constrain the position to stay within the timeline boundaries
+    if (snappedPosition < 0) {
+      // Don't allow preview to go above the start of the timeline
+      snappedPosition = 0;
+    } else if (snappedPosition > maxPosition) {
+      // Don't allow preview to go below the end of the timeline
+      snappedPosition = maxPosition;
+    }
 
     // Update preview values
     previewPosition.value = snappedPosition;
@@ -248,17 +330,60 @@ const TaskItem = ({
     previewVisible.value = true;
   };
 
+  // Check if near edges and should trigger auto-scroll
+  const checkAutoScroll = (absoluteY, isOverTimeline) => {
+    'worklet';
+    if (!isOverTimeline || !timelineLayout.value) return;
+
+    const timelineTop = timelineLayout.value.y;
+    const timelineBottom = timelineTop + timelineViewHeight.value;
+
+    // Store the current pointer position for use in the animation
+    pointerPositionY.value = absoluteY;
+
+    // Check if near top edge
+    if (absoluteY < timelineTop + EDGE_THRESHOLD) {
+      // Near top edge, calculate scroll up speed
+      const distanceFromEdge = absoluteY - timelineTop;
+      const normalizedDistance = Math.max(0, Math.min(1, distanceFromEdge / EDGE_THRESHOLD));
+
+      scrollDirection.value = -1; // Scroll up
+      scrollSpeed.value = MAX_SCROLL_SPEED * (1 - normalizedDistance);
+    }
+    // Check if near bottom edge
+    else if (absoluteY > timelineBottom - EDGE_THRESHOLD) {
+      // Near bottom edge, calculate scroll down speed
+      const distanceFromEdge = timelineBottom - absoluteY;
+      const normalizedDistance = Math.max(0, Math.min(1, distanceFromEdge / EDGE_THRESHOLD));
+
+      scrollDirection.value = 1; // Scroll down
+      scrollSpeed.value = MAX_SCROLL_SPEED * (1 - normalizedDistance);
+    }
+    // Not near any edge
+    else {
+      scrollDirection.value = 0;
+      scrollSpeed.value = 0;
+    }
+  };
+
   // Pan gesture with unified logic for both scheduled and unscheduled tasks
   const panGesture = Gesture.Pan()
     .onStart((event) => {
       isPressed.value = true;
       scale.value = withSpring(task.scheduled ? 1.05 : 1.1);
-      isDragging.value = true; // Set dragging state to show action buttons
+      isDragging.value = true;
       isDraggingScheduled.value = task.scheduled;
 
-      // Reset hover states at the start
+      // Reset hover states
       isRemoveHovered.value = false;
       isCancelHovered.value = false;
+
+      // Reset accumulated scroll offset
+      accumulatedScrollOffset.value = 0;
+
+      // Reset auto-scroll values
+      scrollDirection.value = 0;
+      scrollSpeed.value = 0;
 
       // Store original position for cancel action
       originalPosition.value = {
@@ -282,7 +407,7 @@ const TaskItem = ({
       }
     })
     .onUpdate((event) => {
-      // Check if hovering over remove or cancel buttons and update hover states
+      // Check if hovering over remove/cancel buttons...
       const isOverRemove = isPointInRect(
         event.absoluteX,
         event.absoluteY,
@@ -298,25 +423,35 @@ const TaskItem = ({
       isRemoveHovered.value = isOverRemove;
       isCancelHovered.value = isOverCancel;
 
+      // The crucial fix: Add accumulated scroll offset to translation
+      translateX.value = event.translationX;
+
       if (task.scheduled) {
-        // Scheduled task: vertical movement only (reordering within timeline)
-        translateX.value = event.translationX;
-        translateY.value = event.translationY;
-
-        // Update preview position based on current task time and translation
-        const basePosition = timeToPosition(taskTime.value);
-        const newPosition = basePosition + event.translationY;
-        updatePreviewPosition(newPosition, true);
+        // For scheduled tasks, adjust for accumulated scroll
+        translateY.value = event.translationY + accumulatedScrollOffset.value;
       } else {
-        // Unscheduled task: free movement
-        translateX.value = event.translationX;
+        // For unscheduled tasks, no adjustment needed
         translateY.value = event.translationY;
+      }
 
-        // Check if over timeline
+      // Hide preview if hovering over any action button
+      if (isOverRemove || isOverCancel) {
+        previewVisible.value = false;
+        scrollDirection.value = 0; // Stop auto-scrolling
+      } else if (task.scheduled) {
+        // Update preview position based on current task time and adjusted translation
+        const basePosition = timeToPosition(taskTime.value);
+        const newPosition = basePosition + translateY.value;
+        updatePreviewPosition(newPosition, true);
+
+        // Check for auto-scroll
+        checkAutoScroll(event.absoluteY, true);
+      } else {
+        // Check if over timeline...
         if (timelineLayout && timelineLayout.value) {
           const isOver =
             event.absoluteY >= timelineLayout.value.y &&
-            event.absoluteY <= timelineLayout.value.y + timelineLayout.value.height &&
+            event.absoluteY <= timelineLayout.value.y + timelineViewHeight.value &&
             event.absoluteX >= timelineLayout.value.x &&
             event.absoluteX <= timelineLayout.value.x + timelineLayout.value.width;
 
@@ -327,19 +462,34 @@ const TaskItem = ({
 
           // Show preview when over timeline
           if (isOver) {
-            const relativePosition =
-              event.absoluteY - timelineLayout.value.y + (scrollY ? scrollY.value : 0);
+            const relativePosition = event.absoluteY - timelineLayout.value.y + scrollY.value;
             updatePreviewPosition(relativePosition, true);
+
+            // Check for auto-scroll
+            checkAutoScroll(event.absoluteY, isOver);
           } else {
             previewVisible.value = false;
+            scrollDirection.value = 0; // Stop auto-scrolling
           }
         }
       }
     })
     .onEnd((event) => {
+      // Reset accumulated scroll offset
+      accumulatedScrollOffset.value = 0;
+
+      // Stop auto-scrolling
+      scrollDirection.value = 0;
+      scrollSpeed.value = 0;
+      autoScrollActive.value = false;
+
       // Reset hover states
       isRemoveHovered.value = false;
       isCancelHovered.value = false;
+
+      // Reset tracking values
+      rawTranslationY.value = 0;
+      scrollOffset.value = 0;
 
       // Check if drag ended over remove button
       if (isPointInRect(event.absoluteX, event.absoluteY, removeButtonLayout.value)) {
@@ -478,6 +628,12 @@ const TimelineComponent = () => {
   const timelineLayout = useSharedValue({ x: 0, y: 0, width: 0, height: 0 });
   const layoutChanged = useSharedValue(0);
 
+  // Shared value for the visible timeline height (may be less than total height)
+  const timelineViewHeight = useSharedValue(0);
+
+  // Auto-scroll active flag
+  const autoScrollActive = useSharedValue(false);
+
   // Preview animation values
   const previewVisible = useSharedValue(false);
   const previewPosition = useSharedValue(0);
@@ -497,6 +653,21 @@ const TimelineComponent = () => {
   // New shared values for button hover states
   const isRemoveHovered = useSharedValue(false);
   const isCancelHovered = useSharedValue(false);
+
+  // Animated scroll handler for the timeline
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      // Just using the default scrollY from useScrollViewOffset
+    },
+  });
+
+  // Effect to update timelineViewHeight after layout
+  useEffect(() => {
+    if (Platform.OS === 'web') {
+      // For web, we can use window height as an approximation
+      timelineViewHeight.value = SCREEN_HEIGHT * 0.85; // Assuming timeline is 85% of screen height
+    }
+  }, [timelineViewHeight]);
 
   // Measure buttons layout
   const measureButtons = useCallback(() => {
@@ -550,11 +721,14 @@ const TimelineComponent = () => {
           width: measured.width,
           height: measured.height,
         };
+
+        // Update the visible height of the timeline
+        timelineViewHeight.value = measured.height;
       }
     } catch (e) {
       console.log('Measurement error:', e);
     }
-  }, [timelineLayoutRef, timelineLayout]);
+  }, [timelineLayoutRef, timelineLayout, timelineViewHeight]);
 
   // Handle layout events
   const handleTimelineLayout = useCallback(
@@ -679,6 +853,10 @@ const TimelineComponent = () => {
                 cancelButtonLayout={cancelButtonLayout}
                 isRemoveHovered={isRemoveHovered}
                 isCancelHovered={isCancelHovered}
+                // New props for auto-scrolling
+                autoScrollActive={autoScrollActive}
+                scrollViewRef={scrollViewRef}
+                timelineViewHeight={timelineViewHeight}
               />
             ))}
         </View>
@@ -689,7 +867,7 @@ const TimelineComponent = () => {
         ref={timelineLayoutRef}
         style={styles.timelineContainer}
         onLayout={handleTimelineLayout}>
-        <Animated.ScrollView ref={scrollViewRef} scrollEventThrottle={16}>
+        <Animated.ScrollView ref={scrollViewRef} scrollEventThrottle={16} onScroll={scrollHandler}>
           <View style={styles.timelineSideBar}>{renderHours()}</View>
           <View style={styles.timelineContent}>
             {/* Preview component */}
@@ -715,6 +893,7 @@ const TimelineComponent = () => {
                   task={task}
                   index={index}
                   onStateChange={handleTaskStateChange}
+                  scrollY={scrollY}
                   timelineLayout={timelineLayout}
                   previewVisible={previewVisible}
                   previewPosition={previewPosition}
@@ -728,6 +907,10 @@ const TimelineComponent = () => {
                   ghostHeight={ghostHeight}
                   isRemoveHovered={isRemoveHovered}
                   isCancelHovered={isCancelHovered}
+                  // New props for auto-scrolling
+                  autoScrollActive={autoScrollActive}
+                  scrollViewRef={scrollViewRef}
+                  timelineViewHeight={timelineViewHeight}
                 />
               ))}
           </View>
