@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { View, Text } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -441,4 +441,11 @@ const TaskItem = ({
   );
 };
 
-export default TaskItem;
+export default memo(TaskItem, (prevProps, nextProps) => {
+  // Only re-render for important changes
+  return (
+    prevProps.task.id === nextProps.task.id &&
+    prevProps.task.scheduled === nextProps.task.scheduled &&
+    prevProps.task.startTime === nextProps.task.startTime
+  );
+});

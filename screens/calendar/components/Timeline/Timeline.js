@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect, useMemo } from 'react';
 import { View, Text, Platform } from 'react-native';
 import {
   useAnimatedRef,
@@ -59,13 +59,6 @@ const TimelineComponent = () => {
   // New shared values for button hover states
   const isRemoveHovered = useSharedValue(false);
   const isCancelHovered = useSharedValue(false);
-
-  // Animated scroll handler for the timeline
-  const scrollHandler = useAnimatedScrollHandler({
-    onScroll: (event) => {
-      // Just using the default scrollY from useScrollViewOffset
-    },
-  });
 
   // Effect to update timelineViewHeight after layout
   useEffect(() => {
@@ -162,7 +155,6 @@ const TimelineComponent = () => {
     [measureTimelineOnUI],
   );
 
-  // We can keep this reaction to ensure measurements are updated when drag state changes
   useAnimatedReaction(
     () => ({
       isDragging: isDragging.value,
@@ -181,42 +173,28 @@ const TimelineComponent = () => {
   );
 
   // Task state change handler
-  const handleTaskStateChange = (taskId, isScheduled, newStartTime) => {
-    setTasks((prev) => {
-      return prev.map((task) => {
-        if (task.id === taskId) {
-          if (isScheduled) {
-            return {
-              ...task,
-              scheduled: true,
-              startTime: newStartTime,
-            };
-          } else {
-            return {
-              ...task,
-              scheduled: false,
-              startTime: null,
-            };
-          }
-        }
-        return task;
-      });
-    });
-  };
+  const handleTaskStateChange = useCallback((taskId, isScheduled, newStartTime) => {
+    setTasks((prev) =>
+      prev.map((task) =>
+        task.id === taskId
+          ? { ...task, scheduled: isScheduled, startTime: isScheduled ? newStartTime : null }
+          : task,
+      ),
+    );
+  }, []);
 
   // Render hour markers
-  const renderHours = () => {
-    const hourMarkers = [];
-    HOURS.forEach((hour, hourIndex) => {
-      hourMarkers.push(
+  const hourMarkers = useMemo(() => {
+    return HOURS.flatMap((hour, hourIndex) => {
+      const markers = [
         <View key={`hour-${hourIndex}`} style={styles.hourContainer}>
           <Text style={styles.hourText}>{hour}</Text>
           <View style={styles.hourLine} />
         </View>,
-      );
+      ];
       if (hourIndex < HOURS.length - 1) {
-        QUARTERS.slice(1).forEach((quarter, qIndex) => {
-          hourMarkers.push(
+        markers.push(
+          ...QUARTERS.slice(1).map((quarter, qIndex) => (
             <View
               key={`hour-${hourIndex}-q-${qIndex}`}
               style={[
@@ -225,13 +203,15 @@ const TimelineComponent = () => {
               ]}>
               <Text style={styles.quarterText}>{quarter}</Text>
               <View style={styles.quarterLine} />
-            </View>,
-          );
-        });
+            </View>
+          )),
+        );
       }
+      return markers;
     });
-    return hourMarkers;
-  };
+  }, []);
+
+  const scheduledTasks = useMemo(() => tasks.filter((task) => task.scheduled), [tasks]);
 
   // Render the UI
   return (
@@ -259,7 +239,6 @@ const TimelineComponent = () => {
                 cancelButtonLayout={cancelButtonLayout}
                 isRemoveHovered={isRemoveHovered}
                 isCancelHovered={isCancelHovered}
-                // New props for auto-scrolling
                 autoScrollActive={autoScrollActive}
                 scrollViewRef={scrollViewRef}
                 timelineViewHeight={timelineViewHeight}
@@ -273,8 +252,8 @@ const TimelineComponent = () => {
         ref={timelineLayoutRef}
         style={styles.timelineContainer}
         onLayout={handleTimelineLayout}>
-        <Animated.ScrollView ref={scrollViewRef} scrollEventThrottle={16} onScroll={scrollHandler}>
-          <View style={styles.timelineSideBar}>{renderHours()}</View>
+        <Animated.ScrollView ref={scrollViewRef} scrollEventThrottle={16}>
+          <View style={styles.timelineSideBar}>{hourMarkers}</View>
           <View style={styles.timelineContent}>
             {/* Preview component */}
             <TimelineIndicator
@@ -291,39 +270,36 @@ const TimelineComponent = () => {
             {/* Ghost square component */}
             <GhostSquare visible={ghostVisible} position={ghostPosition} height={ghostHeight} />
 
-            {tasks
-              .filter((task) => task.scheduled)
-              .map((task, index) => (
-                <TaskItem
-                  key={task.id}
-                  task={task}
-                  index={index}
-                  onStateChange={handleTaskStateChange}
-                  scrollY={scrollY}
-                  timelineLayout={timelineLayout}
-                  previewVisible={previewVisible}
-                  previewPosition={previewPosition}
-                  previewHeight={previewHeight}
-                  isDragging={isDragging}
-                  isDraggingScheduled={isDraggingScheduled}
-                  removeButtonLayout={removeButtonLayout}
-                  cancelButtonLayout={cancelButtonLayout}
-                  ghostVisible={ghostVisible}
-                  ghostPosition={ghostPosition}
-                  ghostHeight={ghostHeight}
-                  isRemoveHovered={isRemoveHovered}
-                  isCancelHovered={isCancelHovered}
-                  // New props for auto-scrolling
-                  autoScrollActive={autoScrollActive}
-                  scrollViewRef={scrollViewRef}
-                  timelineViewHeight={timelineViewHeight}
-                />
-              ))}
+            {scheduledTasks.map((task, index) => (
+              <TaskItem
+                key={task.id}
+                task={task}
+                index={index}
+                onStateChange={handleTaskStateChange}
+                scrollY={scrollY}
+                timelineLayout={timelineLayout}
+                previewVisible={previewVisible}
+                previewPosition={previewPosition}
+                previewHeight={previewHeight}
+                isDragging={isDragging}
+                isDraggingScheduled={isDraggingScheduled}
+                removeButtonLayout={removeButtonLayout}
+                cancelButtonLayout={cancelButtonLayout}
+                ghostVisible={ghostVisible}
+                ghostPosition={ghostPosition}
+                ghostHeight={ghostHeight}
+                isRemoveHovered={isRemoveHovered}
+                isCancelHovered={isCancelHovered}
+                autoScrollActive={autoScrollActive}
+                scrollViewRef={scrollViewRef}
+                timelineViewHeight={timelineViewHeight}
+              />
+            ))}
           </View>
         </Animated.ScrollView>
       </Animated.View>
 
-      {/* Drag action buttons - now passing individual button layout handler */}
+      {/* Cancel and Remove Buttons */}
       <DragActionButtons
         isVisible={isDragging}
         isDraggingScheduled={isDraggingScheduled}

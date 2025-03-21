@@ -297,7 +297,6 @@ export default function CalenarScreen() {
         </View>
       </View>
       <View style={styles.dragList}>
-        {/* <TaskReorderableList selectedDate={selectedDate} /> */}
         <TimelineComponent />
       </View>
     </View>
