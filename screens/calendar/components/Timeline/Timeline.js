@@ -17,6 +17,7 @@ import { TimelineIndicator, GhostSquare } from './TimelineIndicator';
 import DragActionButtons from './DragActionButtons';
 import {
   INITIAL_TASKS,
+  INITIAL_EVENTS,
   HOURS,
   QUARTERS,
   HOUR_HEIGHT,

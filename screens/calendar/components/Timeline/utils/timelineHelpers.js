@@ -22,6 +22,28 @@ export const INITIAL_TASKS = [
   { id: '5', title: 'Project Work', duration: 0.75, scheduled: false, startTime: null },
 ];
 
+// Sample data with duration only (no position)
+export const INITIAL_EVENTS = [
+  {
+    id: 'event1',
+    title: 'Team Meeting',
+    startDate: new Date(new Date().setHours(9, 30, 0, 0)),
+    endDate: new Date(new Date().setHours(11, 0, 0, 0)),
+  },
+  {
+    id: 'event2',
+    title: 'Lunch with Client',
+    startDate: new Date(new Date().setHours(12, 0, 0, 0)),
+    endDate: new Date(new Date().setHours(13, 0, 0, 0)),
+  },
+  {
+    id: 'event3',
+    title: 'Product Demo',
+    startDate: new Date(new Date().setHours(15, 15, 0, 0)),
+    endDate: new Date(new Date().setHours(16, 30, 0, 0)),
+  },
+];
+
 export const HOURS = Array.from({ length: 13 }, (_, i) => {
   const hour = i + 8;
   // 12 PM is noon, hours after noon are PM

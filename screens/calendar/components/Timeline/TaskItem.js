@@ -53,6 +53,9 @@ const TaskItem = ({
   const isOverTimeline = useSharedValue(false);
   const originalPosition = useSharedValue({ x: 0, y: 0 });
 
+  // track if unscheduled task should auto-scroll
+  const hasBeenOverTimeline = useSharedValue(false);
+
   // Auto-scroll values
   const pointerPositionY = useSharedValue(0);
   const scrollDirection = useSharedValue(0);
@@ -60,6 +63,15 @@ const TaskItem = ({
   const rawTranslationY = useSharedValue(0);
   const scrollOffset = useSharedValue(0);
   const accumulatedScrollOffset = useSharedValue(0);
+
+  const initialDragDirection = useSharedValue(0); // 0 = undetermined, 1 = down, -1 = up
+  const dragStartY = useSharedValue(0);
+  const previousY = useSharedValue(0);
+  const autoScrollDelayActive = useSharedValue(false);
+  const autoScrollDelayTimeout = useSharedValue(null);
+  const autoScrollIntent = useSharedValue(false);
+  const consecutiveDirectionSamples = useSharedValue(0);
+  const directionSamplesNeeded = 3; // Number of consistent direction samples need
 
   // Task-specific animation value that represents its time position
   const taskTime = useSharedValue(task.startTime || MIN_HOUR);
@@ -72,7 +84,9 @@ const TaskItem = ({
   useAnimatedReaction(
     () => {
       return {
-        isActive: isPressed.value && (isOverTimeline.value || task.scheduled),
+        // MODIFIED: Include hasBeenOverTimeline in the condition
+        isActive:
+          isPressed.value && (isOverTimeline.value || task.scheduled || hasBeenOverTimeline.value),
         pointerY: pointerPositionY.value,
         direction: scrollDirection.value,
         speed: scrollSpeed.value,
@@ -151,10 +165,25 @@ const TaskItem = ({
     previewVisible.value = true;
   };
 
-  // Check if near edges and should trigger auto-scroll
-  const checkAutoScroll = (absoluteY, isOverTimeline) => {
+  // Determines if the user intends to auto-scroll based on direction
+  const determineScrollIntent = (currentY, previousY, edgeDirection) => {
     'worklet';
-    if (!isOverTimeline || !timelineLayout.value) return;
+
+    // If not near an edge, no intent
+    if (edgeDirection === 0) return false;
+
+    // Calculate the drag direction: positive = moving down, negative = moving up
+    const moveDirection = currentY > previousY ? 1 : currentY < previousY ? -1 : 0;
+
+    // If movement is in the same direction as the edge (e.g., moving down near bottom edge)
+    // then the user likely intends to scroll
+    return moveDirection === edgeDirection;
+  };
+
+  // Check if near edges and should trigger auto-scroll
+  const checkAutoScroll = (absoluteY, shouldCheckScroll) => {
+    'worklet';
+    if (!shouldCheckScroll || !timelineLayout.value) return;
 
     const timelineTop = timelineLayout.value.y;
     const timelineBottom = timelineTop + timelineViewHeight.value;
@@ -164,26 +193,61 @@ const TaskItem = ({
     // Store the current pointer position for use in the animation
     pointerPositionY.value = absoluteY;
 
+    // Determine edge proximity and direction
+    let nearEdgeDirection = 0; // 0 = not near edge, 1 = near bottom, -1 = near top
+
     // Check if near top edge
     if (absoluteY < timelineTop + EDGE_THRESHOLD) {
-      // Near top edge, calculate scroll up speed
+      nearEdgeDirection = -1; // Near top edge
+    }
+    // Check if near bottom edge
+    else if (absoluteY > timelineBottom - EDGE_THRESHOLD) {
+      nearEdgeDirection = 1; // Near bottom edge
+    }
+
+    // If the drag just started, initialize the direction tracking
+    if (previousY.value === 0) {
+      previousY.value = absoluteY;
+      dragStartY.value = absoluteY;
+      return; // Skip the first frame to establish direction
+    }
+
+    // Determine if the user intends to scroll based on their drag direction
+    const hasScrollIntent = determineScrollIntent(absoluteY, previousY.value, nearEdgeDirection);
+
+    // If direction is consistent with previous frame, increment counter
+    if (hasScrollIntent && autoScrollIntent.value) {
+      consecutiveDirectionSamples.value += 1;
+    } else {
+      consecutiveDirectionSamples.value = hasScrollIntent ? 1 : 0;
+    }
+
+    // Update intent for next frame
+    autoScrollIntent.value = hasScrollIntent;
+
+    // Store current position for next comparison
+    previousY.value = absoluteY;
+
+    // Only activate auto-scroll if we have consistent directional intent
+    const shouldActivateScroll = consecutiveDirectionSamples.value >= directionSamplesNeeded;
+
+    // Now set the scroll direction and speed based on edge proximity and intent
+    if (nearEdgeDirection === -1 && shouldActivateScroll) {
+      // Near top edge with intent
       const distanceFromEdge = absoluteY - timelineTop;
       const normalizedDistance = Math.max(0, Math.min(1, distanceFromEdge / EDGE_THRESHOLD));
 
       scrollDirection.value = -1; // Scroll up
       scrollSpeed.value = MAX_SCROLL_SPEED * (1 - normalizedDistance);
-    }
-    // Check if near bottom edge
-    else if (absoluteY > timelineBottom - EDGE_THRESHOLD) {
-      // Near bottom edge, calculate scroll down speed
+    } else if (nearEdgeDirection === 1 && shouldActivateScroll) {
+      // Near bottom edge with intent
       const distanceFromEdge = timelineBottom - absoluteY;
       const normalizedDistance = Math.max(0, Math.min(1, distanceFromEdge / EDGE_THRESHOLD));
 
       scrollDirection.value = 1; // Scroll down
       scrollSpeed.value = MAX_SCROLL_SPEED * (1 - normalizedDistance);
-    }
-    // Not near any edge
-    else {
+    } else {
+      // Not near any edge or no consistent intent
       scrollDirection.value = 0;
       scrollSpeed.value = 0;
     }
@@ -193,7 +257,7 @@ const TaskItem = ({
   const panGesture = Gesture.Pan()
     .onStart((event) => {
       isPressed.value = true;
-      scale.value = withSpring(task.scheduled ? 1.05 : 1.1);
+      scale.value = withSpring(task.scheduled ? 1.05 : 1.2);
       isDragging.value = true;
       isDraggingScheduled.value = task.scheduled;
 
@@ -207,6 +271,16 @@ const TaskItem = ({
       // Reset auto-scroll values
       scrollDirection.value = 0;
       scrollSpeed.value = 0;
+
+      // Reset direction tracking
+      initialDragDirection.value = 0;
+      dragStartY.value = 0;
+      previousY.value = 0;
+      autoScrollIntent.value = false;
+      consecutiveDirectionSamples.value = 0;
+
+      // Reset the hasBeenOverTimeline flag
+      hasBeenOverTimeline.value = false;
 
       // Store original position for cancel action
       originalPosition.value = {
@@ -267,7 +341,7 @@ const TaskItem = ({
         const newPosition = basePosition + translateY.value;
         updatePreviewPosition(newPosition, true);
 
-        // Check for auto-scroll
+        // Check for auto-scroll (scheduled tasks always auto-scroll)
         checkAutoScroll(event.absoluteY, true);
       } else {
         // Check if over timeline...
@@ -278,22 +352,27 @@ const TaskItem = ({
             event.absoluteX >= timelineLayout.value.x &&
             event.absoluteX <= timelineLayout.value.x + timelineLayout.value.width;
 
+          // IMPORTANT: If we're over the timeline, set the flag that will persist
+          if (isOver) {
+            hasBeenOverTimeline.value = true;
+          }
+
           if (isOver !== isOverTimeline.value) {
             isOverTimeline.value = isOver;
-            scale.value = withSpring(isOver ? 1.2 : 1.1);
+            scale.value = withSpring(isOver ? 1.6 : 1.2);
           }
 
           // Show preview when over timeline
           if (isOver) {
             const relativePosition = event.absoluteY - timelineLayout.value.y + scrollY.value;
             updatePreviewPosition(relativePosition, true);
-
-            // Check for auto-scroll
-            checkAutoScroll(event.absoluteY, isOver);
           } else {
             previewVisible.value = false;
-            scrollDirection.value = 0; // Stop auto-scrolling
           }
+
+          // Check for auto-scroll with updated condition
+          // Once the task has been over the timeline, keep auto-scrolling active
+          checkAutoScroll(event.absoluteY, isOver || hasBeenOverTimeline.value);
         }
       }
     })
@@ -305,6 +384,16 @@ const TaskItem = ({
       scrollDirection.value = 0;
       scrollSpeed.value = 0;
       autoScrollActive.value = false;
+
+      // Reset direction tracking
+      initialDragDirection.value = 0;
+      dragStartY.value = 0;
+      previousY.value = 0;
+      autoScrollIntent.value = false;
+      consecutiveDirectionSamples.value = 0;
+
+      // Reset the flag for the next drag
+      hasBeenOverTimeline.value = false;
 
       // Reset hover states
       isRemoveHovered.value = false;
@@ -408,10 +497,11 @@ const TaskItem = ({
           { scale: scale.value },
         ],
         opacity: opacity.value,
-        width: TASK_ITEM_WIDTH,
-        height: TASK_ITEM_HEIGHT,
+        width: TASK_ITEM_WIDTH / 2, // Make width half the original size
+        height: TASK_ITEM_HEIGHT / 2, // Make height half the original size
         backgroundColor: isOverTimeline.value ? '#a8e6cf' : '#ffd3b6',
         zIndex: isPressed.value ? 1000 : 1,
+        padding: 5, // Smaller padding for the reduced size
       };
     }
   });
@@ -421,7 +511,7 @@ const TaskItem = ({
     <GestureDetector gesture={panGesture}>
       <Animated.View style={[styles.taskItem, animatedStyles]}>
         <Text
-          style={task.scheduled ? styles.scheduledTaskTitle : styles.taskTitle}
+          style={task.scheduled ? styles.scheduledTaskTitle : styles.unscheduledTaskTitle}
           numberOfLines={1}>
           {task.title}
         </Text>
@@ -434,7 +524,7 @@ const TaskItem = ({
           </View>
         ) : (
           // Unscheduled task just shows duration
-          <Text style={styles.taskDuration}>{task.duration}h</Text>
+          <Text style={styles.unscheduledTaskDuration}>{task.duration}h</Text>
         )}
       </Animated.View>
     </GestureDetector>

@@ -1,5 +1,6 @@
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Dimensions } from 'react-native';
 import { HOUR_HEIGHT, QUARTER_HEIGHT, TIMELINE_OFFSET } from './utils/timelineHelpers';
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const styles = StyleSheet.create({
   container: {
@@ -13,7 +14,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   unscheduledArea: {
-    height: '15%',
+    height: SCREEN_HEIGHT * 0.1,
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
     backgroundColor: 'rgba(152, 16, 16, 0.2)',
@@ -106,6 +107,14 @@ const styles = StyleSheet.create({
   },
   taskDuration: {
     fontSize: 14,
+    color: '#555',
+  },
+  unscheduledTaskTitle: {
+    fontWeight: '600',
+    fontSize: 12,
+  },
+  unscheduledTaskDuration: {
+    fontSize: 10,
     color: '#555',
   },
   scheduledTaskTitle: {
