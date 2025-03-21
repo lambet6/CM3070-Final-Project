@@ -11,7 +11,6 @@ import Animated, {
 } from 'react-native-reanimated';
 import styles from './styles';
 import {
-  MAX_HOUR,
   HOUR_HEIGHT,
   TASK_ITEM_HEIGHT,
   TASK_ITEM_WIDTH,
@@ -23,6 +22,9 @@ import {
   isPointInRect,
   formatTimeFromDecimal,
 } from './utils/timelineHelpers';
+
+// Define snapping threshold in pixels
+const SNAP_THRESHOLD = 150;
 
 const TaskItem = ({
   task,
@@ -43,12 +45,11 @@ const TaskItem = ({
   ghostHeight,
   isRemoveHovered,
   isCancelHovered,
-  // Auto-scrolling props
   autoScrollActive,
   scrollViewRef,
   timelineViewHeight,
-  // CHANGED: Replace invalidZones with validZones
   validZones,
+  isPreviewValid,
 }) => {
   // Shared animation values
   const translateX = useSharedValue(0);
@@ -152,15 +153,10 @@ const TaskItem = ({
     [scrollY, timelineLayout],
   );
 
-  // REMOVED: calculateValidZones function is no longer needed as we're using precomputed validZones
-
-  // Simplified updatePreviewPosition function with precomputed valid zones
+  // MODIFIED: updatePreviewPosition function with threshold-based snapping
   const updatePreviewPosition = (rawPosition, isDraggingOnTimeline) => {
     'worklet';
     if (!isDraggingOnTimeline) return;
-
-    // Calculate the total timeline height
-    const timelineHeight = (MAX_HOUR - MIN_HOUR) * HOUR_HEIGHT;
 
     // Calculate task duration in pixels
     const taskDurationInPixels = task.duration * HOUR_HEIGHT;
@@ -170,14 +166,32 @@ const TaskItem = ({
     // Use the precomputed valid zones from props
     const zoneList = validZones || [];
 
-    // Find the best position
+    // Snap to quarter-hour increments initially
+    const totalQuarters = Math.round(rawPosition / QUARTER_HEIGHT);
+    const snappedPosition = totalQuarters * QUARTER_HEIGHT;
+
+    // Check if the current position is already within a valid zone
+    let isWithinValidZone = false;
+    for (let i = 0; i < zoneList.length && !isWithinValidZone; i++) {
+      const zone = zoneList[i];
+      if (snappedPosition >= zone.start && snappedPosition <= zone.end - taskDurationInPixels) {
+        isWithinValidZone = true;
+      }
+    }
+
+    // If the position is already valid, use it and mark as valid
+    if (isWithinValidZone) {
+      previewPosition.value = snappedPosition;
+      previewHeight.value = taskHeight;
+      previewVisible.value = true;
+      if (isPreviewValid) isPreviewValid.value = true;
+      return;
+    }
+
+    // If we're not in a valid zone, find the closest valid position
     let bestPosition = 0;
     let minDistance = Infinity;
     let validPositionFound = false;
-
-    // Calculate quarter snapped position
-    const totalQuarters = Math.round(rawPosition / QUARTER_HEIGHT);
-    const snappedPosition = totalQuarters * QUARTER_HEIGHT;
 
     // Iterate through all valid zones to find the closest valid position
     for (let i = 0; i < zoneList.length; i++) {
@@ -192,15 +206,7 @@ const TaskItem = ({
       const endPos = zone.end - taskDurationInPixels;
       const endDistance = Math.abs(snappedPosition - endPos);
 
-      // 3. Exactly where the user is trying to place it (if within the zone)
-      if (snappedPosition >= zone.start && snappedPosition <= zone.end - taskDurationInPixels) {
-        // User's desired position is valid!
-        bestPosition = snappedPosition;
-        validPositionFound = true;
-        break; // No need to check further distances
-      }
-
-      // Otherwise, check if this zone has a closer valid position than what we've found so far
+      // Check if either boundary is closer than our current best
       if (startDistance < minDistance) {
         minDistance = startDistance;
         bestPosition = startPos;
@@ -214,17 +220,24 @@ const TaskItem = ({
       }
     }
 
-    // If we didn't find any valid positions (which is unlikely but possible if the entire day is booked),
-    // default to the start of the day
+    // If we didn't find any valid positions, default to the start of the day
     if (!validPositionFound) {
       bestPosition = 0;
+      minDistance = Infinity; // Ensure we don't snap
     }
 
-    // Snap to quarter-hour increments
-    const quarterSnapped = Math.round(bestPosition / QUARTER_HEIGHT) * QUARTER_HEIGHT;
+    // Only snap to the best position if it's within the threshold
+    if (minDistance <= SNAP_THRESHOLD) {
+      // Snap to quarter-hour increments
+      const quarterSnapped = Math.round(bestPosition / QUARTER_HEIGHT) * QUARTER_HEIGHT;
+      previewPosition.value = quarterSnapped;
+      if (isPreviewValid) isPreviewValid.value = true;
+    } else {
+      // Otherwise, keep the preview at the current position (showing it's invalid)
+      previewPosition.value = snappedPosition;
+      if (isPreviewValid) isPreviewValid.value = false;
+    }
 
-    // Update preview values
-    previewPosition.value = quarterSnapped;
     previewHeight.value = taskHeight;
     previewVisible.value = true;
   };
@@ -345,6 +358,9 @@ const TaskItem = ({
 
       // Reset the hasBeenOverTimeline flag
       hasBeenOverTimeline.value = false;
+
+      // Default to valid position initially
+      if (isPreviewValid) isPreviewValid.value = true;
 
       // Store original position for cancel action
       originalPosition.value = {
@@ -494,14 +510,17 @@ const TaskItem = ({
           isOverTimeline.value = false;
         }
       } else if (task.scheduled) {
-        // Calculate new time from preview position
-        const newTime = positionToTime(previewPosition.value);
+        // Only update if position is valid
+        if (isPreviewValid && isPreviewValid.value) {
+          // Calculate new time from preview position
+          const newTime = positionToTime(previewPosition.value);
 
-        // Update task's time value
-        taskTime.value = newTime;
+          // Update task's time value
+          taskTime.value = newTime;
 
-        // Update task state
-        runOnJS(onStateChange)(task.id, true, newTime);
+          // Update task state
+          runOnJS(onStateChange)(task.id, true, newTime);
+        }
 
         // Reset translation since we updated the base position
         translateY.value = 0;
@@ -511,7 +530,7 @@ const TaskItem = ({
         ghostVisible.value = false;
       } else {
         // Unscheduled task logic
-        if (isOverTimeline.value) {
+        if (isOverTimeline.value && isPreviewValid && isPreviewValid.value) {
           // Calculate time from preview position
           const newTime = positionToTime(previewPosition.value);
 

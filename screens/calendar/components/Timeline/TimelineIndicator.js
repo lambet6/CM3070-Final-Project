@@ -1,8 +1,22 @@
 import React from 'react';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 
-export const TimelineIndicator = ({ visible, position, height, style }) => {
+export const TimelineIndicator = ({ visible, position, height, style, isValid }) => {
   const animatedStyle = useAnimatedStyle(() => {
+    // Dynamic styling based on position validity
+    const validStyle = {
+      backgroundColor: 'rgba(0, 123, 255, 0.4)',
+      borderColor: 'rgba(0, 123, 255, 0.6)',
+    };
+
+    const invalidStyle = {
+      backgroundColor: 'rgba(255, 0, 0, 0.4)',
+      borderColor: 'rgba(255, 0, 0, 0.6)',
+    };
+
+    // Apply color based on validity
+    const colorStyle = isValid && isValid.value ? validStyle : invalidStyle;
+
     return {
       position: 'absolute',
       left: 0,
@@ -11,7 +25,10 @@ export const TimelineIndicator = ({ visible, position, height, style }) => {
       height: height.value,
       marginHorizontal: 5,
       opacity: visible.value ? 1 : 0,
-      zIndex: style.zIndex || 500,
+      zIndex: 500,
+      borderRadius: 8,
+      borderWidth: 2,
+      ...colorStyle,
       ...style,
     };
   });

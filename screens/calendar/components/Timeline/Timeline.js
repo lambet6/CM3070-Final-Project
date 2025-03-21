@@ -53,6 +53,9 @@ const TimelineComponent = () => {
   const ghostPosition = useSharedValue(0);
   const ghostHeight = useSharedValue(0);
 
+  // NEW: Add shared value to track if preview position is valid
+  const isPreviewValid = useSharedValue(true);
+
   // Drag action buttons related values
   const isDragging = useSharedValue(false);
   const isDraggingScheduled = useSharedValue(false);
@@ -327,6 +330,8 @@ const TimelineComponent = () => {
                 timelineViewHeight={timelineViewHeight}
                 // CHANGED: Replace invalidZones with precomputed validZones
                 validZones={validZonesByDuration[task.duration]}
+                // NEW: Add isPreviewValid value
+                isPreviewValid={isPreviewValid}
               />
             ))}
         </View>
@@ -345,18 +350,18 @@ const TimelineComponent = () => {
               <EventItem key={event.id} event={event} />
             ))}
 
-            {/* Preview component */}
+            {/* UPDATED: Preview component with isValid prop */}
             <TimelineIndicator
               visible={previewVisible}
               position={previewPosition}
               height={previewHeight}
+              isValid={isPreviewValid}
               style={{
-                backgroundColor: 'rgba(0, 123, 255, 0.4)',
                 borderRadius: 8,
                 borderWidth: 2,
-                borderColor: 'rgba(0, 123, 255, 0.6)',
               }}
             />
+
             {/* Ghost square component */}
             <GhostSquare visible={ghostVisible} position={ghostPosition} height={ghostHeight} />
 
@@ -386,6 +391,8 @@ const TimelineComponent = () => {
                 timelineViewHeight={timelineViewHeight}
                 // CHANGED: Replace invalidZones with precomputed validZones
                 validZones={validZonesByDuration[task.duration]}
+                // NEW: Add isPreviewValid value
+                isPreviewValid={isPreviewValid}
               />
             ))}
           </View>
