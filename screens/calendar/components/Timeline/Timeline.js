@@ -1,0 +1,340 @@
+import React, { useCallback, useState, useEffect } from 'react';
+import { View, Text, Platform } from 'react-native';
+import {
+  useAnimatedRef,
+  useScrollViewOffset,
+  useSharedValue,
+  useAnimatedReaction,
+  runOnUI,
+  useAnimatedScrollHandler,
+  measure,
+} from 'react-native-reanimated';
+import Animated from 'react-native-reanimated';
+
+import styles from './styles';
+import TaskItem from './TaskItem';
+import { TimelineIndicator, GhostSquare } from './TimelineIndicator';
+import DragActionButtons from './DragActionButtons';
+import {
+  INITIAL_TASKS,
+  HOURS,
+  QUARTERS,
+  HOUR_HEIGHT,
+  QUARTER_HEIGHT,
+  SCREEN_HEIGHT,
+} from './utils/timelineHelpers';
+
+const TimelineComponent = () => {
+  // Single array of tasks
+  const [tasks, setTasks] = useState(INITIAL_TASKS);
+
+  const scrollViewRef = useAnimatedRef();
+  const timelineLayoutRef = useAnimatedRef();
+  const scrollY = useScrollViewOffset(scrollViewRef);
+  const timelineLayout = useSharedValue({ x: 0, y: 0, width: 0, height: 0 });
+  const layoutChanged = useSharedValue(0);
+
+  // Shared value for the visible timeline height (may be less than total height)
+  const timelineViewHeight = useSharedValue(0);
+
+  // Auto-scroll active flag
+  const autoScrollActive = useSharedValue(false);
+
+  // Preview animation values
+  const previewVisible = useSharedValue(false);
+  const previewPosition = useSharedValue(0);
+  const previewHeight = useSharedValue(0);
+  const ghostVisible = useSharedValue(false);
+  const ghostPosition = useSharedValue(0);
+  const ghostHeight = useSharedValue(0);
+
+  // Drag action buttons related values
+  const isDragging = useSharedValue(false);
+  const isDraggingScheduled = useSharedValue(false);
+  const removeButtonRef = useAnimatedRef();
+  const cancelButtonRef = useAnimatedRef();
+  const removeButtonLayout = useSharedValue(null);
+  const cancelButtonLayout = useSharedValue(null);
+
+  // New shared values for button hover states
+  const isRemoveHovered = useSharedValue(false);
+  const isCancelHovered = useSharedValue(false);
+
+  // Animated scroll handler for the timeline
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      // Just using the default scrollY from useScrollViewOffset
+    },
+  });
+
+  // Effect to update timelineViewHeight after layout
+  useEffect(() => {
+    if (Platform.OS === 'web') {
+      // For web, we can use window height as an approximation
+      timelineViewHeight.value = SCREEN_HEIGHT * 0.85; // Assuming timeline is 85% of screen height
+    }
+  }, [timelineViewHeight]);
+
+  // Measure buttons layout
+  const measureButtons = useCallback(() => {
+    'worklet';
+    try {
+      const removeMeasured = measure(removeButtonRef);
+      const cancelMeasured = measure(cancelButtonRef);
+
+      if (removeMeasured) {
+        removeButtonLayout.value = {
+          x: removeMeasured.pageX,
+          y: removeMeasured.pageY,
+          width: removeMeasured.width,
+          height: removeMeasured.height,
+        };
+      }
+
+      if (cancelMeasured) {
+        cancelButtonLayout.value = {
+          x: cancelMeasured.pageX,
+          y: cancelMeasured.pageY,
+          width: cancelMeasured.width,
+          height: cancelMeasured.height,
+        };
+      }
+    } catch (e) {
+      console.log('Button measurement error:', e);
+    }
+  }, [removeButtonRef, cancelButtonRef, removeButtonLayout, cancelButtonLayout]);
+
+  // Handle button layout - now this will be called for each individual button
+  const handleButtonLayout = useCallback(() => {
+    if (Platform.OS === 'ios') {
+      requestAnimationFrame(() => {
+        runOnUI(measureButtons)();
+      });
+    } else {
+      runOnUI(measureButtons)();
+    }
+  }, [measureButtons]);
+
+  // Measure timeline layout
+  const measureTimelineOnUI = useCallback(() => {
+    'worklet';
+    try {
+      const measured = measure(timelineLayoutRef);
+      if (measured) {
+        timelineLayout.value = {
+          x: measured.pageX,
+          y: measured.pageY,
+          width: measured.width,
+          height: measured.height,
+        };
+
+        // Update the visible height of the timeline
+        timelineViewHeight.value = measured.height;
+      }
+    } catch (e) {
+      console.log('Measurement error:', e);
+    }
+  }, [timelineLayoutRef, timelineLayout, timelineViewHeight]);
+
+  // Handle layout events
+  const handleTimelineLayout = useCallback(
+    (event) => {
+      layoutChanged.value += 1;
+      if (Platform.OS === 'ios') {
+        requestAnimationFrame(() => {
+          runOnUI(measureTimelineOnUI)();
+        });
+      } else {
+        runOnUI(measureTimelineOnUI)();
+      }
+    },
+    [measureTimelineOnUI, layoutChanged],
+  );
+
+  // Animated reaction to layout changes
+  useAnimatedReaction(
+    () => layoutChanged.value,
+    (currentValue, previousValue) => {
+      if (currentValue !== previousValue) {
+        measureTimelineOnUI();
+      }
+    },
+    [measureTimelineOnUI],
+  );
+
+  // We can keep this reaction to ensure measurements are updated when drag state changes
+  useAnimatedReaction(
+    () => ({
+      isDragging: isDragging.value,
+      isDraggingScheduled: isDraggingScheduled.value,
+    }),
+    (current, previous) => {
+      if (
+        !previous ||
+        current.isDragging !== previous.isDragging ||
+        current.isDraggingScheduled !== previous.isDraggingScheduled
+      ) {
+        measureButtons();
+      }
+    },
+    [measureButtons],
+  );
+
+  // Task state change handler
+  const handleTaskStateChange = (taskId, isScheduled, newStartTime) => {
+    setTasks((prev) => {
+      return prev.map((task) => {
+        if (task.id === taskId) {
+          if (isScheduled) {
+            return {
+              ...task,
+              scheduled: true,
+              startTime: newStartTime,
+            };
+          } else {
+            return {
+              ...task,
+              scheduled: false,
+              startTime: null,
+            };
+          }
+        }
+        return task;
+      });
+    });
+  };
+
+  // Render hour markers
+  const renderHours = () => {
+    const hourMarkers = [];
+    HOURS.forEach((hour, hourIndex) => {
+      hourMarkers.push(
+        <View key={`hour-${hourIndex}`} style={styles.hourContainer}>
+          <Text style={styles.hourText}>{hour}</Text>
+          <View style={styles.hourLine} />
+        </View>,
+      );
+      if (hourIndex < HOURS.length - 1) {
+        QUARTERS.slice(1).forEach((quarter, qIndex) => {
+          hourMarkers.push(
+            <View
+              key={`hour-${hourIndex}-q-${qIndex}`}
+              style={[
+                styles.quarterContainer,
+                { top: hourIndex * HOUR_HEIGHT + (qIndex + 1) * QUARTER_HEIGHT },
+              ]}>
+              <Text style={styles.quarterText}>{quarter}</Text>
+              <View style={styles.quarterLine} />
+            </View>,
+          );
+        });
+      }
+    });
+    return hourMarkers;
+  };
+
+  // Render the UI
+  return (
+    <View style={styles.container}>
+      {/* Unscheduled Tasks Area */}
+      <View style={styles.unscheduledArea}>
+        <Text style={styles.sectionTitle}>Tasks</Text>
+        <View style={styles.unscheduledTasksContainer}>
+          {tasks
+            .filter((task) => !task.scheduled)
+            .map((task, idx) => (
+              <TaskItem
+                key={task.id}
+                task={task}
+                index={idx}
+                onStateChange={handleTaskStateChange}
+                scrollY={scrollY}
+                timelineLayout={timelineLayout}
+                previewVisible={previewVisible}
+                previewPosition={previewPosition}
+                previewHeight={previewHeight}
+                isDragging={isDragging}
+                isDraggingScheduled={isDraggingScheduled}
+                removeButtonLayout={removeButtonLayout}
+                cancelButtonLayout={cancelButtonLayout}
+                isRemoveHovered={isRemoveHovered}
+                isCancelHovered={isCancelHovered}
+                // New props for auto-scrolling
+                autoScrollActive={autoScrollActive}
+                scrollViewRef={scrollViewRef}
+                timelineViewHeight={timelineViewHeight}
+              />
+            ))}
+        </View>
+      </View>
+
+      {/* Timeline */}
+      <Animated.View
+        ref={timelineLayoutRef}
+        style={styles.timelineContainer}
+        onLayout={handleTimelineLayout}>
+        <Animated.ScrollView ref={scrollViewRef} scrollEventThrottle={16} onScroll={scrollHandler}>
+          <View style={styles.timelineSideBar}>{renderHours()}</View>
+          <View style={styles.timelineContent}>
+            {/* Preview component */}
+            <TimelineIndicator
+              visible={previewVisible}
+              position={previewPosition}
+              height={previewHeight}
+              style={{
+                backgroundColor: 'rgba(0, 123, 255, 0.4)',
+                borderRadius: 8,
+                borderWidth: 2,
+                borderColor: 'rgba(0, 123, 255, 0.6)',
+              }}
+            />
+            {/* Ghost square component */}
+            <GhostSquare visible={ghostVisible} position={ghostPosition} height={ghostHeight} />
+
+            {tasks
+              .filter((task) => task.scheduled)
+              .map((task, index) => (
+                <TaskItem
+                  key={task.id}
+                  task={task}
+                  index={index}
+                  onStateChange={handleTaskStateChange}
+                  scrollY={scrollY}
+                  timelineLayout={timelineLayout}
+                  previewVisible={previewVisible}
+                  previewPosition={previewPosition}
+                  previewHeight={previewHeight}
+                  isDragging={isDragging}
+                  isDraggingScheduled={isDraggingScheduled}
+                  removeButtonLayout={removeButtonLayout}
+                  cancelButtonLayout={cancelButtonLayout}
+                  ghostVisible={ghostVisible}
+                  ghostPosition={ghostPosition}
+                  ghostHeight={ghostHeight}
+                  isRemoveHovered={isRemoveHovered}
+                  isCancelHovered={isCancelHovered}
+                  // New props for auto-scrolling
+                  autoScrollActive={autoScrollActive}
+                  scrollViewRef={scrollViewRef}
+                  timelineViewHeight={timelineViewHeight}
+                />
+              ))}
+          </View>
+        </Animated.ScrollView>
+      </Animated.View>
+
+      {/* Drag action buttons - now passing individual button layout handler */}
+      <DragActionButtons
+        isVisible={isDragging}
+        isDraggingScheduled={isDraggingScheduled}
+        removeButtonRef={removeButtonRef}
+        cancelButtonRef={cancelButtonRef}
+        onLayoutChange={handleButtonLayout}
+        isRemoveHovered={isRemoveHovered}
+        isCancelHovered={isCancelHovered}
+      />
+    </View>
+  );
+};
+
+export default TimelineComponent;

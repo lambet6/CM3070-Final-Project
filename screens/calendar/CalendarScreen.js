@@ -25,8 +25,7 @@ import { CONSTANTS } from './CalendarConstants';
 import { styles } from './CalendarStyles';
 import { createCalendarTheme } from './CalendarTheme';
 import { useCalendarAnimations } from './hooks/useCalendarAnimations';
-import TaskReorderableList from './components/TaskReorderableList';
-import TimelineComponent from './components/DailySchedule';
+import TimelineComponent from './components/Timeline/Timeline';
 
 const today = new Date();
 
