@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+import React, { memo, useEffect } from 'react';
 import { View, Text } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -11,10 +11,13 @@ import Animated, {
 } from 'react-native-reanimated';
 import styles from './styles';
 import {
+  MAX_HOUR,
+  HOUR_HEIGHT,
   TASK_ITEM_HEIGHT,
   TASK_ITEM_WIDTH,
   QUARTER_HEIGHT,
   MIN_HOUR,
+  dateToDecimalHours,
   timeToPosition,
   positionToTime,
   isPointInRect,
@@ -24,6 +27,7 @@ import {
 const TaskItem = ({
   task,
   index,
+  events,
   onStateChange,
   scrollY,
   timelineLayout,
@@ -43,6 +47,8 @@ const TaskItem = ({
   autoScrollActive,
   scrollViewRef,
   timelineViewHeight,
+  // CHANGED: Replace invalidZones with validZones
+  validZones,
 }) => {
   // Shared animation values
   const translateX = useSharedValue(0);
@@ -67,8 +73,6 @@ const TaskItem = ({
   const initialDragDirection = useSharedValue(0); // 0 = undetermined, 1 = down, -1 = up
   const dragStartY = useSharedValue(0);
   const previousY = useSharedValue(0);
-  const autoScrollDelayActive = useSharedValue(false);
-  const autoScrollDelayTimeout = useSharedValue(null);
   const autoScrollIntent = useSharedValue(false);
   const consecutiveDirectionSamples = useSharedValue(0);
   const directionSamplesNeeded = 3; // Number of consistent direction samples need
@@ -79,6 +83,22 @@ const TaskItem = ({
   // Calculate height based on duration
   const durationQuarters = Math.round(task.duration * 4);
   const taskHeight = task.scheduled ? durationQuarters * QUARTER_HEIGHT : TASK_ITEM_HEIGHT;
+
+  // Create a shared value for processed events
+  const processedEvents = useSharedValue([]);
+
+  // Process events when they change
+  useEffect(() => {
+    if (events) {
+      const processed = events.map((event) => ({
+        id: event.id,
+        title: event.title,
+        startTime: dateToDecimalHours(event.startDate),
+        endTime: dateToDecimalHours(event.endDate),
+      }));
+      processedEvents.value = processed;
+    }
+  }, [events, processedEvents]);
 
   // Auto-scroll logic
   useAnimatedReaction(
@@ -132,36 +152,80 @@ const TaskItem = ({
     [scrollY, timelineLayout],
   );
 
-  // Update preview position during drag with boundary constraints
+  // REMOVED: calculateValidZones function is no longer needed as we're using precomputed validZones
+
+  // Simplified updatePreviewPosition function with precomputed valid zones
   const updatePreviewPosition = (rawPosition, isDraggingOnTimeline) => {
     'worklet';
     if (!isDraggingOnTimeline) return;
 
     // Calculate the total timeline height
-    const timelineHeight = (21 - 8) * 80; // (MAX_HOUR - MIN_HOUR) * HOUR_HEIGHT
+    const timelineHeight = (MAX_HOUR - MIN_HOUR) * HOUR_HEIGHT;
 
-    // Calculate quarter position (snap to nearest quarter)
+    // Calculate task duration in pixels
+    const taskDurationInPixels = task.duration * HOUR_HEIGHT;
+    const durationQuarters = Math.round(task.duration * 4);
+    const taskHeight = durationQuarters * QUARTER_HEIGHT;
+
+    // Use the precomputed valid zones from props
+    const zoneList = validZones || [];
+
+    // Find the best position
+    let bestPosition = 0;
+    let minDistance = Infinity;
+    let validPositionFound = false;
+
+    // Calculate quarter snapped position
     const totalQuarters = Math.round(rawPosition / QUARTER_HEIGHT);
+    const snappedPosition = totalQuarters * QUARTER_HEIGHT;
 
-    // Calculate the snapped position
-    let snappedPosition = totalQuarters * QUARTER_HEIGHT;
+    // Iterate through all valid zones to find the closest valid position
+    for (let i = 0; i < zoneList.length; i++) {
+      const zone = zoneList[i];
 
-    // Calculate the maximum allowed position based on preview height
-    // This ensures the end of the preview doesn't go past the end of the timeline
-    const maxPosition = timelineHeight - previewHeight.value;
+      // Calculate possible positions within this zone
+      // 1. At the start of the zone
+      const startPos = zone.start;
+      const startDistance = Math.abs(snappedPosition - startPos);
 
-    // Constrain the position to stay within the timeline boundaries
-    if (snappedPosition < 0) {
-      // Don't allow preview to go above the start of the timeline
-      snappedPosition = 0;
-    } else if (snappedPosition > maxPosition) {
-      // Don't allow preview to go below the end of the timeline
-      snappedPosition = maxPosition;
+      // 2. At the latest possible position within the zone where task still fits
+      const endPos = zone.end - taskDurationInPixels;
+      const endDistance = Math.abs(snappedPosition - endPos);
+
+      // 3. Exactly where the user is trying to place it (if within the zone)
+      if (snappedPosition >= zone.start && snappedPosition <= zone.end - taskDurationInPixels) {
+        // User's desired position is valid!
+        bestPosition = snappedPosition;
+        validPositionFound = true;
+        break; // No need to check further distances
+      }
+
+      // Otherwise, check if this zone has a closer valid position than what we've found so far
+      if (startDistance < minDistance) {
+        minDistance = startDistance;
+        bestPosition = startPos;
+        validPositionFound = true;
+      }
+
+      if (endDistance < minDistance) {
+        minDistance = endDistance;
+        bestPosition = endPos;
+        validPositionFound = true;
+      }
     }
 
+    // If we didn't find any valid positions (which is unlikely but possible if the entire day is booked),
+    // default to the start of the day
+    if (!validPositionFound) {
+      bestPosition = 0;
+    }
+
+    // Snap to quarter-hour increments
+    const quarterSnapped = Math.round(bestPosition / QUARTER_HEIGHT) * QUARTER_HEIGHT;
+
     // Update preview values
-    previewPosition.value = snappedPosition;
-    previewHeight.value = durationQuarters * QUARTER_HEIGHT;
+    previewPosition.value = quarterSnapped;
+    previewHeight.value = taskHeight;
     previewVisible.value = true;
   };
 

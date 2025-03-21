@@ -6,28 +6,32 @@ import {
   useSharedValue,
   useAnimatedReaction,
   runOnUI,
-  useAnimatedScrollHandler,
   measure,
 } from 'react-native-reanimated';
 import Animated from 'react-native-reanimated';
 
 import styles from './styles';
 import TaskItem from './TaskItem';
+import EventItem from './EventItem'; // Import the new EventItem component
 import { TimelineIndicator, GhostSquare } from './TimelineIndicator';
 import DragActionButtons from './DragActionButtons';
 import {
   INITIAL_TASKS,
-  INITIAL_EVENTS,
+  INITIAL_EVENTS, // Import the events data
   HOURS,
   QUARTERS,
   HOUR_HEIGHT,
   QUARTER_HEIGHT,
   SCREEN_HEIGHT,
+  timeToPosition,
+  dateToDecimalHours,
 } from './utils/timelineHelpers';
 
 const TimelineComponent = () => {
   // Single array of tasks
   const [tasks, setTasks] = useState(INITIAL_TASKS);
+  // We don't need state for events since they're fixed and not interactive
+  const events = useMemo(() => INITIAL_EVENTS, []);
 
   const scrollViewRef = useAnimatedRef();
   const timelineLayoutRef = useAnimatedRef();
@@ -184,6 +188,83 @@ const TimelineComponent = () => {
     );
   }, []);
 
+  // Calculate invalid zones from events
+  const calculateInvalidZones = useCallback((eventsData) => {
+    const zones = eventsData.map((event) => ({
+      start: timeToPosition(dateToDecimalHours(event.startDate)),
+      end: timeToPosition(dateToDecimalHours(event.endDate)),
+    }));
+
+    // Sort by start time
+    return zones.sort((a, b) => a.start - b.start);
+  }, []);
+
+  // Pre-compute invalid zones once when events change
+  const invalidZones = useMemo(
+    () => calculateInvalidZones(events),
+    [events, calculateInvalidZones],
+  );
+
+  // NEW: Calculate valid zones for a specific task duration
+  const calculateValidZonesForDuration = useCallback(
+    (taskDuration) => {
+      const taskDurationInPixels = taskDuration * HOUR_HEIGHT;
+      const timelineHeight = HOURS.length * HOUR_HEIGHT; // Total timeline height
+
+      const validZones = [];
+
+      // Check if we can fit at the beginning of the day
+      if (invalidZones.length === 0 || invalidZones[0].start >= taskDurationInPixels) {
+        validZones.push({
+          start: 0,
+          end: invalidZones.length === 0 ? timelineHeight : invalidZones[0].start,
+        });
+      }
+
+      // Check gaps between events
+      for (let i = 0; i < invalidZones.length - 1; i++) {
+        const currentZone = invalidZones[i];
+        const nextZone = invalidZones[i + 1];
+        const gapSize = nextZone.start - currentZone.end;
+
+        if (gapSize >= taskDurationInPixels) {
+          validZones.push({
+            start: currentZone.end,
+            end: nextZone.start,
+          });
+        }
+      }
+
+      // Check if we can fit at the end of the day
+      if (
+        invalidZones.length === 0 ||
+        invalidZones[invalidZones.length - 1].end + taskDurationInPixels <= timelineHeight
+      ) {
+        const lastEventEnd =
+          invalidZones.length === 0 ? 0 : invalidZones[invalidZones.length - 1].end;
+        validZones.push({
+          start: lastEventEnd,
+          end: timelineHeight,
+        });
+      }
+
+      return validZones;
+    },
+    [invalidZones],
+  );
+
+  // NEW: Precompute valid zones for all unique task durations
+  const validZonesByDuration = useMemo(() => {
+    const uniqueDurations = [...new Set(tasks.map((task) => task.duration))];
+    const result = {};
+
+    uniqueDurations.forEach((duration) => {
+      result[duration] = calculateValidZonesForDuration(duration);
+    });
+
+    return result;
+  }, [tasks, calculateValidZonesForDuration]);
+
   // Render hour markers
   const hourMarkers = useMemo(() => {
     return HOURS.flatMap((hour, hourIndex) => {
@@ -228,6 +309,7 @@ const TimelineComponent = () => {
                 key={task.id}
                 task={task}
                 index={idx}
+                events={events}
                 onStateChange={handleTaskStateChange}
                 scrollY={scrollY}
                 timelineLayout={timelineLayout}
@@ -243,6 +325,8 @@ const TimelineComponent = () => {
                 autoScrollActive={autoScrollActive}
                 scrollViewRef={scrollViewRef}
                 timelineViewHeight={timelineViewHeight}
+                // CHANGED: Replace invalidZones with precomputed validZones
+                validZones={validZonesByDuration[task.duration]}
               />
             ))}
         </View>
@@ -256,6 +340,11 @@ const TimelineComponent = () => {
         <Animated.ScrollView ref={scrollViewRef} scrollEventThrottle={16}>
           <View style={styles.timelineSideBar}>{hourMarkers}</View>
           <View style={styles.timelineContent}>
+            {/* Fixed events - render before tasks so they appear behind tasks */}
+            {events.map((event) => (
+              <EventItem key={event.id} event={event} />
+            ))}
+
             {/* Preview component */}
             <TimelineIndicator
               visible={previewVisible}
@@ -276,6 +365,7 @@ const TimelineComponent = () => {
                 key={task.id}
                 task={task}
                 index={index}
+                events={events}
                 onStateChange={handleTaskStateChange}
                 scrollY={scrollY}
                 timelineLayout={timelineLayout}
@@ -294,6 +384,8 @@ const TimelineComponent = () => {
                 autoScrollActive={autoScrollActive}
                 scrollViewRef={scrollViewRef}
                 timelineViewHeight={timelineViewHeight}
+                // CHANGED: Replace invalidZones with precomputed validZones
+                validZones={validZonesByDuration[task.duration]}
               />
             ))}
           </View>

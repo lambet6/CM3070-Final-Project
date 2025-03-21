@@ -44,6 +44,10 @@ export const INITIAL_EVENTS = [
   },
 ];
 
+export const dateToDecimalHours = (date) => {
+  return date.getHours() + date.getMinutes() / 60;
+};
+
 export const HOURS = Array.from({ length: 13 }, (_, i) => {
   const hour = i + 8;
   // 12 PM is noon, hours after noon are PM
