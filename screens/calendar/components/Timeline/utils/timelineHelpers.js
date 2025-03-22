@@ -49,6 +49,12 @@ export const INITIAL_EVENTS = [
     startDate: new Date(new Date().setHours(15, 30, 0, 0)),
     endDate: new Date(new Date().setHours(16, 45, 0, 0)),
   },
+  {
+    id: 'event 5',
+    title: 'Overlapping event 2',
+    startDate: new Date(new Date().setHours(15, 30, 0, 0)),
+    endDate: new Date(new Date().setHours(16, 45, 0, 0)),
+  },
 ];
 
 export const dateToDecimalHours = (date) => {

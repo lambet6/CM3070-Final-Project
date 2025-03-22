@@ -127,6 +127,12 @@ const styles = StyleSheet.create({
     width: '100%',
     marginTop: 4,
   },
+  smallScheduledTaskDetails: {
+    flexDirection: 'column',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginTop: 4,
+  },
   scheduledTaskTime: {
     fontSize: 12,
     color: '#444',
