@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text } from 'react-native';
 import { BaseButton } from 'react-native-gesture-handler';
 import TaskItem from './TaskItem/TaskItem';
-import styles from './styles';
+import styles from '../styles';
 
 const UnscheduledTasksSection = ({
   tasks,

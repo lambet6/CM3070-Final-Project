@@ -1,6 +1,6 @@
 import React from 'react';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
-import styles from './styles';
+import styles from '../styles';
 
 const DragActionButtons = ({
   isVisible,

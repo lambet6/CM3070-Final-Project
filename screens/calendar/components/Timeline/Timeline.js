@@ -3,8 +3,8 @@ import { View, Platform } from 'react-native';
 import { useAnimatedRef, useScrollViewOffset, useAnimatedReaction } from 'react-native-reanimated';
 import { INITIAL_TASKS, INITIAL_EVENTS, SCREEN_HEIGHT } from './utils/timelineHelpers';
 import styles from './styles';
-import DragActionButtons from './DragActionButtons';
-import Tooltip from './ToolTip';
+import DragActionButtons from './components/DragActionButtons';
+import Tooltip from './components/ToolTip';
 
 // Import refactored utilities
 import { calculateEventLayout } from './utils/eventLayoutUtils';
@@ -16,8 +16,8 @@ import { useDragAnimations } from './hooks/useDragAnimations';
 import { useLayoutMeasurement } from './hooks/useLayoutMeasurement';
 
 // Import UI components
-import UnscheduledTasksSection from './/UnscheduledTasksSection';
-import TimelineContent from './/TimelineContent';
+import UnscheduledTasksSection from './components/UnscheduledTasksSection';
+import TimelineContent from './components/TimelineContent';
 
 const TimelineComponent = () => {
   // Task state

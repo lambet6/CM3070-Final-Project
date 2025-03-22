@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text } from 'react-native';
-import styles from './styles';
+import styles from '../styles';
 import {
   timeToPosition,
   HOUR_HEIGHT,
@@ -9,7 +9,7 @@ import {
   HOURS,
   MIN_HOUR,
   MAX_HOUR,
-} from './utils/timelineHelpers';
+} from '../utils/timelineHelpers';
 
 const EventItem = ({ event, layout = null }) => {
   // Calculate position and height from event times

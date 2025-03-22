@@ -2,7 +2,7 @@ import React, { memo, useEffect, useMemo } from 'react';
 import { View, Text } from 'react-native';
 import { GestureDetector } from 'react-native-gesture-handler';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
-import styles from '../styles';
+import styles from '../../styles';
 import {
   HOUR_HEIGHT,
   TASK_ITEM_HEIGHT,
@@ -10,7 +10,7 @@ import {
   QUARTER_HEIGHT,
   timeToPosition,
   formatTimeFromDecimal,
-} from '../utils/timelineHelpers';
+} from '../../utils/timelineHelpers';
 
 // Import custom hooks
 import useTaskAnimations from './hooks/useTaskAnimations';

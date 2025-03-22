@@ -1,5 +1,5 @@
 import { useSharedValue } from 'react-native-reanimated';
-import { MIN_HOUR } from '../../utils/timelineHelpers';
+import { MIN_HOUR } from '../../../utils/timelineHelpers';
 
 /**
  * Custom hook to manage all animation-related shared values for task items

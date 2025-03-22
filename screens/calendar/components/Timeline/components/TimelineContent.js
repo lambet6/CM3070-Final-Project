@@ -5,7 +5,7 @@ import TaskItem from './TaskItem/TaskItem';
 import EventItem from './EventItem';
 import { TimelineIndicator, GhostSquare } from './TimelineIndicator';
 import HourMarkers from './HourMarkers';
-import styles from './styles';
+import styles from '../styles';
 
 const TimelineContent = ({
   scrollViewRef,

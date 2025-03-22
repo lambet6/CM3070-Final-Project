@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Gesture } from 'react-native-gesture-handler';
 import { withSpring, runOnJS } from 'react-native-reanimated';
-import { isPointInRect, timeToPosition, positionToTime } from '../../utils/timelineHelpers';
+import { isPointInRect, timeToPosition, positionToTime } from '../../../utils/timelineHelpers';
 import { updatePreviewPosition } from '../utils/previewUtils';
 import { checkAutoScroll } from '../utils/autoScrollUtils';
 

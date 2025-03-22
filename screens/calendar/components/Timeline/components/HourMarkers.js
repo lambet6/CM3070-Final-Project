@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text } from 'react-native';
-import { HOURS, QUARTERS, HOUR_HEIGHT, QUARTER_HEIGHT } from './utils/timelineHelpers';
-import styles from './styles';
+import { HOURS, QUARTERS, HOUR_HEIGHT, QUARTER_HEIGHT } from '../utils/timelineHelpers';
+import styles from '../styles';
 
 const HourMarkers = () => {
   return HOURS.flatMap((hour, hourIndex) => {
