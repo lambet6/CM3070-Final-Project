@@ -6,17 +6,41 @@ import {
   HOUR_HEIGHT,
   formatTimeFromDecimal,
   dateToDecimalHours,
+  HOURS,
+  MIN_HOUR,
+  MAX_HOUR,
 } from './utils/timelineHelpers';
 
 const EventItem = ({ event, layout = null }) => {
   // Calculate position and height from event times
   const startTime = dateToDecimalHours(event.startDate);
   const endTime = dateToDecimalHours(event.endDate);
-  const duration = endTime - startTime; // in hours
 
-  const position = timeToPosition(startTime);
-  const height = duration * HOUR_HEIGHT;
+  // Use the MIN_HOUR and MAX_HOUR constants directly instead of parsing HOURS
+  const timelineStartHour = MIN_HOUR;
+  const timelineEndHour = MAX_HOUR;
 
+  // Check if event is completely outside the timeline
+  if (startTime >= timelineEndHour || endTime <= timelineStartHour) {
+    return null; // Don't render events completely outside timeline
+  }
+
+  // Adjust start and end times for events partially within the timeline
+  const adjustedStartTime = Math.max(startTime, timelineStartHour);
+  const adjustedEndTime = Math.min(endTime, timelineEndHour);
+  const adjustedDuration = adjustedEndTime - adjustedStartTime; // in hours
+
+  const position = timeToPosition(adjustedStartTime);
+  const height = adjustedDuration * HOUR_HEIGHT;
+
+  // Original duration for display purposes
+  const duration = endTime - startTime;
+
+  // Check if the event was clipped
+  const isClippedStart = startTime < timelineStartHour;
+  const isClippedEnd = endTime > timelineEndHour;
+
+  // Rest of your code remains the same...
   // Default styles for full width (no overlap)
   let viewStyle = {
     position: 'absolute',
@@ -64,6 +88,23 @@ const EventItem = ({ event, layout = null }) => {
     };
   }
 
+  // Add visual indication for clipped events
+  if (isClippedStart) {
+    viewStyle.borderTopLeftRadius = 0;
+    viewStyle.borderTopRightRadius = 0;
+    viewStyle.borderTopWidth = 2;
+    viewStyle.borderTopColor = '#4b6584';
+    viewStyle.borderTopStyle = 'dashed';
+  }
+
+  if (isClippedEnd) {
+    viewStyle.borderBottomLeftRadius = 0;
+    viewStyle.borderBottomRightRadius = 0;
+    viewStyle.borderBottomWidth = 2;
+    viewStyle.borderBottomColor = '#4b6584';
+    viewStyle.borderBottomStyle = 'dashed';
+  }
+
   return (
     <View style={viewStyle}>
       <Text
@@ -75,6 +116,7 @@ const EventItem = ({ event, layout = null }) => {
         ]}
         numberOfLines={1}>
         {event.title}
+        {(isClippedStart || isClippedEnd) && ' ⋯'}
       </Text>
       <View
         style={
