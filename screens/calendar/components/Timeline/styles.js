@@ -28,8 +28,7 @@ const styles = StyleSheet.create({
   unscheduledTasksContainer: {
     height: TASK_ITEM_HEIGHT / 1.5,
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    overflow: 'hidden',
+    flexWrap: 'no wrap',
     gap: 10,
   },
   unscheduledTasksContainerExpanded: {
@@ -125,15 +124,22 @@ const styles = StyleSheet.create({
   },
   scheduledTaskTitle: {
     fontWeight: '600',
-    fontSize: 16,
+    fontSize: 14,
   },
   scheduledTaskDetails: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     width: '100%',
     marginTop: 4,
+    textAlign: 'center',
   },
-  smallScheduledTaskDetails: {
+  EventDetails: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginTop: 4,
+  },
+  smallEventDetails: {
     flexDirection: 'column',
     justifyContent: 'space-between',
     width: '100%',

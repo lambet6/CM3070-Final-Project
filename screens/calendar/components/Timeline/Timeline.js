@@ -27,7 +27,6 @@ import {
   SCREEN_HEIGHT,
   timeToPosition,
   dateToDecimalHours,
-  TASK_ITEM_HEIGHT,
 } from './utils/timelineHelpers';
 import { BaseButton } from 'react-native-gesture-handler';
 
@@ -495,7 +494,6 @@ const TimelineComponent = () => {
                   key={task.id}
                   task={task}
                   index={idx}
-                  events={events}
                   onStateChange={handleTaskStateChange}
                   scrollY={scrollY}
                   timelineLayout={timelineLayout}
@@ -560,7 +558,6 @@ const TimelineComponent = () => {
                 key={task.id}
                 task={task}
                 index={index}
-                events={events}
                 onStateChange={handleTaskStateChange}
                 scrollY={scrollY}
                 timelineLayout={timelineLayout}

@@ -119,11 +119,7 @@ const EventItem = ({ event, layout = null }) => {
         {(isClippedStart || isClippedEnd) && ' ⋯'}
       </Text>
       <View
-        style={
-          layout && layout.columnCount > 1
-            ? styles.smallScheduledTaskDetails
-            : styles.scheduledTaskDetails
-        }>
+        style={layout && layout.columnCount > 1 ? styles.smallEventDetails : styles.EventDetails}>
         <Text
           style={[
             styles.scheduledTaskTime,

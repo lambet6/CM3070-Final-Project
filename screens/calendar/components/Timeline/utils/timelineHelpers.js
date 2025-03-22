@@ -4,11 +4,12 @@ import { Dimensions } from 'react-native';
 export const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 export const HOUR_HEIGHT = 80;
 export const QUARTER_HEIGHT = HOUR_HEIGHT / 4; // 15-minute increments
-export const TASK_ITEM_HEIGHT = 50;
+export const TASK_ITEM_HEIGHT = 75;
 export const TASK_ITEM_WIDTH = 120;
 export const TIMELINE_OFFSET = SCREEN_WIDTH * 0.25;
 export const MIN_HOUR = 8; // 8 AM
 export const MAX_HOUR = 21; // 9 PM
+export const TIMELINE_HEIGHT = 13 * HOUR_HEIGHT; // 13 hours (8 AM to 9 PM)
 // Auto-scroll constants
 export const EDGE_THRESHOLD = 100; // Distance from edge to trigger auto-scroll
 export const MAX_SCROLL_SPEED = 8; // Maximum scroll speed
