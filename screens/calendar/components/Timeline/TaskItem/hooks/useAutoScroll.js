@@ -1,5 +1,5 @@
 import { useAnimatedReaction, scrollTo } from 'react-native-reanimated';
-import { TIMELINE_HEIGHT } from '../utils/timelineHelpers';
+import { TIMELINE_HEIGHT } from '../../utils/timelineHelpers';
 
 /**
  * Custom hook to handle auto-scrolling behavior for tasks

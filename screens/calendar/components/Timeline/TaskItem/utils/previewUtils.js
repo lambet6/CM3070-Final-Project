@@ -1,4 +1,4 @@
-import { QUARTER_HEIGHT, HOUR_HEIGHT } from './timelineHelpers';
+import { QUARTER_HEIGHT, HOUR_HEIGHT } from '../../utils/timelineHelpers';
 
 // Define snapping threshold in pixels
 export const SNAP_THRESHOLD = 150;

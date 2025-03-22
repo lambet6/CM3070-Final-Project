@@ -12,7 +12,7 @@ import Animated from 'react-native-reanimated';
 import { Icon, MD3Colors } from 'react-native-paper';
 
 import styles from './styles';
-import TaskItem from './TaskItem';
+import TaskItem from './TaskItem/TaskItem';
 import EventItem from './EventItem'; // Import the new EventItem component
 import { TimelineIndicator, GhostSquare } from './TimelineIndicator';
 import DragActionButtons from './DragActionButtons';
