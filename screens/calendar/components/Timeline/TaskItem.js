@@ -50,6 +50,9 @@ const TaskItem = ({
   timelineViewHeight,
   validZones,
   isPreviewValid,
+  isSchedulable = true,
+  onTapUnScheduled,
+  onDismissTooltip,
 }) => {
   // Shared animation values
   const translateX = useSharedValue(0);
@@ -100,6 +103,21 @@ const TaskItem = ({
       processedEvents.value = processed;
     }
   }, [events, processedEvents]);
+
+  // NEW: Add tap gesture for non-schedulable tasks
+  const tapGesture = Gesture.Tap().onStart((event) => {
+    // Calculate position for the tooltip
+    const position = {
+      x: event.absoluteX - event.x - TASK_ITEM_HEIGHT,
+      y: event.absoluteY - event.y + TASK_ITEM_HEIGHT / 2,
+    };
+    if (!isSchedulable && onTapUnScheduled) {
+      // Call the handler with position info
+      runOnJS(onTapUnScheduled)(position, 'This task is too long for your available time slots');
+    } else if (isSchedulable && onTapUnScheduled) {
+      runOnJS(onTapUnScheduled)(position, 'Drag to schedule this task');
+    }
+  });
 
   // Auto-scroll logic
   useAnimatedReaction(
@@ -234,7 +252,13 @@ const TaskItem = ({
       if (isPreviewValid) isPreviewValid.value = true;
     } else {
       // Otherwise, keep the preview at the current position (showing it's invalid)
-      previewPosition.value = snappedPosition;
+      // BUT constrain it within the timeline boundaries
+      const timelineHeight = 13 * HOUR_HEIGHT; // HOURS.length * HOUR_HEIGHT
+      const constrainedPosition = Math.max(
+        0,
+        Math.min(timelineHeight - taskHeight, snappedPosition),
+      );
+      previewPosition.value = constrainedPosition;
       if (isPreviewValid) isPreviewValid.value = false;
     }
 
@@ -332,7 +356,12 @@ const TaskItem = ({
 
   // Pan gesture with unified logic for both scheduled and unscheduled tasks
   const panGesture = Gesture.Pan()
+    .enabled(isSchedulable) // Disable gesture if not schedulable
     .onStart((event) => {
+      if (onDismissTooltip) {
+        runOnJS(onDismissTooltip)();
+      }
+
       isPressed.value = true;
       scale.value = withSpring(task.scheduled ? 1.05 : 1.2);
       isDragging.value = true;
@@ -444,7 +473,9 @@ const TaskItem = ({
 
           // Show preview when over timeline
           if (isOver) {
-            const relativePosition = event.absoluteY - timelineLayout.value.y + scrollY.value;
+            // Adjust the relative position by subtracting the offset
+            const relativePosition =
+              event.absoluteY - timelineLayout.value.y + scrollY.value - event.y;
             updatePreviewPosition(relativePosition, true);
           } else {
             previewVisible.value = false;
@@ -540,6 +571,8 @@ const TaskItem = ({
           // Snap back to original position
           translateX.value = withSpring(0);
           translateY.value = withSpring(0);
+          // Reset the timeline flag so the color changes back
+          isOverTimeline.value = false;
         }
 
         // Hide preview
@@ -550,6 +583,9 @@ const TaskItem = ({
       isPressed.value = false;
       isDragging.value = false; // Reset dragging state to hide action buttons
     });
+
+  // NEW: Compose pan and tap gestures
+  const composedGestures = Gesture.Exclusive(panGesture, tapGesture);
 
   // Unified animated styles
   const animatedStyles = useAnimatedStyle(() => {
@@ -579,19 +615,29 @@ const TaskItem = ({
           { translateY: translateY.value },
           { scale: scale.value },
         ],
-        opacity: opacity.value,
-        width: TASK_ITEM_WIDTH / 2, // Make width half the original size
-        height: TASK_ITEM_HEIGHT / 2, // Make height half the original size
-        backgroundColor: isOverTimeline.value ? '#a8e6cf' : '#ffd3b6',
+        opacity: !isSchedulable ? 0.5 : opacity.value, // Reduce opacity if not schedulable
+        width: TASK_ITEM_WIDTH / 2,
+        height: TASK_ITEM_HEIGHT / 2,
+        backgroundColor: isOverTimeline.value
+          ? '#a8e6cf'
+          : !isSchedulable
+            ? '#e0e0e0' // Grayed out background for non-schedulable tasks
+            : '#ffd3b6',
         zIndex: isPressed.value ? 1000 : 1,
-        padding: 5, // Smaller padding for the reduced size
+        padding: 5,
+        // Add a border to indicate it's disabled
+        ...(!isSchedulable && {
+          borderWidth: 1,
+          borderColor: '#bdbdbd',
+          borderStyle: 'dashed',
+        }),
       };
     }
   });
 
   // Render task item
   return (
-    <GestureDetector gesture={panGesture}>
+    <GestureDetector gesture={composedGestures}>
       <Animated.View style={[styles.taskItem, animatedStyles]}>
         <Text
           style={task.scheduled ? styles.scheduledTaskTitle : styles.unscheduledTaskTitle}
@@ -604,6 +650,9 @@ const TaskItem = ({
           <View style={styles.scheduledTaskDetails}>
             <Text style={styles.scheduledTaskTime}>{formatTimeFromDecimal(task.startTime)}</Text>
             <Text style={styles.scheduledTaskDuration}>{task.duration}h</Text>
+            {!isSchedulable && (
+              <Text style={styles.nonSchedulableText}>No time slots available</Text>
+            )}
           </View>
         ) : (
           // Unscheduled task just shows duration

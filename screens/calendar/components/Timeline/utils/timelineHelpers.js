@@ -20,6 +20,7 @@ export const INITIAL_TASKS = [
   { id: '3', title: 'Workout', duration: 2, scheduled: false, startTime: null },
   { id: '4', title: 'Call Mom', duration: 0.5, scheduled: false, startTime: null },
   { id: '5', title: 'Project Work', duration: 0.75, scheduled: false, startTime: null },
+  { id: '6', title: 'Long task', duration: 6, scheduled: false, startTime: null },
 ];
 
 // Sample data with duration only (no position)
@@ -41,6 +42,12 @@ export const INITIAL_EVENTS = [
     title: 'Product Demo',
     startDate: new Date(new Date().setHours(15, 15, 0, 0)),
     endDate: new Date(new Date().setHours(16, 30, 0, 0)),
+  },
+  {
+    id: 'event 4',
+    title: 'Overlapping event',
+    startDate: new Date(new Date().setHours(15, 30, 0, 0)),
+    endDate: new Date(new Date().setHours(16, 45, 0, 0)),
   },
 ];
 

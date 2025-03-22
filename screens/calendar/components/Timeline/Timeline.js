@@ -15,6 +15,7 @@ import TaskItem from './TaskItem';
 import EventItem from './EventItem'; // Import the new EventItem component
 import { TimelineIndicator, GhostSquare } from './TimelineIndicator';
 import DragActionButtons from './DragActionButtons';
+import Tooltip from './ToolTip'; // Import the Tooltip component
 import {
   INITIAL_TASKS,
   INITIAL_EVENTS, // Import the events data
@@ -32,6 +33,11 @@ const TimelineComponent = () => {
   const [tasks, setTasks] = useState(INITIAL_TASKS);
   // We don't need state for events since they're fixed and not interactive
   const events = useMemo(() => INITIAL_EVENTS, []);
+
+  // Add tooltip state
+  const [tooltipVisible, setTooltipVisible] = useState(false);
+  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
+  const [tooltipMessage, setTooltipMessage] = useState('');
 
   const scrollViewRef = useAnimatedRef();
   const timelineLayoutRef = useAnimatedRef();
@@ -67,6 +73,18 @@ const TimelineComponent = () => {
   // New shared values for button hover states
   const isRemoveHovered = useSharedValue(false);
   const isCancelHovered = useSharedValue(false);
+
+  // Function to show tooltip for non-schedulable tasks
+  const showTooltip = useCallback((position, message) => {
+    setTooltipPosition(position);
+    setTooltipMessage(message);
+    setTooltipVisible(true);
+  }, []);
+
+  // Function to hide tooltip
+  const hideTooltip = useCallback(() => {
+    setTooltipVisible(false);
+  }, []);
 
   // Effect to update timelineViewHeight after layout
   useEffect(() => {
@@ -301,39 +319,51 @@ const TimelineComponent = () => {
   // Render the UI
   return (
     <View style={styles.container}>
+      {/* Tooltip for non-schedulable tasks */}
+      <Tooltip
+        message={tooltipMessage}
+        position={tooltipPosition}
+        isVisible={tooltipVisible}
+        onDismiss={hideTooltip}
+      />
+
       {/* Unscheduled Tasks Area */}
       <View style={styles.unscheduledArea}>
         <Text style={styles.sectionTitle}>Tasks</Text>
         <View style={styles.unscheduledTasksContainer}>
           {tasks
             .filter((task) => !task.scheduled)
-            .map((task, idx) => (
-              <TaskItem
-                key={task.id}
-                task={task}
-                index={idx}
-                events={events}
-                onStateChange={handleTaskStateChange}
-                scrollY={scrollY}
-                timelineLayout={timelineLayout}
-                previewVisible={previewVisible}
-                previewPosition={previewPosition}
-                previewHeight={previewHeight}
-                isDragging={isDragging}
-                isDraggingScheduled={isDraggingScheduled}
-                removeButtonLayout={removeButtonLayout}
-                cancelButtonLayout={cancelButtonLayout}
-                isRemoveHovered={isRemoveHovered}
-                isCancelHovered={isCancelHovered}
-                autoScrollActive={autoScrollActive}
-                scrollViewRef={scrollViewRef}
-                timelineViewHeight={timelineViewHeight}
-                // CHANGED: Replace invalidZones with precomputed validZones
-                validZones={validZonesByDuration[task.duration]}
-                // NEW: Add isPreviewValid value
-                isPreviewValid={isPreviewValid}
-              />
-            ))}
+            .map((task, idx) => {
+              const hasValidZones = validZonesByDuration[task.duration]?.length > 0;
+              return (
+                <TaskItem
+                  key={task.id}
+                  task={task}
+                  index={idx}
+                  events={events}
+                  onStateChange={handleTaskStateChange}
+                  scrollY={scrollY}
+                  timelineLayout={timelineLayout}
+                  previewVisible={previewVisible}
+                  previewPosition={previewPosition}
+                  previewHeight={previewHeight}
+                  isDragging={isDragging}
+                  isDraggingScheduled={isDraggingScheduled}
+                  removeButtonLayout={removeButtonLayout}
+                  cancelButtonLayout={cancelButtonLayout}
+                  isRemoveHovered={isRemoveHovered}
+                  isCancelHovered={isCancelHovered}
+                  autoScrollActive={autoScrollActive}
+                  scrollViewRef={scrollViewRef}
+                  timelineViewHeight={timelineViewHeight}
+                  validZones={validZonesByDuration[task.duration]}
+                  isPreviewValid={isPreviewValid}
+                  isSchedulable={hasValidZones}
+                  onTapUnScheduled={(position, message) => showTooltip(position, message)}
+                  onDismissTooltip={hideTooltip}
+                />
+              );
+            })}
         </View>
       </View>
 
@@ -350,7 +380,7 @@ const TimelineComponent = () => {
               <EventItem key={event.id} event={event} />
             ))}
 
-            {/* UPDATED: Preview component with isValid prop */}
+            {/* Preview component*/}
             <TimelineIndicator
               visible={previewVisible}
               position={previewPosition}
@@ -389,10 +419,10 @@ const TimelineComponent = () => {
                 autoScrollActive={autoScrollActive}
                 scrollViewRef={scrollViewRef}
                 timelineViewHeight={timelineViewHeight}
-                // CHANGED: Replace invalidZones with precomputed validZones
                 validZones={validZonesByDuration[task.duration]}
-                // NEW: Add isPreviewValid value
                 isPreviewValid={isPreviewValid}
+                onTapUnScheduled={(position, message) => showTooltip(position, message)}
+                onDismissTooltip={hideTooltip}
               />
             ))}
           </View>
