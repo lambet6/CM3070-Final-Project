@@ -9,6 +9,7 @@ import {
   measure,
 } from 'react-native-reanimated';
 import Animated from 'react-native-reanimated';
+import { Icon, MD3Colors } from 'react-native-paper';
 
 import styles from './styles';
 import TaskItem from './TaskItem';
@@ -26,7 +27,9 @@ import {
   SCREEN_HEIGHT,
   timeToPosition,
   dateToDecimalHours,
+  TASK_ITEM_HEIGHT,
 } from './utils/timelineHelpers';
+import { BaseButton } from 'react-native-gesture-handler';
 
 // Function to calculate event layout for handling overlaps
 const calculateEventLayout = (events) => {
@@ -213,6 +216,13 @@ const TimelineComponent = () => {
   // New shared values for button hover states
   const isRemoveHovered = useSharedValue(false);
   const isCancelHovered = useSharedValue(false);
+
+  const [isTasksExpanded, setIsTasksExpanded] = useState(false);
+
+  // Function to toggle unscheduled tasks expansion
+  const toggleTasksExpanded = useCallback(() => {
+    setIsTasksExpanded((prev) => !prev);
+  }, []);
 
   // Function to show tooltip for non-schedulable tasks
   const showTooltip = useCallback((position, message) => {
@@ -470,7 +480,12 @@ const TimelineComponent = () => {
       {/* Unscheduled Tasks Area */}
       <View style={styles.unscheduledArea}>
         <Text style={styles.sectionTitle}>Tasks</Text>
-        <View style={styles.unscheduledTasksContainer}>
+        <View
+          style={
+            isTasksExpanded
+              ? styles.unscheduledTasksContainerExpanded
+              : styles.unscheduledTasksContainer
+          }>
           {tasks
             .filter((task) => !task.scheduled)
             .map((task, idx) => {
@@ -505,6 +520,11 @@ const TimelineComponent = () => {
               );
             })}
         </View>
+        <BaseButton
+          style={styles.expandButton}
+          onPress={() => setIsTasksExpanded(!isTasksExpanded)}>
+          <Text style={styles.expandButtonText}>{isTasksExpanded ? '∧' : '∨'}</Text>
+        </BaseButton>
       </View>
 
       {/* Timeline */}

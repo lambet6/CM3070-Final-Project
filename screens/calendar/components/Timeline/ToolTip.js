@@ -1,7 +1,14 @@
 /* global setTimeout clearTimeout */
 import React, { useState, useEffect } from 'react';
 import { Text, Dimensions } from 'react-native';
-import Animated, { FadeIn, FadeOut, StretchInX, StretchOutX } from 'react-native-reanimated';
+import Animated, {
+  FadeIn,
+  FadeOut,
+  StretchInX,
+  StretchOutX,
+  FlipInXDown,
+  FlipOutXDown,
+} from 'react-native-reanimated';
 
 // Tooltip component
 const Tooltip = ({ message, position, isVisible, onDismiss }) => {
@@ -91,8 +98,8 @@ const Tooltip = ({ message, position, isVisible, onDismiss }) => {
 
   return (
     <Animated.View
-      entering={StretchInX.duration(150)}
-      exiting={StretchOutX.duration(150)}
+      entering={FlipInXDown.duration(150)}
+      exiting={FlipOutXDown.duration(150)}
       onLayout={(event) => {
         // Get actual dimensions after rendering
         const { width, height } = event.nativeEvent.layout;

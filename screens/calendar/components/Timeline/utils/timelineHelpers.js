@@ -21,6 +21,11 @@ export const INITIAL_TASKS = [
   { id: '4', title: 'Call Mom', duration: 0.5, scheduled: false, startTime: null },
   { id: '5', title: 'Project Work', duration: 0.75, scheduled: false, startTime: null },
   { id: '6', title: 'Long task', duration: 6, scheduled: false, startTime: null },
+  { id: '7', title: 'Read Book', duration: 1.25, scheduled: false, startTime: null },
+  { id: '8', title: 'Guitar Practice', duration: 0.5, scheduled: false, startTime: null },
+  { id: '9', title: 'Team Sync', duration: 0.25, scheduled: false, startTime: null },
+  { id: '10', title: 'Grocery Shopping', duration: 1.75, scheduled: false, startTime: null },
+  { id: '11', title: 'Study Session', duration: 3, scheduled: false, startTime: null },
 ];
 
 // Sample data with duration only (no position)

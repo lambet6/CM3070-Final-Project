@@ -1,6 +1,6 @@
 import { StyleSheet, Dimensions } from 'react-native';
 import { HOUR_HEIGHT, QUARTER_HEIGHT, TIMELINE_OFFSET } from './utils/timelineHelpers';
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+import { TASK_ITEM_HEIGHT } from './utils/timelineHelpers';
 
 const styles = StyleSheet.create({
   container: {
@@ -14,7 +14,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   unscheduledArea: {
-    height: SCREEN_HEIGHT * 0.1,
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
     backgroundColor: 'rgba(152, 16, 16, 0.2)',
@@ -27,11 +26,18 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   unscheduledTasksContainer: {
-    height: '100%',
+    height: TASK_ITEM_HEIGHT / 1.5,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    overflow: 'hidden',
+    gap: 10,
+  },
+  unscheduledTasksContainerExpanded: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 10,
   },
+
   timelineContainer: {
     flex: 1,
   },
@@ -161,6 +167,20 @@ const styles = StyleSheet.create({
   },
   actionButtonIcon: {
     fontSize: 18,
+  },
+  expandButton: {
+    paddingVertical: 2,
+    paddingHorizontal: 12,
+    alignSelf: 'center',
+    marginTop: 10,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  expandButtonText: {
+    fontSize: 14,
+    color: '#555',
+    fontWeight: '500',
   },
 });
 
