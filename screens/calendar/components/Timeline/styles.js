@@ -1,6 +1,6 @@
 import { StyleSheet, Dimensions } from 'react-native';
-import { HOUR_HEIGHT, QUARTER_HEIGHT, TIMELINE_OFFSET } from './utils/timelineHelpers';
-import { TASK_ITEM_HEIGHT } from './utils/timelineHelpers';
+import { HOUR_HEIGHT, QUARTER_HEIGHT, TIMELINE_OFFSET } from './utils';
+import { TASK_ITEM_HEIGHT } from './utils';
 
 const styles = StyleSheet.create({
   container: {
@@ -189,5 +189,42 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 });
-
 export default styles;
+
+export const stylesTooltip = StyleSheet.create({
+  container: {
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    maxWidth: 200,
+    minWidth: 100,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+    elevation: 5,
+    zIndex: 1000,
+  },
+  text: {
+    color: 'white',
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  arrow: {
+    position: 'absolute',
+    bottom: -10,
+    width: 0,
+    height: 0,
+    backgroundColor: 'transparent',
+    borderStyle: 'solid',
+    borderLeftWidth: 10,
+    borderRightWidth: 10,
+    borderTopWidth: 10,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderTopColor: 'rgba(0, 0, 0, 0.75)',
+  },
+});

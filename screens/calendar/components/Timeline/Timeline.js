@@ -1,23 +1,19 @@
 import React, { useCallback, useState, useEffect, useMemo, useRef } from 'react';
 import { View, Platform } from 'react-native';
 import { useAnimatedRef, useScrollViewOffset, useAnimatedReaction } from 'react-native-reanimated';
-import { SCREEN_HEIGHT } from './utils/timelineHelpers';
+import { SCREEN_HEIGHT } from './utils';
 import styles from './styles';
-import DragActionButtons from './components/DragActionButtons';
-import Tooltip from './components/ToolTip';
 
 // Import refactored utilities
-import { calculateEventLayout } from './utils/eventLayoutUtils';
-import { calculateInvalidZones, computeValidZonesByDuration } from './utils/timelineZoneUtils';
+import { calculateEventLayout } from './utils';
+import { calculateInvalidZones, computeValidZonesByDuration } from './utils';
 
 // Import custom hooks
-import { useTooltip } from './hooks/useTooltip';
-import { useDragAnimations } from './hooks/useDragAnimations';
-import { useLayoutMeasurement } from './hooks/useLayoutMeasurement';
+import { useTooltip, useLayoutMeasurement } from './hooks';
+import { useDragAnimations } from './animations';
 
 // Import UI components
-import UnscheduledTasksSection from './components/UnscheduledTasksSection';
-import TimelineContent from './components/TimelineContent';
+import { UnscheduledTasksSection, TimelineContent, DragActionButtons, Tooltip } from './components';
 
 // Import task store and manager
 import { useTaskStore } from '../../../../store/taskStore';

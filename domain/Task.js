@@ -68,7 +68,9 @@ export class Task {
   }
 
   isOverdue() {
-    return !this.completed && this.dueDate < new Date();
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0); // Set to beginning of current day
+    return !this.completed && this.dueDate < startOfToday;
   }
 
   toJSON() {

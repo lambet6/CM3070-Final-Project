@@ -315,6 +315,7 @@ export const createTaskManager = (repository, getStore) => {
           const newDueDate = new Date();
           newDueDate.setDate(newDueDate.getDate() + daysToAdd);
           task.setDueDate(newDueDate);
+          task.setScheduledTime(null);
           rescheduledCount++;
         }
         return task;
