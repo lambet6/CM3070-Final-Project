@@ -1,52 +1,67 @@
 import { create } from 'zustand';
 
 /**
- * Creates a task store that focuses only on state management
- * @returns {Function} Zustand store hook
+ * Direct Zustand store for task management
  */
-export const createTaskStore = () => {
-  return create((set, get) => ({
-    // State
-    tasks: { high: [], medium: [], low: [] },
-    error: null,
-    hasRescheduledThisSession: false,
+export const useTaskStore = create((set, get) => ({
+  // State
+  tasks: { high: [], medium: [], low: [] },
+  error: null,
+  hasRescheduledThisSession: false,
 
-    // Simple setters
-    setTasks: (tasks) => set({ tasks }),
-    setError: (error) => set({ error }),
-    setHasRescheduledThisSession: (value) => set({ hasRescheduledThisSession: value }),
+  // Simple setters
+  setTasks: (tasks) => set({ tasks }),
+  setError: (error) => set({ error }),
+  setHasRescheduledThisSession: (value) => set({ hasRescheduledThisSession: value }),
 
-    // Helper selectors
-    getConsolidatedTasks: () => {
-      const { tasks } = get();
-      return [
-        ...tasks.high.map((task) => ({ ...task, priority: 'High' })),
-        ...tasks.medium.map((task) => ({ ...task, priority: 'Medium' })),
-        ...tasks.low.map((task) => ({ ...task, priority: 'Low' })),
-      ].sort((a, b) => {
-        // Compare dates first
-        const dateCompare = new Date(a.dueDate) - new Date(b.dueDate);
-        // If dates are equal, sort by priority (High > Medium > Low)
-        return (
-          dateCompare ||
-          ['High', 'Medium', 'Low'].indexOf(a.priority) -
-            ['High', 'Medium', 'Low'].indexOf(b.priority)
-        );
-      });
-    },
+  // Helper selectors
+  getConsolidatedTasks: () => {
+    const { tasks } = get();
+    return [
+      ...tasks.high.map((task) => ({ ...task, priority: 'High' })),
+      ...tasks.medium.map((task) => ({ ...task, priority: 'Medium' })),
+      ...tasks.low.map((task) => ({ ...task, priority: 'Low' })),
+    ].sort((a, b) => {
+      // Compare dates first
+      const dateCompare = new Date(a.dueDate) - new Date(b.dueDate);
+      // If dates are equal, sort by priority
+      return (
+        dateCompare ||
+        ['High', 'Medium', 'Low'].indexOf(a.priority) -
+          ['High', 'Medium', 'Low'].indexOf(b.priority)
+      );
+    });
+  },
 
-    getTasksOnDate: (date) => {
-      const { tasks } = get();
-      const allTasks = [...tasks.high, ...tasks.medium, ...tasks.low];
-      return allTasks.filter((task) => {
+  getTasksOnDate: (date) => {
+    // Handle invalid date inputs
+    if (!date || !(date instanceof Date) || isNaN(date.getTime())) {
+      console.warn('Invalid date passed to getTasksOnDate:', date);
+      return [];
+    }
+
+    const { tasks } = get();
+    const allTasks = [...tasks.high, ...tasks.medium, ...tasks.low];
+    const targetDateString = date.toDateString();
+
+    return allTasks.filter((task) => {
+      // Skip tasks without due dates
+      if (!task.dueDate) return false;
+
+      try {
         const taskDate = new Date(task.dueDate);
-        return taskDate.toDateString() === date.toDateString();
-      });
-    },
-  }));
-};
+        // Validate the task date is valid
+        if (isNaN(taskDate.getTime())) {
+          console.warn('Invalid task date encountered:', task.dueDate, 'for task:', task.id);
+          return false;
+        }
 
-/**
- * Default task store instance for use in components
- */
-export const useTaskStore = createTaskStore();
+        // Compare using string representation to avoid reference equality issues
+        return taskDate.toDateString() === targetDateString;
+      } catch (error) {
+        console.error('Error processing task date for task:', task.id, error);
+        return false;
+      }
+    });
+  },
+}));

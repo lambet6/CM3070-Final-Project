@@ -142,4 +142,4 @@ const EventItem = ({ event, layout = null }) => {
   );
 };
 
-export default EventItem;
+export default React.memo(EventItem);

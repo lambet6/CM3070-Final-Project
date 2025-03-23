@@ -7,7 +7,6 @@ import { styles } from '../CalendarStyles';
 
 export const CalendarWeek = React.memo(
   ({ week, isWeekView, calendarTheme, onDatePress, events, tasks, selectedDate }) => {
-    // Pre-process events and tasks into maps for O(1) lookup instead of using .some() repeatedly
     const eventMap = useMemo(() => {
       if (!events || events.length === 0) return new Map();
 

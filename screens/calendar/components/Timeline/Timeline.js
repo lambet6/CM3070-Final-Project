@@ -1,7 +1,7 @@
-import React, { useCallback, useState, useEffect, useMemo } from 'react';
+import React, { useCallback, useState, useEffect, useMemo, useRef } from 'react';
 import { View, Platform } from 'react-native';
 import { useAnimatedRef, useScrollViewOffset, useAnimatedReaction } from 'react-native-reanimated';
-import { INITIAL_TASKS, INITIAL_EVENTS, SCREEN_HEIGHT } from './utils/timelineHelpers';
+import { SCREEN_HEIGHT } from './utils/timelineHelpers';
 import styles from './styles';
 import DragActionButtons from './components/DragActionButtons';
 import Tooltip from './components/ToolTip';
@@ -19,13 +19,145 @@ import { useLayoutMeasurement } from './hooks/useLayoutMeasurement';
 import UnscheduledTasksSection from './components/UnscheduledTasksSection';
 import TimelineContent from './components/TimelineContent';
 
-const TimelineComponent = () => {
-  // Task state
-  const [tasks, setTasks] = useState(INITIAL_TASKS);
+// Import task store and manager
+import { useTaskStore } from '../../../../store/taskStore';
+import { useTaskManager } from '../../../../hooks/useTaskManager';
+// Import calendar store
+import { useCalendarStore } from '../../../../store/calendarStore';
+
+const TimelineComponent = ({ selectedDate }) => {
+  // Get task manager for updating tasks
+  const taskManager = useTaskManager();
+
+  // Use a ref to track previous selectedDate to prevent unnecessary renders
+  const previousDateRef = useRef(null);
+
+  // Track if we're currently in the process of updating tasks
+  const isUpdatingRef = useRef(false);
+
+  // Get all tasks from the store to reduce selector recalculations
+  const allTasks = useTaskStore((state) => state.tasks);
+  const taskMapCache = useRef({});
+
+  // Get all calendar events
+  const allEvents = useCalendarStore((state) => state.events);
+
+  const tasksForSelectedDate = useMemo(() => {
+    if (!selectedDate) return [];
+
+    // Convert selected date to string key (use ISO format for consistency)
+    const dateKey = selectedDate.toISOString().split('T')[0];
+
+    // Check if we already have this date cached
+    if (taskMapCache.current[dateKey]) {
+      console.log('Using cached tasks for date:', dateKey);
+      return taskMapCache.current[dateKey];
+    }
+
+    console.log('Fetching tasks for date:', dateKey);
+
+    // Get tasks for date using the store method (which has good error handling)
+    const tasks = useTaskStore.getState().getTasksOnDate(selectedDate);
+
+    // Store in cache for future use
+    taskMapCache.current[dateKey] = tasks;
+
+    return tasks;
+  }, [selectedDate]);
+
+  useEffect(() => {
+    // Get the currently selected date key
+    if (!selectedDate) return;
+    const dateKey = selectedDate.toISOString().split('T')[0];
+
+    // Update the cache for current date only
+    const tasks = useTaskStore.getState().getTasksOnDate(selectedDate);
+    taskMapCache.current[dateKey] = tasks;
+
+    // limit cache size to prevent memory issues (keep last 10 dates)
+    const keys = Object.keys(taskMapCache.current);
+    if (keys.length > 10) {
+      const oldestKey = keys[0];
+      const newCache = { ...taskMapCache.current };
+      delete newCache[oldestKey];
+      taskMapCache.current = newCache;
+    }
+  }, [allTasks, selectedDate]);
+
+  // Memoize events for selected date
+  const eventsForSelectedDate = useMemo(() => {
+    if (!selectedDate || !allEvents || allEvents.length === 0) return [];
+
+    const selectedDateString = selectedDate.toDateString();
+
+    return allEvents.filter((event) => {
+      try {
+        // Convert event startDate to same-day comparison
+        const eventDate = new Date(event.startDate);
+        return eventDate.toDateString() === selectedDateString;
+      } catch (e) {
+        console.error('Error comparing dates in eventsForSelectedDate filter', e);
+        return false;
+      }
+    });
+  }, [allEvents, selectedDate]);
+
+  // Only log when tasks or events actually change
+  useEffect(() => {
+    const currentDateString = selectedDate ? selectedDate.toDateString() : null;
+    const prevDateString = previousDateRef.current ? previousDateRef.current.toDateString() : null;
+
+    if (currentDateString !== prevDateString) {
+      console.log('Tasks for selected date:', tasksForSelectedDate);
+      console.log('Events for selected date:', eventsForSelectedDate);
+      previousDateRef.current = selectedDate;
+    }
+  }, [tasksForSelectedDate, eventsForSelectedDate, selectedDate]);
+
+  // Task state for the timeline
+  const [tasks, setTasks] = useState([]);
   const [isTasksExpanded, setIsTasksExpanded] = useState(false);
 
-  // Events data (fixed)
-  const events = useMemo(() => INITIAL_EVENTS, []);
+  // Conversion utilities
+  const minutesToHours = useCallback((minutes) => minutes / 60, []);
+
+  const dateToHours = useCallback((date) => {
+    if (!date) return null;
+    return date.getHours() + date.getMinutes() / 60;
+  }, []);
+
+  const hoursToDate = useCallback(
+    (hours) => {
+      if (hours === null) return null;
+      const date = new Date(selectedDate);
+      const wholeHours = Math.floor(hours);
+      const minutes = Math.round((hours - wholeHours) * 60);
+      date.setHours(wholeHours, minutes, 0, 0);
+      return date;
+    },
+    [selectedDate],
+  );
+
+  // Convert tasks from store format to timeline format when tasksForSelectedDate changes
+  useEffect(() => {
+    // Skip if we're already in the middle of an update
+    if (isUpdatingRef.current) return;
+
+    const newTasks = tasksForSelectedDate.map((task) => ({
+      id: task.id,
+      title: `${task.title} (${task.priority})`, // Include priority in title for visibility
+      duration: minutesToHours(task.duration), // Convert minutes to hours
+      scheduled: !!task.scheduledTime,
+      startTime: dateToHours(task.scheduledTime),
+    }));
+
+    // Only update if tasks have changed
+    const areTasksEqual = JSON.stringify(tasks) === JSON.stringify(newTasks);
+
+    if (!areTasksEqual) {
+      setTasks(newTasks);
+    }
+  }, [tasksForSelectedDate, minutesToHours, dateToHours]);
 
   // Set up hooks
   const { tooltipVisible, tooltipPosition, tooltipMessage, showTooltip, hideTooltip } =
@@ -45,21 +177,28 @@ const TimelineComponent = () => {
     handleButtonLayout,
     measureButtons,
     layoutChanged,
-    parentViewRef, // Add reference for parent view
-    parentViewLayout, // Add layout for parent view
-    handleParentViewLayout, // Add handler for parent view layout
+    parentViewRef,
+    parentViewLayout,
+    handleParentViewLayout,
   } = useLayoutMeasurement();
 
   // Scroll handling
   const scrollViewRef = useAnimatedRef();
   const scrollY = useScrollViewOffset(scrollViewRef);
 
-  // Calculate event layout
-  const eventLayoutMap = useMemo(() => calculateEventLayout(events), [events]);
+  // Calculate event layout with memoization to prevent unnecessary recalculations
+  const eventLayoutMap = useMemo(
+    () => calculateEventLayout(eventsForSelectedDate),
+    [eventsForSelectedDate],
+  );
 
-  // Calculate invalid and valid zones
-  const invalidZones = useMemo(() => calculateInvalidZones(events), [events]);
+  // Calculate invalid and valid zones based on calendar events for the selected date
+  const invalidZones = useMemo(
+    () => calculateInvalidZones(eventsForSelectedDate),
+    [eventsForSelectedDate],
+  );
 
+  // Calculate valid zones for task scheduling that don't conflict with events
   const validZonesByDuration = useMemo(
     () => computeValidZonesByDuration(tasks, invalidZones),
     [tasks, invalidZones],
@@ -69,7 +208,7 @@ const TimelineComponent = () => {
   useEffect(() => {
     if (Platform.OS === 'web') {
       // For web, we can use window height as an approximation
-      timelineViewHeight.value = SCREEN_HEIGHT * 0.85; // Assuming timeline is 85% of screen height
+      timelineViewHeight.value = SCREEN_HEIGHT * 0.85;
     }
   }, [timelineViewHeight]);
 
@@ -102,16 +241,52 @@ const TimelineComponent = () => {
     [measureButtons],
   );
 
-  // Task state change handler
-  const handleTaskStateChange = useCallback((taskId, isScheduled, newStartTime) => {
-    setTasks((prev) =>
-      prev.map((task) =>
-        task.id === taskId
-          ? { ...task, scheduled: isScheduled, startTime: isScheduled ? newStartTime : null }
-          : task,
-      ),
-    );
-  }, []);
+  // Updated task state change handler that uses task manager
+  const handleTaskStateChange = useCallback(
+    async (taskId, isScheduled, newStartTime) => {
+      if (isUpdatingRef.current) return;
+      isUpdatingRef.current = true;
+
+      try {
+        // First update the local state for immediate feedback
+        setTasks((prev) =>
+          prev.map((task) =>
+            task.id === taskId
+              ? { ...task, scheduled: isScheduled, startTime: isScheduled ? newStartTime : null }
+              : task,
+          ),
+        );
+
+        // Find the original task in the tasks for the selected date
+        const originalTask = tasksForSelectedDate.find((task) => task.id === taskId);
+
+        // If we found the task, update it using the task manager
+        if (originalTask) {
+          console.log('Updating task:', originalTask.title, 'to scheduled:', isScheduled);
+          try {
+            // Convert start time to Date or null
+            const scheduledTime = isScheduled ? hoursToDate(newStartTime) : null;
+
+            // Edit the task with the task manager
+            await taskManager.editExistingTask(
+              taskId,
+              originalTask.title,
+              originalTask.priority,
+              originalTask.dueDate,
+              originalTask.duration, // Keep original duration in minutes
+              scheduledTime,
+            );
+          } catch (error) {
+            console.error('Failed to update task:', error);
+          }
+        }
+      } finally {
+        // Always reset the updating flag
+        isUpdatingRef.current = false;
+      }
+    },
+    [tasksForSelectedDate, taskManager, hoursToDate],
+  );
 
   // Group layout values for passing to subcomponents
   const layoutValues = {
@@ -155,7 +330,7 @@ const TimelineComponent = () => {
         timelineLayoutRef={timelineLayoutRef}
         handleTimelineLayout={handleTimelineLayout}
         tasks={tasks}
-        events={events}
+        events={eventsForSelectedDate}
         eventLayoutMap={eventLayoutMap}
         dragAnimationValues={dragAnimationValues}
         layoutValues={layoutValues}

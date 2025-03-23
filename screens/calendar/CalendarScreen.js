@@ -218,6 +218,9 @@ export default function CalenarScreen() {
     setIsWeekView(!isWeekView);
   }, [isWeekView, selectedDate]);
 
+  // Memoize the selected date object to prevent unnecessary re-renders
+  const memoizedSelectedDateObj = useMemo(() => fromDateId(selectedDate), [selectedDate]);
+
   return (
     <View style={styles.container}>
       <View style={styles.calendarContainer}>
@@ -280,9 +283,9 @@ export default function CalenarScreen() {
           </Calendar.VStack>
         </View>
       </View>
-      {/* Daily Timeline */}
+      {/* Daily Timeline - Pass memoized date object */}
       <View style={styles.dragList}>
-        <TimelineComponent />
+        <TimelineComponent selectedDate={memoizedSelectedDateObj} />
       </View>
     </View>
   );

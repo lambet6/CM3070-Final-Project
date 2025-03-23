@@ -76,6 +76,7 @@ export const createTaskManager = (repository, getStore) => {
     task.setDueDate(newDueDate);
     if (newDuration) task.setDuration(newDuration);
     if (newScheduledTime !== undefined) task.setScheduledTime(newScheduledTime);
+    console.log('Task updated:', task);
     return task;
   };
 

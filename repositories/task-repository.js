@@ -43,6 +43,8 @@ export const createTaskRepository = (storage = AsyncStorage) => {
         priority: task.priority,
         dueDate: task.dueDate.toISOString(),
         completed: task.completed,
+        duration: task.duration,
+        scheduledTime: task.scheduledTime ? task.scheduledTime.toISOString() : null,
       }));
       await storage.setItem(TASKS_KEY, JSON.stringify(plainTasks));
     } catch (error) {
