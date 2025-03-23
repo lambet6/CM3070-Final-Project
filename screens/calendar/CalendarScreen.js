@@ -218,22 +218,6 @@ export default function CalenarScreen() {
     setIsWeekView(!isWeekView);
   }, [isWeekView, selectedDate]);
 
-  // // New function to create an event using the manager
-  // const handleCreateEvent = useCallback(
-  //   async (title, startDate, endDate) => {
-  //     try {
-  //       const newEvent = await calendarManager.createCalendarEvent(title, startDate, endDate);
-  //       console.log('New event created:', newEvent);
-  //       return newEvent;
-  //     } catch (error) {
-  //       console.error('Failed to create event:', error);
-  //       // Error handling UI logic could go here
-  //       return null;
-  //     }
-  //   },
-  //   [calendarManager],
-  // );
-
   return (
     <View style={styles.container}>
       <View style={styles.calendarContainer}>
@@ -296,6 +280,7 @@ export default function CalenarScreen() {
           </Calendar.VStack>
         </View>
       </View>
+      {/* Daily Timeline */}
       <View style={styles.dragList}>
         <TimelineComponent />
       </View>

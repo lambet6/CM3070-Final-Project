@@ -45,6 +45,9 @@ const TimelineComponent = () => {
     handleButtonLayout,
     measureButtons,
     layoutChanged,
+    parentViewRef, // Add reference for parent view
+    parentViewLayout, // Add layout for parent view
+    handleParentViewLayout, // Add handler for parent view layout
   } = useLayoutMeasurement();
 
   // Scroll handling
@@ -120,13 +123,14 @@ const TimelineComponent = () => {
 
   // Render the UI
   return (
-    <View style={styles.container}>
+    <View style={styles.container} ref={parentViewRef} onLayout={handleParentViewLayout}>
       {/* Tooltip */}
       <Tooltip
         message={tooltipMessage}
         position={tooltipPosition}
         isVisible={tooltipVisible}
         onDismiss={hideTooltip}
+        parentViewLayout={parentViewLayout}
       />
 
       {/* Unscheduled Tasks Area */}

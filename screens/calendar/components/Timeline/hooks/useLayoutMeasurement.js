@@ -6,10 +6,12 @@ export const useLayoutMeasurement = () => {
   const timelineLayoutRef = useAnimatedRef();
   const removeButtonRef = useAnimatedRef();
   const cancelButtonRef = useAnimatedRef();
+  const parentViewRef = useAnimatedRef(); // Add reference for parent view
 
   const timelineLayout = useSharedValue({ x: 0, y: 0, width: 0, height: 0 });
   const removeButtonLayout = useSharedValue(null);
   const cancelButtonLayout = useSharedValue(null);
+  const parentViewLayout = useSharedValue({ x: 0, y: 0, width: 0, height: 0 }); // Add layout for parent view
   const timelineViewHeight = useSharedValue(0);
   const layoutChanged = useSharedValue(0);
 
@@ -63,6 +65,24 @@ export const useLayoutMeasurement = () => {
     }
   }, [removeButtonRef, cancelButtonRef, removeButtonLayout, cancelButtonLayout]);
 
+  // Measure parent view layout
+  const measureParentViewOnUI = useCallback(() => {
+    'worklet';
+    try {
+      const measured = measure(parentViewRef);
+      if (measured) {
+        parentViewLayout.value = {
+          x: measured.pageX,
+          y: measured.pageY,
+          width: measured.width,
+          height: measured.height,
+        };
+      }
+    } catch (e) {
+      console.log('Parent view measurement error:', e);
+    }
+  }, [parentViewRef, parentViewLayout]);
+
   // Handle timeline layout
   const handleTimelineLayout = useCallback(
     (event) => {
@@ -89,17 +109,35 @@ export const useLayoutMeasurement = () => {
     }
   }, [measureButtons]);
 
+  // Handle parent view layout
+  const handleParentViewLayout = useCallback(
+    (event) => {
+      layoutChanged.value += 1;
+      if (Platform.OS === 'ios') {
+        requestAnimationFrame(() => {
+          runOnUI(measureParentViewOnUI)();
+        });
+      } else {
+        runOnUI(measureParentViewOnUI)();
+      }
+    },
+    [measureParentViewOnUI, layoutChanged],
+  );
+
   return {
     timelineLayoutRef,
     removeButtonRef,
     cancelButtonRef,
+    parentViewRef,
     timelineLayout,
     removeButtonLayout,
     cancelButtonLayout,
+    parentViewLayout,
     timelineViewHeight,
     layoutChanged,
     handleTimelineLayout,
     handleButtonLayout,
+    handleParentViewLayout,
     measureButtons,
   };
 };

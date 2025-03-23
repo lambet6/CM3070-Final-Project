@@ -74,7 +74,12 @@ const UnscheduledTasksSection = ({
             );
           })}
       </View>
-      <BaseButton style={styles.expandButton} onPress={() => setIsTasksExpanded(!isTasksExpanded)}>
+      <BaseButton
+        style={styles.expandButton}
+        onPress={() => {
+          setIsTasksExpanded(!isTasksExpanded);
+          onDismissTooltip();
+        }}>
         <Text style={styles.expandButtonText}>{isTasksExpanded ? '∧' : '∨'}</Text>
       </BaseButton>
     </View>

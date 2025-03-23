@@ -4,6 +4,7 @@ import { withSpring, runOnJS } from 'react-native-reanimated';
 import { isPointInRect, timeToPosition, positionToTime } from '../../../utils/timelineHelpers';
 import { updatePreviewPosition } from '../utils/previewUtils';
 import { checkAutoScroll } from '../utils/autoScrollUtils';
+import { TASK_ITEM_HEIGHT } from '../../../utils/timelineHelpers';
 
 /**
  * Custom hook to create and manage gesture handlers for task items
@@ -42,8 +43,8 @@ export default function useTaskGestures({
       Gesture.Tap().onStart((event) => {
         // Calculate position for the tooltip
         const position = {
-          x: event.absoluteX - event.x - taskHeight,
-          y: event.absoluteY - event.y + taskHeight / 2,
+          x: event.absoluteX - event.x,
+          y: event.absoluteY - event.y,
         };
         if (!isSchedulable && onTapUnScheduled) {
           // Call the handler with position info
