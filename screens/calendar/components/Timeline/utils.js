@@ -60,6 +60,22 @@ export const isPointInRect = (pointX, pointY, rect) => {
   );
 };
 
+export const minutesToHours = (minutes) => minutes / 60;
+
+export const dateToHours = (date) => {
+  if (!date) return null;
+  return date.getHours() + date.getMinutes() / 60;
+};
+
+export const hoursToDate = (hours, selectedDate) => {
+  if (hours === null) return null;
+  const date = new Date(selectedDate);
+  const wholeHours = Math.floor(hours);
+  const minutes = Math.round((hours - wholeHours) * 60);
+  date.setHours(wholeHours, minutes, 0, 0);
+  return date;
+};
+
 // ========================================================================
 // Event layout utilities
 // ========================================================================

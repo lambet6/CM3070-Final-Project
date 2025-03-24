@@ -1,6 +1,7 @@
 import { StyleSheet, Dimensions } from 'react-native';
-import { HOUR_HEIGHT, QUARTER_HEIGHT, TIMELINE_OFFSET } from './utils';
+import { HOUR_HEIGHT, QUARTER_HEIGHT, TASK_ITEM_WIDTH, TIMELINE_OFFSET } from './utils';
 import { TASK_ITEM_HEIGHT } from './utils';
+import { useMemo } from 'react';
 
 const styles = StyleSheet.create({
   container: {
@@ -188,6 +189,29 @@ const styles = StyleSheet.create({
     color: '#555',
     fontWeight: '500',
   },
+  // Scheduled task styles
+  scheduledTaskStatic: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    marginHorizontal: 5,
+    backgroundColor: '#a8e6cf',
+    // Height will be applied dynamically
+  },
+
+  // Unscheduled task styles
+  unscheduledTaskStatic: {
+    width: TASK_ITEM_WIDTH / 2,
+    height: TASK_ITEM_HEIGHT / 2,
+    padding: 5,
+  },
+
+  // Non-schedulable task styles
+  nonSchedulableTaskStatic: {
+    borderWidth: 1,
+    borderColor: '#bdbdbd',
+    borderStyle: 'dashed',
+  },
 });
 export default styles;
 
@@ -228,3 +252,65 @@ export const stylesTooltip = StyleSheet.create({
     borderTopColor: 'rgba(0, 0, 0, 0.75)',
   },
 });
+
+// Helper functions for EventItem styling
+export const getEventBaseStyle = (position, height) => ({
+  position: 'absolute',
+  top: position,
+  height: height,
+  backgroundColor: 'rgba(149, 175, 192, 0.6)',
+  borderRadius: 8,
+  padding: 8,
+  borderLeftWidth: 4,
+  borderLeftColor: '#4b6584',
+  zIndex: 50,
+});
+
+export const getEventWidthStyle = (layout) => {
+  if (layout) {
+    if (layout.isFullWidth) {
+      return {
+        left: 0,
+        right: 0,
+        marginHorizontal: 5,
+      };
+    } else {
+      // Part of an overlap group
+      return {
+        width: `${layout.width}%`,
+        left: `${layout.leftPosition}%`,
+        marginHorizontal: 2, // Reduced for better fit
+        padding: layout.columnCount > 2 ? 4 : 8, // Adjust padding for narrower events
+      };
+    }
+  }
+
+  // Fallback for events without layout data
+  return {
+    left: 0,
+    right: 0,
+    marginHorizontal: 5,
+  };
+};
+
+export const getClippedEventStyle = (isClippedStart, isClippedEnd) => {
+  const style = {};
+
+  if (isClippedStart) {
+    style.borderTopLeftRadius = 0;
+    style.borderTopRightRadius = 0;
+    style.borderTopWidth = 2;
+    style.borderTopColor = '#4b6584';
+    style.borderTopStyle = 'dashed';
+  }
+
+  if (isClippedEnd) {
+    style.borderBottomLeftRadius = 0;
+    style.borderBottomRightRadius = 0;
+    style.borderBottomWidth = 2;
+    style.borderBottomColor = '#4b6584';
+    style.borderBottomStyle = 'dashed';
+  }
+
+  return style;
+};

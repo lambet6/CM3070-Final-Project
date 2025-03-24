@@ -1,7 +1,7 @@
 import React, { useCallback, useState, useEffect, useMemo, useRef } from 'react';
 import { View, Platform } from 'react-native';
 import { useAnimatedRef, useScrollViewOffset, useAnimatedReaction } from 'react-native-reanimated';
-import { SCREEN_HEIGHT } from './utils';
+import { dateToHours, hoursToDate, minutesToHours, SCREEN_HEIGHT } from './utils';
 import styles from './styles';
 
 // Import refactored utilities
@@ -114,26 +114,6 @@ const TimelineComponent = ({ selectedDate }) => {
   const [tasks, setTasks] = useState([]);
   const [isTasksExpanded, setIsTasksExpanded] = useState(false);
 
-  // Conversion utilities
-  const minutesToHours = useCallback((minutes) => minutes / 60, []);
-
-  const dateToHours = useCallback((date) => {
-    if (!date) return null;
-    return date.getHours() + date.getMinutes() / 60;
-  }, []);
-
-  const hoursToDate = useCallback(
-    (hours) => {
-      if (hours === null) return null;
-      const date = new Date(selectedDate);
-      const wholeHours = Math.floor(hours);
-      const minutes = Math.round((hours - wholeHours) * 60);
-      date.setHours(wholeHours, minutes, 0, 0);
-      return date;
-    },
-    [selectedDate],
-  );
-
   // Convert tasks from store format to timeline format when tasksForSelectedDate changes
   useEffect(() => {
     // Skip if we're already in the middle of an update
@@ -153,7 +133,7 @@ const TimelineComponent = ({ selectedDate }) => {
     if (!areTasksEqual) {
       setTasks(newTasks);
     }
-  }, [tasksForSelectedDate, minutesToHours, dateToHours]);
+  }, [tasksForSelectedDate, tasks]);
 
   // Set up hooks
   const { tooltipVisible, tooltipPosition, tooltipMessage, showTooltip, hideTooltip } =
@@ -261,7 +241,7 @@ const TimelineComponent = ({ selectedDate }) => {
           console.log('Updating task:', originalTask.title, 'to scheduled:', isScheduled);
           try {
             // Convert start time to Date or null
-            const scheduledTime = isScheduled ? hoursToDate(newStartTime) : null;
+            const scheduledTime = isScheduled ? hoursToDate(newStartTime, selectedDate) : null;
 
             // Edit the task with the task manager
             await taskManager.editExistingTask(
@@ -281,7 +261,7 @@ const TimelineComponent = ({ selectedDate }) => {
         isUpdatingRef.current = false;
       }
     },
-    [tasksForSelectedDate, taskManager, hoursToDate],
+    [tasksForSelectedDate, selectedDate, taskManager],
   );
 
   // Group layout values for passing to subcomponents

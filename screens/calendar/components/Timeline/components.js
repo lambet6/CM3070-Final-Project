@@ -3,7 +3,12 @@ import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { View, Text, Dimensions } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import { GestureDetector, BaseButton } from 'react-native-gesture-handler';
-import styles, { stylesTooltip } from './styles';
+import styles, {
+  getClippedEventStyle,
+  getEventBaseStyle,
+  getEventWidthStyle,
+  stylesTooltip,
+} from './styles';
 import {
   HOURS,
   QUARTERS,
@@ -22,6 +27,8 @@ import {
   useTimelineIndicatorStyle,
   useTaskAnimations,
   useAutoScroll,
+  useDragActionButtonsStyles,
+  useTooltipStyles,
 } from './animations';
 import { useTaskGestures } from './hooks';
 
@@ -56,6 +63,46 @@ export const HourMarkers = React.memo(() => {
 });
 HourMarkers.displayName = 'HourMarkers';
 
+// Helper function to render event items
+const renderEvents = (events, eventLayoutMap) => {
+  return events.map((event) => (
+    <EventItem key={event.id} event={event} layout={eventLayoutMap.get(event.id)} />
+  ));
+};
+
+// Helper function to render task items
+const renderTasks = (
+  tasks,
+  onStateChange,
+  scrollY,
+  timelineLayout,
+  animationValues,
+  layoutValues,
+  validZonesByDuration,
+  onTapUnScheduled,
+  onDismissTooltip,
+  scrollViewRef,
+) => {
+  const scheduledTasks = tasks.filter((task) => task.scheduled);
+
+  return scheduledTasks.map((task, index) => (
+    <TaskItem
+      key={task.id}
+      task={task}
+      index={index}
+      onStateChange={onStateChange}
+      scrollY={scrollY}
+      timelineLayout={timelineLayout}
+      dragAnimationValues={animationValues}
+      layoutValues={layoutValues}
+      validZones={validZonesByDuration[task.duration]}
+      scrollViewRef={scrollViewRef}
+      onTapUnScheduled={onTapUnScheduled}
+      onDismissTooltip={onDismissTooltip}
+    />
+  ));
+};
+
 export const TimelineContent = React.memo(
   ({
     scrollViewRef,
@@ -76,21 +123,11 @@ export const TimelineContent = React.memo(
       previewVisible,
       previewPosition,
       previewHeight,
+      isPreviewValid,
       ghostVisible,
       ghostPosition,
       ghostHeight,
-      isDragging,
-      isDraggingScheduled,
-      isPreviewValid,
-      isRemoveHovered,
-      isCancelHovered,
-      autoScrollActive,
     } = dragAnimationValues;
-
-    const { timelineLayout, removeButtonLayout, cancelButtonLayout, timelineViewHeight } =
-      layoutValues;
-
-    const scheduledTasks = tasks.filter((task) => task.scheduled);
 
     return (
       <Animated.View
@@ -103,9 +140,7 @@ export const TimelineContent = React.memo(
           </View>
           <View style={styles.timelineContent}>
             {/* Fixed events - render before tasks so they appear behind tasks */}
-            {events.map((event) => (
-              <EventItem key={event.id} event={event} layout={eventLayoutMap.get(event.id)} />
-            ))}
+            {renderEvents(events, eventLayoutMap)}
 
             {/* Preview component*/}
             <TimelineIndicator
@@ -122,35 +157,19 @@ export const TimelineContent = React.memo(
             {/* Ghost square component */}
             <GhostSquare visible={ghostVisible} position={ghostPosition} height={ghostHeight} />
 
-            {scheduledTasks.map((task, index) => (
-              <TaskItem
-                key={task.id}
-                task={task}
-                index={index}
-                onStateChange={onStateChange}
-                scrollY={scrollY}
-                timelineLayout={timelineLayout}
-                previewVisible={previewVisible}
-                previewPosition={previewPosition}
-                previewHeight={previewHeight}
-                isDragging={isDragging}
-                isDraggingScheduled={isDraggingScheduled}
-                removeButtonLayout={removeButtonLayout}
-                cancelButtonLayout={cancelButtonLayout}
-                ghostVisible={ghostVisible}
-                ghostPosition={ghostPosition}
-                ghostHeight={ghostHeight}
-                isRemoveHovered={isRemoveHovered}
-                isCancelHovered={isCancelHovered}
-                autoScrollActive={autoScrollActive}
-                scrollViewRef={scrollViewRef}
-                timelineViewHeight={timelineViewHeight}
-                validZones={validZonesByDuration[task.duration]}
-                isPreviewValid={isPreviewValid}
-                onTapUnScheduled={onTapUnScheduled}
-                onDismissTooltip={onDismissTooltip}
-              />
-            ))}
+            {/* Scheduled Tasks */}
+            {renderTasks(
+              tasks,
+              onStateChange,
+              scrollY,
+              layoutValues.timelineLayout,
+              dragAnimationValues,
+              layoutValues,
+              validZonesByDuration,
+              onTapUnScheduled,
+              onDismissTooltip,
+              scrollViewRef,
+            )}
           </View>
         </Animated.ScrollView>
       </Animated.View>
@@ -158,11 +177,13 @@ export const TimelineContent = React.memo(
   },
 );
 TimelineContent.displayName = 'TimelineContent';
+
 export const TimelineIndicator = ({ visible, position, height, style, isValid }) => {
   return (
     <Animated.View style={useTimelineIndicatorStyle(visible, position, height, style, isValid)} />
   );
 };
+
 export const GhostSquare = ({ visible, position, height, style }) => {
   return <Animated.View style={useGhostSquareStyle(visible, position, height, style)} />;
 };
@@ -199,99 +220,34 @@ export const EventItem = React.memo(({ event, layout = null }) => {
   const isClippedStart = startTime < timelineStartHour;
   const isClippedEnd = endTime > timelineEndHour;
 
-  // Default styles for full width (no overlap)
-  let viewStyle = {
-    position: 'absolute',
-    top: position,
-    height: height,
-    backgroundColor: 'rgba(149, 175, 192, 0.6)',
-    borderRadius: 8,
-    padding: 8,
-    borderLeftWidth: 4,
-    borderLeftColor: '#4b6584',
-    zIndex: 50,
+  // Combine all style aspects using the helper functions
+  const baseStyle = getEventBaseStyle(position, height);
+  const widthStyle = getEventWidthStyle(layout);
+  const clippedStyle = getClippedEventStyle(isClippedStart, isClippedEnd);
+
+  const viewStyle = {
+    ...baseStyle,
+    ...widthStyle,
+    ...clippedStyle,
   };
 
-  // If layout data is provided, check if the event is full width or part of a collision group
-  if (layout) {
-    if (layout.isFullWidth) {
-      // Full width event (no overlaps)
-      viewStyle = {
-        ...viewStyle,
-        left: 0,
-        right: 0,
-        marginHorizontal: 5,
-      };
-    } else {
-      // Part of an overlap group
-      viewStyle = {
-        ...viewStyle,
-        width: `${layout.width}%`,
-        left: `${layout.leftPosition}%`,
-        marginHorizontal: 2, // Reduced for better fit
-      };
-
-      // Adjust padding for narrower events
-      if (layout.columnCount > 2) {
-        viewStyle.padding = 4;
-      }
-    }
-  } else {
-    // Fallback for events without layout data (should be full width)
-    viewStyle = {
-      ...viewStyle,
-      left: 0,
-      right: 0,
-      marginHorizontal: 5,
-    };
-  }
-
-  // Add visual indication for clipped events
-  if (isClippedStart) {
-    viewStyle.borderTopLeftRadius = 0;
-    viewStyle.borderTopRightRadius = 0;
-    viewStyle.borderTopWidth = 2;
-    viewStyle.borderTopColor = '#4b6584';
-    viewStyle.borderTopStyle = 'dashed';
-  }
-
-  if (isClippedEnd) {
-    viewStyle.borderBottomLeftRadius = 0;
-    viewStyle.borderBottomRightRadius = 0;
-    viewStyle.borderBottomWidth = 2;
-    viewStyle.borderBottomColor = '#4b6584';
-    viewStyle.borderBottomStyle = 'dashed';
-  }
+  const isNarrow = layout && layout.columnCount > 1;
+  const titleFontSize = isNarrow ? { fontSize: 12 } : {};
+  const detailsFontSize = isNarrow ? { fontSize: 10 } : {};
 
   return (
     <View style={viewStyle}>
       <Text
-        style={[
-          styles.scheduledTaskTitle,
-          { fontWeight: '500' },
-          // Reduce font size for narrower events
-          layout && layout.columnCount > 1 ? { fontSize: 12 } : {},
-        ]}
+        style={[styles.scheduledTaskTitle, { fontWeight: '500' }, titleFontSize]}
         numberOfLines={1}>
         {event.title}
         {(isClippedStart || isClippedEnd) && ' ⋯'}
       </Text>
-      <View
-        style={layout && layout.columnCount > 1 ? styles.smallEventDetails : styles.EventDetails}>
-        <Text
-          style={[
-            styles.scheduledTaskTime,
-            // Reduce font size for narrower events
-            layout && layout.columnCount > 1 ? { fontSize: 10 } : {},
-          ]}>
+      <View style={isNarrow ? styles.smallEventDetails : styles.EventDetails}>
+        <Text style={[styles.scheduledTaskTime, detailsFontSize]}>
           {formatTimeFromDecimal(startTime)} - {formatTimeFromDecimal(endTime)}
         </Text>
-        <Text
-          style={[
-            styles.scheduledTaskDuration,
-            // Reduce font size for narrower events
-            layout && layout.columnCount > 1 ? { fontSize: 10 } : {},
-          ]}>
+        <Text style={[styles.scheduledTaskDuration, detailsFontSize]}>
           {Math.floor(duration)}h
           {Math.round((duration % 1) * 60) ? ` ${Math.round((duration % 1) * 60)}m` : ''}
         </Text>
@@ -304,13 +260,28 @@ EventItem.displayName = 'EventItem';
 // ========================================================================
 // Task components
 // ========================================================================
-const TaskItem = React.memo(
-  ({
-    task,
-    index,
-    onStateChange,
-    scrollY,
-    timelineLayout,
+
+// Extract task props extraction to a separate function
+const extractTaskProps = (dragAnimationValues, layoutValues) => {
+  const {
+    previewVisible,
+    previewPosition,
+    previewHeight,
+    isDragging,
+    isDraggingScheduled,
+    isRemoveHovered,
+    isCancelHovered,
+    autoScrollActive,
+    ghostVisible,
+    ghostPosition,
+    ghostHeight,
+    isPreviewValid,
+  } = dragAnimationValues;
+
+  const { removeButtonLayout, cancelButtonLayout, timelineViewHeight, timelineLayout } =
+    layoutValues;
+
+  return {
     previewVisible,
     previewPosition,
     previewHeight,
@@ -324,14 +295,30 @@ const TaskItem = React.memo(
     isRemoveHovered,
     isCancelHovered,
     autoScrollActive,
-    scrollViewRef,
     timelineViewHeight,
-    validZones,
     isPreviewValid,
+    timelineLayout,
+  };
+};
+
+const TaskItem = React.memo(
+  ({
+    task,
+    index,
+    onStateChange,
+    scrollY,
+    timelineLayout,
+    dragAnimationValues,
+    layoutValues,
+    validZones,
+    scrollViewRef,
     isSchedulable = true,
     onTapUnScheduled,
     onDismissTooltip,
   }) => {
+    // Extract props from animation and layout values
+    const props = extractTaskProps(dragAnimationValues, layoutValues);
+
     // Use custom hooks for animations and state management
     const animations = useTaskAnimations(task);
 
@@ -349,11 +336,11 @@ const TaskItem = React.memo(
       scrollDirection: animations.scrollDirection,
       scrollSpeed: animations.scrollSpeed,
       accumulatedScrollOffset: animations.accumulatedScrollOffset,
-      autoScrollActive,
+      autoScrollActive: props.autoScrollActive,
       scrollY,
       timelineLayout,
       scrollViewRef,
-      timelineViewHeight,
+      timelineViewHeight: props.timelineViewHeight,
     });
 
     // Create gesture handlers
@@ -363,62 +350,28 @@ const TaskItem = React.memo(
       onStateChange,
       scrollY,
       timelineLayout,
-      previewVisible,
-      previewPosition,
-      previewHeight,
-      isDragging,
-      isDraggingScheduled,
-      removeButtonLayout,
-      cancelButtonLayout,
-      ghostVisible,
-      ghostPosition,
-      ghostHeight,
-      isRemoveHovered,
-      isCancelHovered,
-      autoScrollActive,
+      previewVisible: props.previewVisible,
+      previewPosition: props.previewPosition,
+      previewHeight: props.previewHeight,
+      isDragging: props.isDragging,
+      isDraggingScheduled: props.isDraggingScheduled,
+      removeButtonLayout: props.removeButtonLayout,
+      cancelButtonLayout: props.cancelButtonLayout,
+      ghostVisible: props.ghostVisible,
+      ghostPosition: props.ghostPosition,
+      ghostHeight: props.ghostHeight,
+      isRemoveHovered: props.isRemoveHovered,
+      isCancelHovered: props.isCancelHovered,
+      autoScrollActive: props.autoScrollActive,
       scrollViewRef,
-      timelineViewHeight,
+      timelineViewHeight: props.timelineViewHeight,
       validZones,
-      isPreviewValid,
+      isPreviewValid: props.isPreviewValid,
       isSchedulable,
       onTapUnScheduled,
       onDismissTooltip,
       taskHeight,
     });
-
-    // Define static styles outside of the worklet for better performance
-    const scheduledStaticStyles = useMemo(
-      () => ({
-        position: 'absolute',
-        left: 0,
-        right: 0,
-        marginHorizontal: 5,
-        backgroundColor: '#a8e6cf',
-        height: taskHeight,
-      }),
-      [taskHeight],
-    );
-
-    const unscheduledStaticStyles = useMemo(
-      () => ({
-        width: TASK_ITEM_WIDTH / 2,
-        height: TASK_ITEM_HEIGHT / 2,
-        padding: 5,
-      }),
-      [],
-    );
-
-    const nonSchedulableStaticStyles = useMemo(
-      () =>
-        !isSchedulable
-          ? {
-              borderWidth: 1,
-              borderColor: '#bdbdbd',
-              borderStyle: 'dashed',
-            }
-          : {},
-      [isSchedulable],
-    );
 
     // Optimized animated styles - only compute what changes during animation
     const animatedStyles = useAnimatedStyle(() => {
@@ -451,24 +404,14 @@ const TaskItem = React.memo(
       }
     });
 
-    // Render task item
-    return (
-      <GestureDetector gesture={composedGestures}>
-        <Animated.View
-          style={[
-            styles.taskItem,
-            task.scheduled ? scheduledStaticStyles : unscheduledStaticStyles,
-            !task.scheduled && nonSchedulableStaticStyles,
-            animatedStyles,
-          ]}>
-          <Text
-            style={task.scheduled ? styles.scheduledTaskTitle : styles.unscheduledTaskTitle}
-            numberOfLines={1}>
-            {task.title}
-          </Text>
-
-          {task.scheduled ? (
-            // Scheduled task details with time display
+    // Render task content based on scheduled state
+    const renderTaskContent = () => {
+      if (task.scheduled) {
+        return (
+          <>
+            <Text style={styles.scheduledTaskTitle} numberOfLines={1}>
+              {task.title}
+            </Text>
             <View style={styles.scheduledTaskDetails}>
               <Text style={styles.scheduledTaskTime}>{formatTimeFromDecimal(task.startTime)}</Text>
               <Text style={styles.scheduledTaskDuration}>{task.duration.toFixed(1)}h</Text>
@@ -476,16 +419,79 @@ const TaskItem = React.memo(
                 <Text style={styles.nonSchedulableText}>No time slots available</Text>
               )}
             </View>
-          ) : (
-            // Unscheduled task just shows duration
+          </>
+        );
+      } else {
+        return (
+          <>
+            <Text style={styles.unscheduledTaskTitle} numberOfLines={1}>
+              {task.title}
+            </Text>
             <Text style={styles.unscheduledTaskDuration}>{task.duration.toFixed(1)}h</Text>
-          )}
+          </>
+        );
+      }
+    };
+
+    // Render task item
+    return (
+      <GestureDetector gesture={composedGestures}>
+        <Animated.View
+          style={[
+            styles.taskItem,
+            // Apply static styles from styles.js
+            task.scheduled
+              ? [styles.scheduledTaskStatic, { height: taskHeight }]
+              : styles.unscheduledTaskStatic,
+            // Apply non-schedulable style conditionally
+            !task.scheduled && !isSchedulable && styles.nonSchedulableTaskStatic,
+            // Apply animated styles
+            animatedStyles,
+          ]}>
+          {renderTaskContent()}
         </Animated.View>
       </GestureDetector>
     );
   },
 );
 TaskItem.displayName = 'TaskItem';
+
+// Helper function to render unscheduled tasks
+const renderUnscheduledTasks = (
+  tasks,
+  onStateChange,
+  scrollY,
+  timelineLayout,
+  dragAnimationValues,
+  layoutValues,
+  validZonesByDuration,
+  onTapUnScheduled,
+  onDismissTooltip,
+  scrollViewRef,
+) => {
+  return tasks
+    .filter((task) => !task.scheduled)
+    .map((task, idx) => {
+      const hasValidZones = validZonesByDuration[task.duration]?.length > 0;
+      return (
+        <TaskItem
+          key={task.id}
+          task={task}
+          index={idx}
+          onStateChange={onStateChange}
+          scrollY={scrollY}
+          timelineLayout={timelineLayout}
+          dragAnimationValues={dragAnimationValues}
+          layoutValues={layoutValues}
+          validZones={validZonesByDuration[task.duration]}
+          scrollViewRef={scrollViewRef}
+          isSchedulable={hasValidZones}
+          onTapUnScheduled={onTapUnScheduled}
+          onDismissTooltip={onDismissTooltip}
+        />
+      );
+    });
+};
 
 export const UnscheduledTasksSection = React.memo(
   ({
@@ -502,20 +508,6 @@ export const UnscheduledTasksSection = React.memo(
     onDismissTooltip,
     scrollViewRef,
   }) => {
-    const {
-      previewVisible,
-      previewPosition,
-      previewHeight,
-      isDragging,
-      isDraggingScheduled,
-      isPreviewValid,
-      isRemoveHovered,
-      isCancelHovered,
-      autoScrollActive,
-    } = dragAnimationValues;
-
-    const { removeButtonLayout, cancelButtonLayout, timelineViewHeight } = layoutValues;
-
     return (
       <View style={styles.unscheduledArea}>
         <Text style={styles.sectionTitle}>Tasks</Text>
@@ -525,38 +517,18 @@ export const UnscheduledTasksSection = React.memo(
               ? styles.unscheduledTasksContainerExpanded
               : styles.unscheduledTasksContainer
           }>
-          {tasks
-            .filter((task) => !task.scheduled)
-            .map((task, idx) => {
-              const hasValidZones = validZonesByDuration[task.duration]?.length > 0;
-              return (
-                <TaskItem
-                  key={task.id}
-                  task={task}
-                  index={idx}
-                  onStateChange={onStateChange}
-                  scrollY={scrollY}
-                  timelineLayout={timelineLayout}
-                  previewVisible={previewVisible}
-                  previewPosition={previewPosition}
-                  previewHeight={previewHeight}
-                  isDragging={isDragging}
-                  isDraggingScheduled={isDraggingScheduled}
-                  removeButtonLayout={removeButtonLayout}
-                  cancelButtonLayout={cancelButtonLayout}
-                  isRemoveHovered={isRemoveHovered}
-                  isCancelHovered={isCancelHovered}
-                  autoScrollActive={autoScrollActive}
-                  scrollViewRef={scrollViewRef}
-                  timelineViewHeight={timelineViewHeight}
-                  validZones={validZonesByDuration[task.duration]}
-                  isPreviewValid={isPreviewValid}
-                  isSchedulable={hasValidZones}
-                  onTapUnScheduled={onTapUnScheduled}
-                  onDismissTooltip={onDismissTooltip}
-                />
-              );
-            })}
+          {renderUnscheduledTasks(
+            tasks,
+            onStateChange,
+            scrollY,
+            timelineLayout,
+            dragAnimationValues,
+            layoutValues,
+            validZonesByDuration,
+            onTapUnScheduled,
+            onDismissTooltip,
+            scrollViewRef,
+          )}
         </View>
         <BaseButton
           style={styles.expandButton}
@@ -575,6 +547,7 @@ UnscheduledTasksSection.displayName = 'UnscheduledTasksSection';
 // ========================================================================
 // UI components
 // ========================================================================
+
 export const DragActionButtons = ({
   isVisible,
   removeButtonRef,
@@ -584,57 +557,16 @@ export const DragActionButtons = ({
   isCancelHovered,
   isDraggingScheduled,
 }) => {
-  const animatedStyle = useAnimatedStyle(() => {
-    return {
-      position: 'absolute',
-      bottom: 40,
-      left: 0,
-      right: 0,
-      flexDirection: 'row',
-      justifyContent: 'space-around',
-      zIndex: 2000,
-      opacity: isVisible.value ? 1 : 0,
-      pointerEvents: isVisible.value ? 'auto' : 'none',
-    };
-  });
-
-  const cancelButtonStyle = useAnimatedStyle(() => {
-    return {
-      backgroundColor: isCancelHovered.value ? 'rgb(224, 133, 0)' : 'transparent',
-    };
-  });
-
-  const removeButtonStyle = useAnimatedStyle(() => {
-    return {
-      backgroundColor: isRemoveHovered.value ? 'rgb(224, 133, 0)' : 'transparent',
-      width: isDraggingScheduled.value ? 120 : 0,
-      marginLeft: isDraggingScheduled.value ? 10 : 0,
-    };
-  });
-
-  // Center cancel button when remove button is hidden
-  const cancelContainerStyle = useAnimatedStyle(() => {
-    return {
-      width: isDraggingScheduled.value ? '50%' : '100%',
-      alignItems: isDraggingScheduled.value ? 'flex-end' : 'center',
-      paddingRight: isDraggingScheduled.value ? 10 : 0,
-    };
-  });
-
-  const removeButtonTextStyle = useAnimatedStyle(() => {
-    return {
-      color: isRemoveHovered.value ? 'white' : 'rgb(224, 133, 0)',
-    };
-  });
-
-  const cancelButtonTextStyle = useAnimatedStyle(() => {
-    return {
-      color: isCancelHovered.value ? 'white' : 'rgb(224, 133, 0)',
-    };
-  });
-
+  const {
+    containerStyle,
+    cancelButtonStyle,
+    removeButtonStyle,
+    cancelContainerStyle,
+    removeButtonTextStyle,
+    cancelButtonTextStyle,
+  } = useDragActionButtonsStyles(isVisible, isRemoveHovered, isCancelHovered, isDraggingScheduled);
   return (
-    <Animated.View style={animatedStyle}>
+    <Animated.View style={containerStyle}>
       <Animated.View style={cancelContainerStyle}>
         <Animated.View
           ref={cancelButtonRef}
@@ -659,74 +591,10 @@ export const DragActionButtons = ({
   );
 };
 
-export const Tooltip = ({ message, position, isVisible, onDismiss, parentViewLayout }) => {
+// Helper function to manage tooltip auto-dismiss
+const useTooltipDismiss = (isVisible, onDismiss, position, message) => {
   const dismissTimerRef = useRef(null);
-  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
-  const [hasLayout, setHasLayout] = useState(false);
-  const tooltipWidth = useSharedValue(0);
-  const tooltipHeight = useSharedValue(0);
-  const arrowPosition = useSharedValue(0);
 
-  // Get screen dimensions
-  const { width: screenWidth, height: screenHeight } = Dimensions.get('screen');
-
-  // Update shared values when dimensions change
-  useEffect(() => {
-    tooltipWidth.value = dimensions.width;
-    tooltipHeight.value = dimensions.height;
-  }, [dimensions, tooltipHeight, tooltipWidth]);
-
-  // Use animated style to safely access shared values
-  const tooltipStyle = useAnimatedStyle(() => {
-    // Calculate offsets based on actual dimensions
-    const horizontalOffset = tooltipWidth.value / 2;
-    const verticalOffset = tooltipHeight.value / 2 + TASK_ITEM_HEIGHT / 2;
-
-    // Default positions (when no parentViewLayout is available)
-    let tooltipX = position.x - horizontalOffset; // Center tooltip horizontally
-    let tooltipY = position.y - verticalOffset; // Position above finger
-
-    // If parentViewLayout is available, adjust position
-    if (parentViewLayout) {
-      const parentLayout = parentViewLayout.value;
-      if (parentLayout) {
-        // Adjust tooltip position based on parent view layout
-        tooltipX = position.x - horizontalOffset + TASK_ITEM_WIDTH / 4;
-        tooltipY = position.y - parentLayout.y - verticalOffset;
-      }
-    }
-
-    // Calculate the center point for the arrow before boundary adjustments
-    const targetX = tooltipX + horizontalOffset;
-
-    // Ensure tooltip stays within screen boundaries
-    // Horizontal boundaries
-    const rightEdge = tooltipX + tooltipWidth.value;
-    if (rightEdge > screenWidth - 10) {
-      tooltipX = screenWidth - tooltipWidth.value - 10; // 10px padding from edge
-    }
-    if (tooltipX < 10) {
-      tooltipX = 10; // 10px padding from left edge
-    }
-
-    // Set arrow position relative to the tooltip's adjusted position
-    arrowPosition.value = targetX - tooltipX;
-
-    return {
-      position: 'absolute',
-      left: tooltipX,
-      top: tooltipY,
-    };
-  });
-
-  // Style for the arrow
-  const arrowStyle = useAnimatedStyle(() => {
-    return {
-      left: arrowPosition.value - 10, // -10 to center the 20px wide arrow
-    };
-  });
-
-  // Set up auto-dismiss timer when tooltip becomes visible
   useEffect(() => {
     if (isVisible) {
       // Clear any existing timer
@@ -750,10 +618,39 @@ export const Tooltip = ({ message, position, isVisible, onDismiss, parentViewLay
     };
   }, [isVisible, onDismiss, position, message]);
 
+  return dismissTimerRef;
+};
+
+export const Tooltip = ({ message, position, isVisible, onDismiss, parentViewLayout }) => {
+  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+  const [hasLayout, setHasLayout] = useState(false);
+  const tooltipWidth = useSharedValue(0);
+  const tooltipHeight = useSharedValue(0);
+  const arrowPosition = useSharedValue(0);
+
+  // Set up auto-dismiss timer
+  const dismissTimerRef = useTooltipDismiss(isVisible, onDismiss, position, message);
+
+  // Get screen dimensions
+  const { width: screenWidth } = Dimensions.get('screen');
+
+  // Update shared values when dimensions change
+  useEffect(() => {
+    tooltipWidth.value = dimensions.width;
+    tooltipHeight.value = dimensions.height;
+  }, [dimensions, tooltipHeight, tooltipWidth]);
+
+  const { tooltipStyle, arrowStyle } = useTooltipStyles(
+    tooltipWidth,
+    tooltipHeight,
+    position,
+    arrowPosition,
+    hasLayout,
+    parentViewLayout,
+    screenWidth,
+  );
+
   // Don't render anything if not visible or no position
-  if (!isVisible || !position) {
-    return null;
-  }
   if (!isVisible || !position) {
     return null;
   }
@@ -766,8 +663,6 @@ export const Tooltip = ({ message, position, isVisible, onDismiss, parentViewLay
         // Only show the tooltip once we have measured its dimensions
         !hasLayout && { opacity: 0 },
       ]}
-      // entering={hasLayout ? FadeInDown : undefined}
-      // exiting={FadeOutDown}
       onLayout={(event) => {
         const { width, height } = event.nativeEvent.layout;
         setDimensions({ width, height });

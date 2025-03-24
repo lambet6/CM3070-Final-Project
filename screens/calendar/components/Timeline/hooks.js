@@ -13,127 +13,10 @@ import { isPointInRect, timeToPosition, positionToTime } from './utils';
 import { updatePreviewPosition, checkAutoScroll } from './animations';
 
 // ========================================================================
-// Helper functions
+// Tasks and Events data hooks
 // ========================================================================
 
-// Generic measurement function for any ref
-const measureElementOnUI = (ref, layoutValue) => {
-  'worklet';
-  try {
-    const measured = measure(ref);
-    if (measured) {
-      layoutValue.value = {
-        x: measured.pageX,
-        y: measured.pageY,
-        width: measured.width,
-        height: measured.height,
-      };
-      return measured;
-    }
-  } catch (e) {
-    console.log('Measurement error:', e);
-  }
-  return null;
-};
 
-// Generic layout handler factory
-const useCreateLayoutHandler = (measureFn, layoutChanged) => {
-  return useCallback(() => {
-    if (layoutChanged) layoutChanged.value += 1;
-
-    if (Platform.OS === 'ios') {
-      requestAnimationFrame(() => {
-        runOnUI(measureFn)();
-      });
-    } else {
-      runOnUI(measureFn)();
-    }
-  }, [measureFn, layoutChanged]);
-};
-
-// Handle drag over buttons
-const handleButtonInteraction = (
-  event,
-  removeButtonLayout,
-  cancelButtonLayout,
-  isRemoveHovered,
-  isCancelHovered,
-) => {
-  'worklet';
-  const isOverRemove = isPointInRect(event.absoluteX, event.absoluteY, removeButtonLayout.value);
-  const isOverCancel = isPointInRect(event.absoluteX, event.absoluteY, cancelButtonLayout.value);
-
-  isRemoveHovered.value = isOverRemove;
-  isCancelHovered.value = isOverCancel;
-
-  return { isOverRemove, isOverCancel };
-};
-
-// Handle task movement
-const handleTaskMovement = (event, task, animations, params) => {
-  'worklet';
-  const {
-    timelineLayout,
-    scrollY,
-    previewPosition,
-    previewVisible,
-    previewHeight,
-    isPreviewValid,
-    validZones,
-    timelineViewHeight,
-  } = params;
-
-  // Update translation values
-  animations.translateX.value = event.translationX;
-  animations.translateY.value =
-    event.translationY + (task.scheduled ? animations.accumulatedScrollOffset.value : 0);
-
-  // Handle scheduled task movement
-  if (task.scheduled) {
-    const basePosition = timeToPosition(animations.taskTime.value);
-    const newPosition = basePosition + animations.translateY.value;
-
-    updatePreviewPosition(newPosition, true, {
-      task,
-      validZones,
-      previewPosition,
-      previewHeight,
-      previewVisible,
-      isPreviewValid,
-    });
-  }
-  // Handle unscheduled task movement
-  else if (timelineLayout && timelineLayout.value) {
-    const isOver = isPointInRect(event.absoluteX, event.absoluteY, {
-      ...timelineLayout.value,
-      height: timelineViewHeight.value,
-    });
-
-    // Track if we've been over timeline during this gesture
-    if (isOver) animations.hasBeenOverTimeline.value = true;
-
-    // Update scale based on whether we're over timeline
-    if (isOver !== animations.isOverTimeline.value) {
-      animations.isOverTimeline.value = isOver;
-      animations.scale.value = withSpring(isOver ? 1.6 : 1.2);
-    }
-
-    // Show/update preview when over timeline
-    if (isOver) {
-      const relativePosition = event.absoluteY - timelineLayout.value.y + scrollY.value - event.y;
-      updatePreviewPosition(relativePosition, true, {
-        task,
-        validZones,
-        previewPosition,
-        previewHeight,
-        previewVisible,
-        isPreviewValid,
-      });
-    } else {
-      previewVisible.value = false;
-    }
-  }
-};
 
 // ========================================================================
 // Layout and measurement hooks
@@ -506,3 +389,126 @@ export function useTaskGestures({
   // Compose gesture handlers
   return useMemo(() => Gesture.Exclusive(panGesture, tapGesture), [panGesture, tapGesture]);
 }
+
+// ========================================================================
+// Helper functions
+// ========================================================================
+
+// Generic measurement function for any ref
+const measureElementOnUI = (ref, layoutValue) => {
+  'worklet';
+  try {
+    const measured = measure(ref);
+    if (measured) {
+      layoutValue.value = {
+        x: measured.pageX,
+        y: measured.pageY,
+        width: measured.width,
+        height: measured.height,
+      };
+      return measured;
+    }
+  } catch (e) {
+    console.log('Measurement error:', e);
+  }
+  return null;
+};
+
+// Generic layout handler factory
+const useCreateLayoutHandler = (measureFn, layoutChanged) => {
+  return useCallback(() => {
+    if (layoutChanged) layoutChanged.value += 1;
+
+    if (Platform.OS === 'ios') {
+      requestAnimationFrame(() => {
+        runOnUI(measureFn)();
+      });
+    } else {
+      runOnUI(measureFn)();
+    }
+  }, [measureFn, layoutChanged]);
+};
+
+// Handle drag over buttons
+const handleButtonInteraction = (
+  event,
+  removeButtonLayout,
+  cancelButtonLayout,
+  isRemoveHovered,
+  isCancelHovered,
+) => {
+  'worklet';
+  const isOverRemove = isPointInRect(event.absoluteX, event.absoluteY, removeButtonLayout.value);
+  const isOverCancel = isPointInRect(event.absoluteX, event.absoluteY, cancelButtonLayout.value);
+
+  isRemoveHovered.value = isOverRemove;
+  isCancelHovered.value = isOverCancel;
+
+  return { isOverRemove, isOverCancel };
+};
+
+// Handle task movement
+const handleTaskMovement = (event, task, animations, params) => {
+  'worklet';
+  const {
+    timelineLayout,
+    scrollY,
+    previewPosition,
+    previewVisible,
+    previewHeight,
+    isPreviewValid,
+    validZones,
+    timelineViewHeight,
+  } = params;
+
+  // Update translation values
+  animations.translateX.value = event.translationX;
+  animations.translateY.value =
+    event.translationY + (task.scheduled ? animations.accumulatedScrollOffset.value : 0);
+
+  // Handle scheduled task movement
+  if (task.scheduled) {
+    const basePosition = timeToPosition(animations.taskTime.value);
+    const newPosition = basePosition + animations.translateY.value;
+
+    updatePreviewPosition(newPosition, true, {
+      task,
+      validZones,
+      previewPosition,
+      previewHeight,
+      previewVisible,
+      isPreviewValid,
+    });
+  }
+  // Handle unscheduled task movement
+  else if (timelineLayout && timelineLayout.value) {
+    const isOver = isPointInRect(event.absoluteX, event.absoluteY, {
+      ...timelineLayout.value,
+      height: timelineViewHeight.value,
+    });
+
+    // Track if we've been over timeline during this gesture
+    if (isOver) animations.hasBeenOverTimeline.value = true;
+
+    // Update scale based on whether we're over timeline
+    if (isOver !== animations.isOverTimeline.value) {
+      animations.isOverTimeline.value = isOver;
+      animations.scale.value = withSpring(isOver ? 1.6 : 1.2);
+    }
+
+    // Show/update preview when over timeline
+    if (isOver) {
+      const relativePosition = event.absoluteY - timelineLayout.value.y + scrollY.value - event.y;
+      updatePreviewPosition(relativePosition, true, {
+        task,
+        validZones,
+        previewPosition,
+        previewHeight,
+        previewVisible,
+        isPreviewValid,
+      });
+    } else {
+      previewVisible.value = false;
+    }
+  }
+};
