@@ -1,14 +1,15 @@
 /* global setTimeout clearTimeout */
-import React, { useEffect, useRef, useState, useMemo } from 'react';
-import { View, Text, Dimensions } from 'react-native';
+import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
+import { View, Text, Dimensions, useWindowDimensions } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
-import { GestureDetector, BaseButton } from 'react-native-gesture-handler';
+import { GestureDetector, BaseButton, FlatList } from 'react-native-gesture-handler';
 import styles, {
   getClippedEventStyle,
   getEventBaseStyle,
   getEventWidthStyle,
   stylesTooltip,
 } from './styles';
+import { Feather } from '@expo/vector-icons';
 import {
   HOURS,
   QUARTERS,
@@ -457,47 +458,45 @@ const TaskItem = React.memo(
 TaskItem.displayName = 'TaskItem';
 
 // Helper function to render unscheduled tasks
-const renderUnscheduledTasks = (
-  tasks,
-  onStateChange,
-  scrollY,
-  timelineLayout,
-  dragAnimationValues,
-  layoutValues,
-  validZonesByDuration,
-  onTapUnScheduled,
-  onDismissTooltip,
-  scrollViewRef,
-) => {
-  return tasks
-    .filter((task) => !task.scheduled)
-    .map((task, idx) => {
-      const hasValidZones = validZonesByDuration[task.duration]?.length > 0;
-      return (
-        <TaskItem
-          key={task.id}
-          task={task}
-          index={idx}
-          onStateChange={onStateChange}
-          scrollY={scrollY}
-          timelineLayout={timelineLayout}
-          dragAnimationValues={dragAnimationValues}
-          layoutValues={layoutValues}
-          validZones={validZonesByDuration[task.duration]}
-          scrollViewRef={scrollViewRef}
-          isSchedulable={hasValidZones}
-          onTapUnScheduled={onTapUnScheduled}
-          onDismissTooltip={onDismissTooltip}
-        />
-      );
-    });
-};
+// const renderUnscheduledTasks = (
+//   tasks,
+//   onStateChange,
+//   scrollY,
+//   timelineLayout,
+//   dragAnimationValues,
+//   layoutValues,
+//   validZonesByDuration,
+//   onTapUnScheduled,
+//   onDismissTooltip,
+//   scrollViewRef,
+// ) => {
+//   return tasks
+//     .filter((task) => !task.scheduled)
+//     .map((task, idx) => {
+//       const hasValidZones = validZonesByDuration[task.duration]?.length > 0;
+//       return (
+//         <TaskItem
+//           key={task.id}
+//           task={task}
+//           index={idx}
+//           onStateChange={onStateChange}
+//           scrollY={scrollY}
+//           timelineLayout={timelineLayout}
+//           dragAnimationValues={dragAnimationValues}
+//           layoutValues={layoutValues}
+//           validZones={validZonesByDuration[task.duration]}
+//           scrollViewRef={scrollViewRef}
+//           isSchedulable={hasValidZones}
+//           onTapUnScheduled={onTapUnScheduled}
+//           onDismissTooltip={onDismissTooltip}
+//         />
+//       );
+//     });
+// };
 
 export const UnscheduledTasksSection = React.memo(
   ({
     tasks,
-    isTasksExpanded,
-    setIsTasksExpanded,
     onStateChange,
     scrollY,
     timelineLayout,
@@ -508,40 +507,90 @@ export const UnscheduledTasksSection = React.memo(
     onDismissTooltip,
     scrollViewRef,
   }) => {
+    // Get only unscheduled tasks
+    const unscheduledTasks = useMemo(() => tasks.filter((task) => !task.scheduled), [tasks]);
+
+    // Use FlatList for better performance and automatic layout
+    const renderTaskItem = useCallback(
+      ({ item: task }) => {
+        const hasValidZones = validZonesByDuration[task.duration]?.length > 0;
+
+        return (
+          <TaskItem
+            key={task.id}
+            task={task}
+            index={0}
+            onStateChange={onStateChange}
+            scrollY={scrollY}
+            timelineLayout={timelineLayout}
+            dragAnimationValues={dragAnimationValues}
+            layoutValues={layoutValues}
+            validZones={validZonesByDuration[task.duration]}
+            scrollViewRef={scrollViewRef}
+            isSchedulable={hasValidZones}
+            onTapUnScheduled={onTapUnScheduled}
+            onDismissTooltip={onDismissTooltip}
+          />
+        );
+      },
+      [
+        onStateChange,
+        scrollY,
+        timelineLayout,
+        dragAnimationValues,
+        layoutValues,
+        validZonesByDuration,
+        onTapUnScheduled,
+        onDismissTooltip,
+        scrollViewRef,
+      ],
+    );
+
+    // Render the empty state when no unscheduled tasks
+    const renderEmptyState = () => (
+      <View style={styles.emptyStateContainer}>
+        <Text style={styles.emptyStateText}>No tasks due</Text>
+      </View>
+    );
+
     return (
       <View style={styles.unscheduledArea}>
-        <Text style={styles.sectionTitle}>Tasks</Text>
-        <View
-          style={
-            isTasksExpanded
-              ? styles.unscheduledTasksContainerExpanded
-              : styles.unscheduledTasksContainer
-          }>
-          {renderUnscheduledTasks(
-            tasks,
-            onStateChange,
-            scrollY,
-            timelineLayout,
-            dragAnimationValues,
-            layoutValues,
-            validZonesByDuration,
-            onTapUnScheduled,
-            onDismissTooltip,
-            scrollViewRef,
+        <View style={styles.unscheduledHeader}>
+          <Text style={styles.sectionTitle}>Tasks</Text>
+          {unscheduledTasks.length > 0 && (
+            <Text style={styles.taskCount}>{unscheduledTasks.length} due</Text>
           )}
         </View>
-        <BaseButton
-          style={styles.expandButton}
-          onPress={() => {
-            setIsTasksExpanded(!isTasksExpanded);
-            onDismissTooltip();
-          }}>
-          <Text style={styles.expandButtonText}>{isTasksExpanded ? '∧' : '∨'}</Text>
-        </BaseButton>
+
+        <View style={styles.unscheduledTasksContainer}>
+          {unscheduledTasks.length > 0 ? (
+            <FlatList
+              data={unscheduledTasks}
+              style={styles.unscheduledTaskList}
+              renderItem={renderTaskItem}
+              ListEmptyComponent={renderEmptyState}
+              horizontal
+              showsHorizontalScrollIndicator={true}
+              contentContainerStyle={styles.taskListContent}
+              keyExtractor={(item) => item.id}
+              initialNumToRender={5}
+              maxToRenderPerBatch={10}
+              windowSize={5}
+              getItemLayout={(data, index) => ({
+                length: TASK_ITEM_WIDTH / 2 + 20, // item width + padding
+                offset: (TASK_ITEM_WIDTH / 2 + 20) * index,
+                index,
+              })}
+            />
+          ) : (
+            renderEmptyState()
+          )}
+        </View>
       </View>
     );
   },
 );
+
 UnscheduledTasksSection.displayName = 'UnscheduledTasksSection';
 
 // ========================================================================

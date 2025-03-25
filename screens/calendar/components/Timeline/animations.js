@@ -6,7 +6,6 @@
  * across various timeline components.
  */
 
-import { useCallback } from 'react';
 import {
   useSharedValue,
   useAnimatedStyle,
@@ -24,6 +23,7 @@ import {
   TASK_ITEM_WIDTH,
   MIN_HOUR,
   timeToPosition,
+  TIMELINE_HEIGHT,
 } from './utils';
 
 // ========================================================================
@@ -691,7 +691,7 @@ export const useAutoScroll = ({
         const scrollAmount = current.speed * current.direction;
 
         // Get the content height and calculate the maximum possible scroll
-        const maxScrollY = Math.max(0, timelineViewHeight.value * 2 - timelineViewHeight.value);
+        const maxScrollY = Math.max(0, TIMELINE_HEIGHT - timelineViewHeight.value);
 
         // Check scroll boundaries before applying scroll
         let newScrollY = currentScrollY;

@@ -112,7 +112,6 @@ const TimelineComponent = ({ selectedDate }) => {
 
   // Task state for the timeline
   const [tasks, setTasks] = useState([]);
-  const [isTasksExpanded, setIsTasksExpanded] = useState(false);
 
   // Convert tasks from store format to timeline format when tasksForSelectedDate changes
   useEffect(() => {
@@ -287,8 +286,6 @@ const TimelineComponent = ({ selectedDate }) => {
       {/* Unscheduled Tasks Area */}
       <UnscheduledTasksSection
         tasks={tasks}
-        isTasksExpanded={isTasksExpanded}
-        setIsTasksExpanded={setIsTasksExpanded}
         onStateChange={handleTaskStateChange}
         scrollY={scrollY}
         timelineLayout={timelineLayout}

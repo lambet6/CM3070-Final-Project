@@ -13,12 +13,6 @@ import { isPointInRect, timeToPosition, positionToTime } from './utils';
 import { updatePreviewPosition, checkAutoScroll } from './animations';
 
 // ========================================================================
-// Tasks and Events data hooks
-// ========================================================================
-
-
-
-// ========================================================================
 // Layout and measurement hooks
 // ========================================================================
 export const useLayoutMeasurement = () => {
@@ -159,7 +153,7 @@ export function useTaskGestures({
 
         runOnJS(onTapUnScheduled)(position, message);
       }),
-    [isSchedulable, onTapUnScheduled],
+    [isSchedulable, onTapUnScheduled, task.scheduled],
   );
 
   // Handle gesture start
@@ -253,14 +247,22 @@ export function useTaskGestures({
         previewVisible.value = false;
         animations.translateX.value = withSpring(0);
         animations.translateY.value = withSpring(0);
-        task.scheduled ? (ghostVisible.value = false) : (animations.isOverTimeline.value = false);
+        if (task.scheduled) {
+          ghostVisible.value = false;
+        } else {
+          animations.isOverTimeline.value = false;
+        }
       }
       // Handle ending over cancel button
       else if (isOverCancel) {
         animations.translateX.value = 0;
         animations.translateY.value = 0;
         previewVisible.value = false;
-        task.scheduled ? (ghostVisible.value = false) : (animations.isOverTimeline.value = false);
+        if (task.scheduled) {
+          ghostVisible.value = false;
+        } else {
+          animations.isOverTimeline.value = false;
+        }
       }
       // Handle task scheduling/rescheduling
       else if (task.scheduled) {
@@ -314,6 +316,7 @@ export function useTaskGestures({
     () =>
       Gesture.Pan()
         .enabled(isSchedulable)
+        .activateAfterLongPress(300)
         .onStart(handleGestureStart)
         .onUpdate((event) => {
           // Check button interaction

@@ -14,11 +14,12 @@ const styles = StyleSheet.create({
     margin: 16,
     textAlign: 'center',
   },
+
+  // Unscheduled tasks
   unscheduledArea: {
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
     backgroundColor: 'rgba(152, 16, 16, 0.2)',
-    paddingHorizontal: 16,
     paddingVertical: 10,
   },
   sectionTitle: {
@@ -27,17 +28,48 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   unscheduledTasksContainer: {
-    height: TASK_ITEM_HEIGHT / 1.5,
+    width: '100%',
+    height: TASK_ITEM_HEIGHT / 2 + 20,
+    position: 'relative',
+  },
+  unscheduledTaskList: {
+    overflow: 'visible',
+  },
+  unscheduledHeader: {
     flexDirection: 'row',
-    flexWrap: 'no wrap',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+    paddingHorizontal: 16,
+  },
+  taskCount: {
+    fontSize: 12,
+    color: '#666',
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  emptyStateContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  emptyStateText: {
+    color: '#888',
+    fontSize: 14,
+    fontStyle: 'italic',
+  },
+  taskListContent: {
+    paddingHorizontal: 10,
     gap: 10,
   },
-  unscheduledTasksContainerExpanded: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
+  unscheduledTaskItem: {
+    marginHorizontal: 5,
   },
 
+  // Timeline styles
   timelineContainer: {
     flex: 1,
   },
@@ -94,6 +126,7 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: '#e8e8e8',
   },
+
   // Base task item shared styles
   taskItem: {
     borderRadius: 8,
@@ -106,6 +139,7 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 3,
   },
+
   // Text styles
   taskTitle: {
     fontWeight: '600',
@@ -155,6 +189,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#555',
   },
+
   // Action buttons styles
   actionButton: {
     width: 120,
@@ -189,6 +224,7 @@ const styles = StyleSheet.create({
     color: '#555',
     fontWeight: '500',
   },
+
   // Scheduled task styles
   scheduledTaskStatic: {
     position: 'absolute',
