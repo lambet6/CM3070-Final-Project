@@ -1,7 +1,12 @@
 /* global setTimeout clearTimeout */
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import { View, Text, Dimensions, useWindowDimensions } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
+import Animated, {
+  runOnJS,
+  useAnimatedReaction,
+  useAnimatedStyle,
+  useSharedValue,
+} from 'react-native-reanimated';
 import { GestureDetector, BaseButton, FlatList } from 'react-native-gesture-handler';
 import styles, {
   getClippedEventStyle,
@@ -457,43 +462,6 @@ const TaskItem = React.memo(
 );
 TaskItem.displayName = 'TaskItem';
 
-// Helper function to render unscheduled tasks
-// const renderUnscheduledTasks = (
-//   tasks,
-//   onStateChange,
-//   scrollY,
-//   timelineLayout,
-//   dragAnimationValues,
-//   layoutValues,
-//   validZonesByDuration,
-//   onTapUnScheduled,
-//   onDismissTooltip,
-//   scrollViewRef,
-// ) => {
-//   return tasks
-//     .filter((task) => !task.scheduled)
-//     .map((task, idx) => {
-//       const hasValidZones = validZonesByDuration[task.duration]?.length > 0;
-//       return (
-//         <TaskItem
-//           key={task.id}
-//           task={task}
-//           index={idx}
-//           onStateChange={onStateChange}
-//           scrollY={scrollY}
-//           timelineLayout={timelineLayout}
-//           dragAnimationValues={dragAnimationValues}
-//           layoutValues={layoutValues}
-//           validZones={validZonesByDuration[task.duration]}
-//           scrollViewRef={scrollViewRef}
-//           isSchedulable={hasValidZones}
-//           onTapUnScheduled={onTapUnScheduled}
-//           onDismissTooltip={onDismissTooltip}
-//         />
-//       );
-//     });
-// };
-
 export const UnscheduledTasksSection = React.memo(
   ({
     tasks,
@@ -506,7 +474,44 @@ export const UnscheduledTasksSection = React.memo(
     onTapUnScheduled,
     onDismissTooltip,
     scrollViewRef,
+    removeButtonRef,
+    cancelButtonRef,
+    onLayoutChange,
+    isRemoveHovered,
+    isCancelHovered,
   }) => {
+    const { cancelButtonStyle, removeButtonStyle, removeButtonTextStyle, cancelButtonTextStyle } =
+      useDragActionButtonsStyles(isRemoveHovered, isCancelHovered);
+    const [taskDragging, setTaskDragging] = useState(false);
+    const [taskDraggingScheduled, setTaskDraggingScheduled] = useState(false);
+    useAnimatedReaction(
+      () => {
+        return dragAnimationValues.isDragging.value;
+      },
+      (currentValue) => {
+        runOnJS(setTaskDragging)(currentValue);
+      },
+    );
+    useAnimatedReaction(
+      () => {
+        return dragAnimationValues.isDraggingScheduled.value;
+      },
+      (currentValue) => {
+        runOnJS(setTaskDraggingScheduled)(currentValue);
+      },
+    );
+    useEffect(() => {
+      if (taskDraggingScheduled) {
+        // Use requestAnimationFrame to ensure the buttons are rendered
+        const timeoutId = setTimeout(() => {
+          if (onLayoutChange) {
+            onLayoutChange();
+          }
+        }, 50); // Small delay to ensure rendering completes
+
+        return () => clearTimeout(timeoutId);
+      }
+    }, [taskDraggingScheduled, onLayoutChange]);
     // Get only unscheduled tasks
     const unscheduledTasks = useMemo(() => tasks.filter((task) => !task.scheduled), [tasks]);
 
@@ -561,8 +566,8 @@ export const UnscheduledTasksSection = React.memo(
             <Text style={styles.taskCount}>{unscheduledTasks.length} due</Text>
           )}
         </View>
-
         <View style={styles.unscheduledTasksContainer}>
+          {/* Always render either the FlatList or empty state */}
           {unscheduledTasks.length > 0 ? (
             <FlatList
               data={unscheduledTasks}
@@ -585,6 +590,44 @@ export const UnscheduledTasksSection = React.memo(
           ) : (
             renderEmptyState()
           )}
+
+          {/* Conditionally render the overlay with absolute positioning */}
+          {taskDraggingScheduled && (
+            <Animated.View
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                // backgroundColor: 'blue',
+                flexDirection: 'row',
+                justifyContent: 'space-around',
+              }}>
+              <Animated.View
+                ref={cancelButtonRef}
+                onLayout={onLayoutChange}
+                style={[styles.actionButton, cancelButtonStyle]}>
+                <Animated.Text style={[styles.actionButtonIcon, cancelButtonTextStyle]}>
+                  ↩
+                </Animated.Text>
+                <Animated.Text style={[styles.actionButtonText, cancelButtonTextStyle]}>
+                  Cancel
+                </Animated.Text>
+              </Animated.View>
+              <Animated.View
+                ref={removeButtonRef}
+                onLayout={onLayoutChange}
+                style={[styles.actionButton, removeButtonStyle]}>
+                <Animated.Text style={[styles.actionButtonIcon, removeButtonTextStyle]}>
+                  ✕
+                </Animated.Text>
+                <Animated.Text style={[styles.actionButtonText, removeButtonTextStyle]}>
+                  Remove
+                </Animated.Text>
+              </Animated.View>
+            </Animated.View>
+          )}
         </View>
       </View>
     );
@@ -597,48 +640,48 @@ UnscheduledTasksSection.displayName = 'UnscheduledTasksSection';
 // UI components
 // ========================================================================
 
-export const DragActionButtons = ({
-  isVisible,
-  removeButtonRef,
-  cancelButtonRef,
-  onLayoutChange,
-  isRemoveHovered,
-  isCancelHovered,
-  isDraggingScheduled,
-}) => {
-  const {
-    containerStyle,
-    cancelButtonStyle,
-    removeButtonStyle,
-    cancelContainerStyle,
-    removeButtonTextStyle,
-    cancelButtonTextStyle,
-  } = useDragActionButtonsStyles(isVisible, isRemoveHovered, isCancelHovered, isDraggingScheduled);
-  return (
-    <Animated.View style={containerStyle}>
-      <Animated.View style={cancelContainerStyle}>
-        <Animated.View
-          ref={cancelButtonRef}
-          style={[styles.actionButton, cancelButtonStyle]}
-          onLayout={onLayoutChange}>
-          <Animated.Text style={[styles.actionButtonIcon, cancelButtonTextStyle]}>↩</Animated.Text>
-          <Animated.Text style={[styles.actionButtonText, cancelButtonTextStyle]}>
-            Cancel
-          </Animated.Text>
-        </Animated.View>
-      </Animated.View>
-      <Animated.View
-        ref={removeButtonRef}
-        style={[styles.actionButton, removeButtonStyle]}
-        onLayout={onLayoutChange}>
-        <Animated.Text style={[styles.actionButtonIcon, removeButtonTextStyle]}>✕</Animated.Text>
-        <Animated.Text style={[styles.actionButtonText, removeButtonTextStyle]}>
-          Remove
-        </Animated.Text>
-      </Animated.View>
-    </Animated.View>
-  );
-};
+// export const DragActionButtons = ({
+//   isVisible,
+//   removeButtonRef,
+//   cancelButtonRef,
+//   onLayoutChange,
+//   isRemoveHovered,
+//   isCancelHovered,
+//   isDraggingScheduled,
+// }) => {
+//   const {
+//     containerStyle,
+//     cancelButtonStyle,
+//     removeButtonStyle,
+//     cancelContainerStyle,
+//     removeButtonTextStyle,
+//     cancelButtonTextStyle,
+//   } = useDragActionButtonsStyles(isVisible, isRemoveHovered, isCancelHovered, isDraggingScheduled);
+//   return (
+//     <Animated.View style={containerStyle}>
+//       <Animated.View style={cancelContainerStyle}>
+//         <Animated.View
+//           ref={cancelButtonRef}
+//           style={[styles.actionButton, cancelButtonStyle]}
+//           onLayout={onLayoutChange}>
+//           <Animated.Text style={[styles.actionButtonIcon, cancelButtonTextStyle]}>↩</Animated.Text>
+//           <Animated.Text style={[styles.actionButtonText, cancelButtonTextStyle]}>
+//             Cancel
+//           </Animated.Text>
+//         </Animated.View>
+//       </Animated.View>
+//       <Animated.View
+//         ref={removeButtonRef}
+//         style={[styles.actionButton, removeButtonStyle]}
+//         onLayout={onLayoutChange}>
+//         <Animated.Text style={[styles.actionButtonIcon, removeButtonTextStyle]}>✕</Animated.Text>
+//         <Animated.Text style={[styles.actionButtonText, removeButtonTextStyle]}>
+//           Remove
+//         </Animated.Text>
+//       </Animated.View>
+//     </Animated.View>
+//   );
+// };
 
 // Helper function to manage tooltip auto-dismiss
 const useTooltipDismiss = (isVisible, onDismiss, position, message) => {

@@ -414,25 +414,7 @@ export const useNonSchedulableTaskStyle = (animations) => {
 /**
  * Creates animated styles for drag action buttons
  */
-export const useDragActionButtonsStyles = (
-  isVisible,
-  isRemoveHovered,
-  isCancelHovered,
-  isDraggingScheduled,
-) => {
-  // Container style
-  const containerStyle = useAnimatedStyle(() => ({
-    position: 'absolute',
-    bottom: 40,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    zIndex: 2000,
-    opacity: isVisible.value ? 1 : 0,
-    pointerEvents: isVisible.value ? 'auto' : 'none',
-  }));
-
+export const useDragActionButtonsStyles = (isRemoveHovered, isCancelHovered) => {
   // Cancel button style
   const cancelButtonStyle = useAnimatedStyle(() => ({
     backgroundColor: isCancelHovered.value ? 'rgb(224, 133, 0)' : 'transparent',
@@ -441,15 +423,6 @@ export const useDragActionButtonsStyles = (
   // Remove button style
   const removeButtonStyle = useAnimatedStyle(() => ({
     backgroundColor: isRemoveHovered.value ? 'rgb(224, 133, 0)' : 'transparent',
-    width: isDraggingScheduled.value ? 120 : 0,
-    marginLeft: isDraggingScheduled.value ? 10 : 0,
-  }));
-
-  // Cancel container style
-  const cancelContainerStyle = useAnimatedStyle(() => ({
-    width: isDraggingScheduled.value ? '50%' : '100%',
-    alignItems: isDraggingScheduled.value ? 'flex-end' : 'center',
-    paddingRight: isDraggingScheduled.value ? 10 : 0,
   }));
 
   // Text styles
@@ -462,10 +435,8 @@ export const useDragActionButtonsStyles = (
   }));
 
   return {
-    containerStyle,
     cancelButtonStyle,
     removeButtonStyle,
-    cancelContainerStyle,
     removeButtonTextStyle,
     cancelButtonTextStyle,
   };

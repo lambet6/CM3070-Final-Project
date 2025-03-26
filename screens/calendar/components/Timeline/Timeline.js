@@ -13,7 +13,7 @@ import { useTooltip, useLayoutMeasurement } from './hooks';
 import { useDragAnimations } from './animations';
 
 // Import UI components
-import { UnscheduledTasksSection, TimelineContent, DragActionButtons, Tooltip } from './components';
+import { UnscheduledTasksSection, TimelineContent, Tooltip } from './components';
 
 // Import task store and manager
 import { useTaskStore } from '../../../../store/taskStore';
@@ -295,6 +295,11 @@ const TimelineComponent = ({ selectedDate }) => {
         onTapUnScheduled={showTooltip}
         onDismissTooltip={hideTooltip}
         scrollViewRef={scrollViewRef}
+        removeButtonRef={removeButtonRef}
+        cancelButtonRef={cancelButtonRef}
+        onLayoutChange={handleButtonLayout}
+        isRemoveHovered={dragAnimationValues.isRemoveHovered}
+        isCancelHovered={dragAnimationValues.isCancelHovered}
       />
 
       {/* Timeline */}
@@ -312,17 +317,6 @@ const TimelineComponent = ({ selectedDate }) => {
         validZonesByDuration={validZonesByDuration}
         onTapUnScheduled={showTooltip}
         onDismissTooltip={hideTooltip}
-      />
-
-      {/* Cancel and Remove Buttons */}
-      <DragActionButtons
-        isVisible={dragAnimationValues.isDragging}
-        isDraggingScheduled={dragAnimationValues.isDraggingScheduled}
-        removeButtonRef={removeButtonRef}
-        cancelButtonRef={cancelButtonRef}
-        onLayoutChange={handleButtonLayout}
-        isRemoveHovered={dragAnimationValues.isRemoveHovered}
-        isCancelHovered={dragAnimationValues.isCancelHovered}
       />
     </View>
   );
