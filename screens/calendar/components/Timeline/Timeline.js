@@ -20,6 +20,7 @@ import { useTaskStore } from '../../../../store/taskStore';
 import { useTaskManager } from '../../../../hooks/useTaskManager';
 // Import calendar store
 import { useCalendarStore } from '../../../../store/calendarStore';
+import { ca } from 'date-fns/locale';
 
 const TimelineComponent = ({ selectedDate }) => {
   // Get task manager for updating tasks
@@ -144,17 +145,17 @@ const TimelineComponent = ({ selectedDate }) => {
     timelineLayoutRef,
     removeButtonRef,
     cancelButtonRef,
-    timelineLayout,
-    removeButtonLayout,
     cancelButtonLayout,
+    removeButtonLayout,
+    timelineLayout,
     timelineViewHeight,
     handleTimelineLayout,
-    handleButtonLayout,
-    measureButtons,
     layoutChanged,
     parentViewRef,
     parentViewLayout,
     handleParentViewLayout,
+    handleCancelButtonLayout,
+    handleRemoveButtonLayout,
   } = useLayoutMeasurement();
 
   // Scroll handling
@@ -192,29 +193,12 @@ const TimelineComponent = ({ selectedDate }) => {
     () => layoutChanged.value,
     (currentValue, previousValue) => {
       if (currentValue !== previousValue) {
-        measureButtons();
+        // We don't need to measure buttons anymore
       }
     },
-    [measureButtons],
   );
 
-  // Set up animation reaction for button measurements
-  useAnimatedReaction(
-    () => ({
-      isDragging: dragAnimationValues.isDragging.value,
-      isDraggingScheduled: dragAnimationValues.isDraggingScheduled.value,
-    }),
-    (current, previous) => {
-      if (
-        !previous ||
-        current.isDragging !== previous.isDragging ||
-        current.isDraggingScheduled !== previous.isDraggingScheduled
-      ) {
-        measureButtons();
-      }
-    },
-    [measureButtons],
-  );
+  // Remove animation reaction for button measurements
 
   // Updated task state change handler that uses task manager
   const handleTaskStateChange = useCallback(
@@ -266,9 +250,9 @@ const TimelineComponent = ({ selectedDate }) => {
   // Group layout values for passing to subcomponents
   const layoutValues = {
     timelineLayout,
-    removeButtonLayout,
-    cancelButtonLayout,
     timelineViewHeight,
+    cancelButtonLayout,
+    removeButtonLayout,
   };
 
   // Render the UI
@@ -297,9 +281,10 @@ const TimelineComponent = ({ selectedDate }) => {
         scrollViewRef={scrollViewRef}
         removeButtonRef={removeButtonRef}
         cancelButtonRef={cancelButtonRef}
-        onLayoutChange={handleButtonLayout}
         isRemoveHovered={dragAnimationValues.isRemoveHovered}
         isCancelHovered={dragAnimationValues.isCancelHovered}
+        handleRemoveButtonLayout={handleRemoveButtonLayout}
+        handleCancelButtonLayout={handleCancelButtonLayout}
       />
 
       {/* Timeline */}

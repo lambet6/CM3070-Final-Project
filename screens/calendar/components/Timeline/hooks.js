@@ -16,15 +16,15 @@ import { updatePreviewPosition, checkAutoScroll } from './animations';
 // Layout and measurement hooks
 // ========================================================================
 export const useLayoutMeasurement = () => {
-  const timelineLayoutRef = useAnimatedRef();
-  const removeButtonRef = useAnimatedRef();
-  const cancelButtonRef = useAnimatedRef();
-  const parentViewRef = useAnimatedRef();
+  const timelineLayoutRef = useAnimatedRef(null);
+  const removeButtonRef = useAnimatedRef(null);
+  const cancelButtonRef = useAnimatedRef(null);
+  const parentViewRef = useAnimatedRef(null);
 
   const timelineLayout = useSharedValue({ x: 0, y: 0, width: 0, height: 0 });
-  const removeButtonLayout = useSharedValue(null);
-  const cancelButtonLayout = useSharedValue(null);
   const parentViewLayout = useSharedValue({ x: 0, y: 0, width: 0, height: 0 });
+  const cancelButtonLayout = useSharedValue({ x: 0, y: 0, width: 0, height: 0 });
+  const removeButtonLayout = useSharedValue({ x: 0, y: 0, width: 0, height: 0 });
   const timelineViewHeight = useSharedValue(0);
   const layoutChanged = useSharedValue(0);
 
@@ -37,43 +37,43 @@ export const useLayoutMeasurement = () => {
     }
   }, [timelineLayoutRef, timelineLayout, timelineViewHeight]);
 
-  // Measure buttons layout
-  const measureButtons = useCallback(() => {
-    'worklet';
-    if (removeButtonRef.current) {
-      measureElementOnUI(removeButtonRef, removeButtonLayout);
-    }
-    if (cancelButtonRef.current) {
-      measureElementOnUI(cancelButtonRef, cancelButtonLayout);
-    }
-  }, [removeButtonRef, cancelButtonRef, removeButtonLayout, cancelButtonLayout]);
-
   // Measure parent view layout
   const measureParentViewOnUI = useCallback(() => {
     'worklet';
     measureElementOnUI(parentViewRef, parentViewLayout);
   }, [parentViewRef, parentViewLayout]);
 
+  const measureCancelButtonOnUI = useCallback(() => {
+    'worklet';
+    measureElementOnUI(cancelButtonRef, cancelButtonLayout);
+  }, [cancelButtonRef, cancelButtonLayout]);
+
+  const measureRemoveButtonOnUI = useCallback(() => {
+    'worklet';
+    measureElementOnUI(removeButtonRef, removeButtonLayout);
+  }, [removeButtonRef, removeButtonLayout]);
+
   // Create layout handlers using the factory
   const handleTimelineLayout = useCreateLayoutHandler(measureTimelineOnUI, layoutChanged);
-  const handleButtonLayout = useCreateLayoutHandler(measureButtons);
   const handleParentViewLayout = useCreateLayoutHandler(measureParentViewOnUI, layoutChanged);
+  const handleCancelButtonLayout = useCreateLayoutHandler(measureCancelButtonOnUI, layoutChanged);
+  const handleRemoveButtonLayout = useCreateLayoutHandler(measureRemoveButtonOnUI, layoutChanged);
 
   return {
     timelineLayoutRef,
     removeButtonRef,
     cancelButtonRef,
     parentViewRef,
-    timelineLayout,
-    removeButtonLayout,
     cancelButtonLayout,
+    removeButtonLayout,
+    timelineLayout,
     parentViewLayout,
     timelineViewHeight,
     layoutChanged,
     handleTimelineLayout,
-    handleButtonLayout,
     handleParentViewLayout,
-    measureButtons,
+    handleCancelButtonLayout,
+    handleRemoveButtonLayout,
   };
 };
 
@@ -121,8 +121,8 @@ export function useTaskGestures({
   previewHeight,
   isDragging,
   isDraggingScheduled,
-  removeButtonLayout,
   cancelButtonLayout,
+  removeButtonLayout,
   ghostVisible,
   ghostPosition,
   ghostHeight,
@@ -174,11 +174,10 @@ export function useTaskGestures({
       animations.resetAnimationValues();
 
       // Update global states
-      isDragging.value = true;
       if (task.scheduled) {
+        isDragging.value = true;
         isDraggingScheduled.value = true;
       }
-      // isDraggingScheduled.value = task.scheduled;
       isRemoveHovered.value = false;
       isCancelHovered.value = false;
 
@@ -242,14 +241,14 @@ export function useTaskGestures({
         event.absoluteY,
         removeButtonLayout.value,
       );
-      const isOverCancel = isPointInRect(
-        event.absoluteX,
-        event.absoluteY,
-        cancelButtonLayout.value,
-      );
+
+      const isOverCancel =
+        cancelButtonLayout &&
+        isPointInRect(event.absoluteX, event.absoluteY, cancelButtonLayout.value);
 
       // Handle ending over remove button
       if (isOverRemove) {
+        console.log('Over remove button');
         runOnJS(onStateChange)(task.id, false, null);
         previewVisible.value = false;
         animations.translateX.value = withSpring(0);
@@ -332,8 +331,8 @@ export function useTaskGestures({
           // Check button interaction
           const { isOverRemove, isOverCancel } = handleButtonInteraction(
             event,
-            removeButtonLayout,
-            cancelButtonLayout,
+            removeButtonLayout.value,
+            cancelButtonLayout.value,
             isRemoveHovered,
             isCancelHovered,
           );
@@ -355,7 +354,7 @@ export function useTaskGestures({
             isPreviewValid,
             validZones,
             timelineViewHeight,
-            isDraggingScheduled,
+            isDragging,
           });
 
           // Check for auto-scroll based on task type
@@ -457,8 +456,8 @@ const handleButtonInteraction = (
   if (!removeButtonLayout || !cancelButtonLayout)
     return { isOverRemove: false, isOverCancel: false };
 
-  const isOverRemove = isPointInRect(event.absoluteX, event.absoluteY, removeButtonLayout.value);
-  const isOverCancel = isPointInRect(event.absoluteX, event.absoluteY, cancelButtonLayout.value);
+  const isOverRemove = isPointInRect(event.absoluteX, event.absoluteY, removeButtonLayout);
+  const isOverCancel = isPointInRect(event.absoluteX, event.absoluteY, cancelButtonLayout);
 
   isRemoveHovered.value = isOverRemove;
   isCancelHovered.value = isOverCancel;
@@ -478,7 +477,7 @@ const handleTaskMovement = (event, task, animations, params) => {
     isPreviewValid,
     validZones,
     timelineViewHeight,
-    isDraggingScheduled,
+    isDragging,
   } = params;
 
   // Update translation values
@@ -510,7 +509,7 @@ const handleTaskMovement = (event, task, animations, params) => {
     // Track if we've been over timeline during this gesture
     if (isOver) {
       animations.hasBeenOverTimeline.value = true;
-      isDraggingScheduled.value = true;
+      isDragging.value = true;
     }
 
     // Update scale based on whether we're over timeline

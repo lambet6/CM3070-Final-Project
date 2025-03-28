@@ -6,6 +6,7 @@ import Animated, {
   useAnimatedReaction,
   useAnimatedStyle,
   useSharedValue,
+  measure,
 } from 'react-native-reanimated';
 import { GestureDetector, BaseButton, FlatList } from 'react-native-gesture-handler';
 import styles, {
@@ -284,7 +285,7 @@ const extractTaskProps = (dragAnimationValues, layoutValues) => {
     isPreviewValid,
   } = dragAnimationValues;
 
-  const { removeButtonLayout, cancelButtonLayout, timelineViewHeight, timelineLayout } =
+  const { timelineViewHeight, timelineLayout, cancelButtonLayout, removeButtonLayout } =
     layoutValues;
 
   return {
@@ -293,8 +294,6 @@ const extractTaskProps = (dragAnimationValues, layoutValues) => {
     previewHeight,
     isDragging,
     isDraggingScheduled,
-    removeButtonLayout,
-    cancelButtonLayout,
     ghostVisible,
     ghostPosition,
     ghostHeight,
@@ -304,6 +303,8 @@ const extractTaskProps = (dragAnimationValues, layoutValues) => {
     timelineViewHeight,
     isPreviewValid,
     timelineLayout,
+    cancelButtonLayout,
+    removeButtonLayout,
   };
 };
 
@@ -321,6 +322,9 @@ const TaskItem = React.memo(
     isSchedulable = true,
     onTapUnScheduled,
     onDismissTooltip,
+    removeButtonRef,
+    cancelButtonRef,
+    isAnyTaskDragging = false, // Accept new prop with default value
   }) => {
     // Extract props from animation and layout values
     const props = extractTaskProps(dragAnimationValues, layoutValues);
@@ -397,9 +401,19 @@ const TaskItem = React.memo(
           zIndex: animations.isPressed.value ? 1000 : index + 1,
         };
       } else {
+        // Determine opacity based on dragging state
+        let opacity;
+        if (isAnyTaskDragging) {
+          // If any task is dragging, only show this task if it's the one being pressed
+          opacity = animations.isPressed.value ? animations.opacity.value : 0;
+        } else {
+          // Normal opacity calculation when no dragging is happening
+          opacity = !isSchedulable ? 0.5 : animations.opacity.value;
+        }
+
         return {
           ...commonTransform,
-          opacity: !isSchedulable ? 0.5 : animations.opacity.value,
+          opacity: opacity,
           backgroundColor: animations.isOverTimeline.value
             ? '#a8e6cf'
             : !isSchedulable
@@ -476,9 +490,10 @@ export const UnscheduledTasksSection = React.memo(
     scrollViewRef,
     removeButtonRef,
     cancelButtonRef,
-    onLayoutChange,
     isRemoveHovered,
     isCancelHovered,
+    handleCancelButtonLayout,
+    handleRemoveButtonLayout,
   }) => {
     const { cancelButtonStyle, removeButtonStyle, removeButtonTextStyle, cancelButtonTextStyle } =
       useDragActionButtonsStyles(isRemoveHovered, isCancelHovered);
@@ -500,18 +515,6 @@ export const UnscheduledTasksSection = React.memo(
         runOnJS(setTaskDraggingScheduled)(currentValue);
       },
     );
-    useEffect(() => {
-      if (taskDraggingScheduled) {
-        // Use requestAnimationFrame to ensure the buttons are rendered
-        const timeoutId = setTimeout(() => {
-          if (onLayoutChange) {
-            onLayoutChange();
-          }
-        }, 50); // Small delay to ensure rendering completes
-
-        return () => clearTimeout(timeoutId);
-      }
-    }, [taskDraggingScheduled, onLayoutChange]);
     // Get only unscheduled tasks
     const unscheduledTasks = useMemo(() => tasks.filter((task) => !task.scheduled), [tasks]);
 
@@ -535,6 +538,9 @@ export const UnscheduledTasksSection = React.memo(
             isSchedulable={hasValidZones}
             onTapUnScheduled={onTapUnScheduled}
             onDismissTooltip={onDismissTooltip}
+            removeButtonRef={removeButtonRef}
+            cancelButtonRef={cancelButtonRef}
+            isAnyTaskDragging={taskDragging} // Add this new prop
           />
         );
       },
@@ -548,6 +554,9 @@ export const UnscheduledTasksSection = React.memo(
         onTapUnScheduled,
         onDismissTooltip,
         scrollViewRef,
+        removeButtonRef,
+        cancelButtonRef,
+        taskDragging, // Add this dependency
       ],
     );
 
@@ -592,7 +601,7 @@ export const UnscheduledTasksSection = React.memo(
           )}
 
           {/* Conditionally render the overlay with absolute positioning */}
-          {taskDraggingScheduled && (
+          {taskDragging && (
             <Animated.View
               style={{
                 position: 'absolute',
@@ -600,13 +609,13 @@ export const UnscheduledTasksSection = React.memo(
                 left: 0,
                 right: 0,
                 bottom: 0,
-                // backgroundColor: 'blue',
                 flexDirection: 'row',
                 justifyContent: 'space-around',
+                backgroundColor: 'rgba// (39, 245, 140, 1)',
               }}>
               <Animated.View
                 ref={cancelButtonRef}
-                onLayout={onLayoutChange}
+                onLayout={handleCancelButtonLayout}
                 style={[styles.actionButton, cancelButtonStyle]}>
                 <Animated.Text style={[styles.actionButtonIcon, cancelButtonTextStyle]}>
                   ↩
@@ -615,17 +624,19 @@ export const UnscheduledTasksSection = React.memo(
                   Cancel
                 </Animated.Text>
               </Animated.View>
-              <Animated.View
-                ref={removeButtonRef}
-                onLayout={onLayoutChange}
-                style={[styles.actionButton, removeButtonStyle]}>
-                <Animated.Text style={[styles.actionButtonIcon, removeButtonTextStyle]}>
-                  ✕
-                </Animated.Text>
-                <Animated.Text style={[styles.actionButtonText, removeButtonTextStyle]}>
-                  Remove
-                </Animated.Text>
-              </Animated.View>
+              {taskDraggingScheduled && (
+                <Animated.View
+                  ref={removeButtonRef}
+                  onLayout={handleRemoveButtonLayout}
+                  style={[styles.actionButton, removeButtonStyle]}>
+                  <Animated.Text style={[styles.actionButtonIcon, removeButtonTextStyle]}>
+                    ✕
+                  </Animated.Text>
+                  <Animated.Text style={[styles.actionButtonText, removeButtonTextStyle]}>
+                    Remove
+                  </Animated.Text>
+                </Animated.View>
+              )}
             </Animated.View>
           )}
         </View>

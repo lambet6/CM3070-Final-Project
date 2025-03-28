@@ -19,7 +19,7 @@ const styles = StyleSheet.create({
   unscheduledArea: {
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
-    backgroundColor: 'rgba(152, 16, 16, 0.2)',
+    backgroundColor: 'rgba(39, 245, 140, 1)',
     paddingVertical: 10,
   },
   sectionTitle: {
