@@ -218,7 +218,7 @@ export default function CalenarScreen() {
     setIsWeekView(!isWeekView);
   }, [isWeekView, selectedDate]);
 
-  // Memoize the selected date object to prevent unnecessary re-renders
+  // Prevent unnecessary re-renders
   const memoizedSelectedDateObj = useMemo(() => fromDateId(selectedDate), [selectedDate]);
 
   return (

@@ -7,6 +7,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8f9fa',
+    overflow: 'hidden',
   },
   title: {
     fontSize: 24,
@@ -30,7 +31,8 @@ const styles = StyleSheet.create({
   unscheduledTasksContainer: {
     width: '100%',
     height: TASK_ITEM_HEIGHT / 2 + 20,
-    position: 'relative',
+    backgroundColor: 'blue',
+    // zIndex: 1,
   },
   unscheduledTaskList: {
     overflow: 'visible',
@@ -72,6 +74,8 @@ const styles = StyleSheet.create({
   // Timeline styles
   timelineContainer: {
     flex: 1,
+    overflow: 'visible',
+    // zIndex: 1,
   },
   timelineSideBar: {
     position: 'absolute',
@@ -79,12 +83,12 @@ const styles = StyleSheet.create({
     top: 0,
     width: TIMELINE_OFFSET,
     height: '100%',
-    zIndex: 10,
   },
   timelineContent: {
     marginLeft: TIMELINE_OFFSET,
     position: 'relative',
     minHeight: 13 * HOUR_HEIGHT, // HOURS.length * HOUR_HEIGHT
+    overflow: 'visible',
   },
   hourContainer: {
     height: HOUR_HEIGHT,
@@ -137,7 +141,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
-    elevation: 3,
+    zIndex: 200,
   },
 
   // Text styles

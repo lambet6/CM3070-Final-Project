@@ -367,45 +367,45 @@ export const useTaskAnimations = (task) => {
 /**
  * Creates animated styles for task items
  */
-export const useTaskItemStyle = (task, animations, index) => {
-  return useAnimatedStyle(() => {
-    // Common transform properties extracted to reduce calculation in worklet
-    const commonTransform = {
-      transform: [
-        { translateX: animations.translateX.value },
-        { translateY: animations.translateY.value },
-        { scale: animations.scale.value },
-      ],
-    };
+// export const useTaskItemStyle = (task, animations, index) => {
+//   return useAnimatedStyle(() => {
+//     // Common transform properties extracted to reduce calculation in worklet
+//     const commonTransform = {
+//       transform: [
+//         { translateX: animations.translateX.value },
+//         { translateY: animations.translateY.value },
+//         { scale: animations.scale.value },
+//       ],
+//     };
 
-    if (task.scheduled) {
-      return {
-        ...commonTransform,
-        top: timeToPosition(animations.taskTime.value),
-        zIndex: animations.isPressed.value ? 1000 : index + 1,
-      };
-    } else {
-      return {
-        ...commonTransform,
-        opacity: animations.opacity.value,
-        backgroundColor: animations.isOverTimeline.value ? '#a8e6cf' : '#ffd3b6',
-        zIndex: animations.isPressed.value ? 1000 : 1,
-      };
-    }
-  });
-};
+//     if (task.scheduled) {
+//       return {
+//         ...commonTransform,
+//         top: timeToPosition(animations.taskTime.value),
+//         zIndex: animations.isPressed.value ? 1000 : index + 1,
+//       };
+//     } else {
+//       return {
+//         ...commonTransform,
+//         opacity: animations.opacity.value,
+//         backgroundColor: animations.isOverTimeline.value ? '#a8e6cf' : '#ffd3b6',
+//         zIndex: animations.isPressed.value ? 1000 : 1,
+//       };
+//     }
+//   });
+// };
 
-/**
- * Creates animated styles for non-schedulable task items
- */
-export const useNonSchedulableTaskStyle = (animations) => {
-  return useAnimatedStyle(() => {
-    return {
-      opacity: 0.5,
-      backgroundColor: animations.isOverTimeline.value ? '#a8e6cf' : '#e0e0e0',
-    };
-  });
-};
+// /**
+//  * Creates animated styles for non-schedulable task items
+//  */
+// export const useNonSchedulableTaskStyle = (animations) => {
+//   return useAnimatedStyle(() => {
+//     return {
+//       opacity: 0.5,
+//       backgroundColor: animations.isOverTimeline.value ? '#a8e6cf' : '#e0e0e0',
+//     };
+//   });
+// };
 
 // ========================================================================
 // MODULE: UI COMPONENT ANIMATIONS

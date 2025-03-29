@@ -396,7 +396,7 @@ export function useTaskGestures({
       isPreviewValid,
       validZones,
       timelineViewHeight,
-      isDraggingScheduled,
+      isDragging,
     ],
   );
 

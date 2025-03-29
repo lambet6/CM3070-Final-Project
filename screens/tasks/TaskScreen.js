@@ -46,11 +46,8 @@ export default function TasksScreen() {
   const { openSheet } = useBottomSheet();
 
   useEffect(() => {
-    const initializeTasks = async () => {
+    const rescheduleTasks = async () => {
       try {
-        // Load all tasks first
-        await taskManager.loadTasks();
-
         // Then handle any overdue tasks
         const { count } = await taskManager.rescheduleOverdueTasks();
 
@@ -66,12 +63,12 @@ export default function TasksScreen() {
           });
         }
       } catch (error) {
-        console.error('Failed to initialize tasks:', error);
+        console.error('Failed to reschedule tasks', error);
       }
     };
 
-    initializeTasks();
-  }, []); // Run once on component mount
+    rescheduleTasks();
+  }, [setSnackbarState, taskManager]); // Run once on component mount
 
   const sections = useMemo(() => {
     if (viewMode === 0) {

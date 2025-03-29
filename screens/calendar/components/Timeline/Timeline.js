@@ -20,7 +20,6 @@ import { useTaskStore } from '../../../../store/taskStore';
 import { useTaskManager } from '../../../../hooks/useTaskManager';
 // Import calendar store
 import { useCalendarStore } from '../../../../store/calendarStore';
-import { ca } from 'date-fns/locale';
 
 const TimelineComponent = ({ selectedDate }) => {
   // Get task manager for updating tasks
@@ -105,8 +104,6 @@ const TimelineComponent = ({ selectedDate }) => {
     const prevDateString = previousDateRef.current ? previousDateRef.current.toDateString() : null;
 
     if (currentDateString !== prevDateString) {
-      console.log('Tasks for selected date:', tasksForSelectedDate);
-      console.log('Events for selected date:', eventsForSelectedDate);
       previousDateRef.current = selectedDate;
     }
   }, [tasksForSelectedDate, eventsForSelectedDate, selectedDate]);
@@ -197,8 +194,6 @@ const TimelineComponent = ({ selectedDate }) => {
       }
     },
   );
-
-  // Remove animation reaction for button measurements
 
   // Updated task state change handler that uses task manager
   const handleTaskStateChange = useCallback(

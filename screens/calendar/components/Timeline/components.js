@@ -141,7 +141,10 @@ export const TimelineContent = React.memo(
         ref={timelineLayoutRef}
         style={styles.timelineContainer}
         onLayout={handleTimelineLayout}>
-        <Animated.ScrollView ref={scrollViewRef} scrollEventThrottle={16}>
+        <Animated.ScrollView
+          style={{ overflow: 'visible' }}
+          ref={scrollViewRef}
+          scrollEventThrottle={16}>
           <View style={styles.timelineSideBar}>
             <HourMarkers />
           </View>
@@ -322,8 +325,6 @@ const TaskItem = React.memo(
     isSchedulable = true,
     onTapUnScheduled,
     onDismissTooltip,
-    removeButtonRef,
-    cancelButtonRef,
     isAnyTaskDragging = false, // Accept new prop with default value
   }) => {
     // Extract props from animation and layout values
@@ -398,7 +399,7 @@ const TaskItem = React.memo(
         return {
           ...commonTransform,
           top: timeToPosition(animations.taskTime.value),
-          zIndex: animations.isPressed.value ? 1000 : index + 1,
+          zIndex: animations.isPressed.value ? 1000 : 750,
         };
       } else {
         // Determine opacity based on dragging state
@@ -591,7 +592,7 @@ export const UnscheduledTasksSection = React.memo(
               maxToRenderPerBatch={10}
               windowSize={5}
               getItemLayout={(data, index) => ({
-                length: TASK_ITEM_WIDTH / 2 + 20, // item width + padding
+                length: TASK_ITEM_WIDTH / 2 + 20,
                 offset: (TASK_ITEM_WIDTH / 2 + 20) * index,
                 index,
               })}
@@ -611,7 +612,7 @@ export const UnscheduledTasksSection = React.memo(
                 bottom: 0,
                 flexDirection: 'row',
                 justifyContent: 'space-around',
-                backgroundColor: 'rgba// (39, 245, 140, 1)',
+                backgroundColor: 'transparent',
               }}>
               <Animated.View
                 ref={cancelButtonRef}
@@ -650,49 +651,6 @@ UnscheduledTasksSection.displayName = 'UnscheduledTasksSection';
 // ========================================================================
 // UI components
 // ========================================================================
-
-// export const DragActionButtons = ({
-//   isVisible,
-//   removeButtonRef,
-//   cancelButtonRef,
-//   onLayoutChange,
-//   isRemoveHovered,
-//   isCancelHovered,
-//   isDraggingScheduled,
-// }) => {
-//   const {
-//     containerStyle,
-//     cancelButtonStyle,
-//     removeButtonStyle,
-//     cancelContainerStyle,
-//     removeButtonTextStyle,
-//     cancelButtonTextStyle,
-//   } = useDragActionButtonsStyles(isVisible, isRemoveHovered, isCancelHovered, isDraggingScheduled);
-//   return (
-//     <Animated.View style={containerStyle}>
-//       <Animated.View style={cancelContainerStyle}>
-//         <Animated.View
-//           ref={cancelButtonRef}
-//           style={[styles.actionButton, cancelButtonStyle]}
-//           onLayout={onLayoutChange}>
-//           <Animated.Text style={[styles.actionButtonIcon, cancelButtonTextStyle]}>↩</Animated.Text>
-//           <Animated.Text style={[styles.actionButtonText, cancelButtonTextStyle]}>
-//             Cancel
-//           </Animated.Text>
-//         </Animated.View>
-//       </Animated.View>
-//       <Animated.View
-//         ref={removeButtonRef}
-//         style={[styles.actionButton, removeButtonStyle]}
-//         onLayout={onLayoutChange}>
-//         <Animated.Text style={[styles.actionButtonIcon, removeButtonTextStyle]}>✕</Animated.Text>
-//         <Animated.Text style={[styles.actionButtonText, removeButtonTextStyle]}>
-//           Remove
-//         </Animated.Text>
-//       </Animated.View>
-//     </Animated.View>
-//   );
-// };
 
 // Helper function to manage tooltip auto-dismiss
 const useTooltipDismiss = (isVisible, onDismiss, position, message) => {
