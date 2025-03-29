@@ -33,57 +33,15 @@ const TimelineComponent = ({ selectedDate }) => {
 
   // Get all tasks from the store to reduce selector recalculations
   const allTasks = useTaskStore((state) => state.tasks);
-  const taskMapCache = useRef({});
-  const [cacheVersion, setCacheVersion] = useState(0);
 
   // Get all calendar events
   const allEvents = useCalendarStore((state) => state.events);
 
-  useEffect(() => {
-    console.log('alltasks:', allTasks);
-    console.log('selectedDate:', selectedDate);
-    // Get the currently selected date key
-    if (!selectedDate) return;
-    const dateKey = selectedDate.toISOString().split('T')[0];
-
-    // Update the cache for current date only
-    const storeTasks = useTaskStore.getState().getTasksOnDate(selectedDate);
-    console.log('storeTasks:', storeTasks);
-    taskMapCache.current[dateKey] = storeTasks;
-    setCacheVersion((prev) => prev + 1);
-
-    // limit cache size to prevent memory issues (keep last 10 dates)
-    const keys = Object.keys(taskMapCache.current);
-    if (keys.length > 10) {
-      const oldestKey = keys[0];
-      const newCache = { ...taskMapCache.current };
-      delete newCache[oldestKey];
-      taskMapCache.current = newCache;
-    }
-  }, [allTasks, selectedDate]);
-
+  // Get tasks for the selected date directly from the store with caching
   const tasksForSelectedDate = useMemo(() => {
     if (!selectedDate) return [];
-
-    // use ISO format for consistency
-    const dateKey = selectedDate.toISOString().split('T')[0];
-
-    // Check if we already have this date cached
-    if (taskMapCache.current[dateKey]) {
-      console.log('Using cached tasks for date:', dateKey);
-      return taskMapCache.current[dateKey];
-    }
-
-    // Get tasks for date using the store method
-    const tasks = useTaskStore.getState().getTasksOnDate(selectedDate);
-
-    // Store in cache for future use
-    taskMapCache.current[dateKey] = tasks;
-
-    console.log('Fetched tasks for date:', dateKey, tasks);
-
-    return tasks;
-  }, [selectedDate, cacheVersion]);
+    return useTaskStore.getState().getTasksOnDate(selectedDate);
+  }, [selectedDate, allTasks]);
 
   // Memoize events for selected date
   const eventsForSelectedDate = useMemo(() => {
