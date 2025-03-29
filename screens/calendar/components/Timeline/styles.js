@@ -31,7 +31,6 @@ const styles = StyleSheet.create({
   unscheduledTasksContainer: {
     width: '100%',
     height: TASK_ITEM_HEIGHT / 2 + 20,
-    backgroundColor: 'blue',
     // zIndex: 1,
   },
   unscheduledTaskList: {
@@ -194,6 +193,16 @@ const styles = StyleSheet.create({
   },
 
   // Action buttons styles
+  actionButtonsContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    backgroundColor: 'transparent',
+  },
   actionButton: {
     width: 120,
     height: 50,
