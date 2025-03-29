@@ -11,6 +11,7 @@ import { Platform } from 'react-native';
 import { Gesture } from 'react-native-gesture-handler';
 import { isPointInRect, timeToPosition, positionToTime } from './utils';
 import { updatePreviewPosition, checkAutoScroll } from './animations';
+import * as Haptics from 'expo-haptics';
 
 // ========================================================================
 // Layout and measurement hooks
@@ -138,6 +139,32 @@ export function useTaskGestures({
   onDismissTooltip,
   taskHeight,
 }) {
+  // Function to trigger haptic feedback
+  const triggerHaptic = useCallback((type) => {
+    switch (type) {
+      case 'light':
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        break;
+      case 'medium':
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        break;
+      case 'heavy':
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+        break;
+      case 'success':
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        break;
+      case 'warning':
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        break;
+      case 'error':
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        break;
+      default:
+        break;
+    }
+  }, []);
+
   // Tap gesture for non-schedulable tasks
   const tapGesture = useMemo(
     () =>
@@ -167,6 +194,9 @@ export function useTaskGestures({
       if (onDismissTooltip) {
         runOnJS(onDismissTooltip)();
       }
+
+      // Trigger light haptic when drag starts (after longpress)
+      runOnJS(triggerHaptic)('light');
 
       // Update animation states
       animations.isPressed.value = true;
@@ -221,6 +251,7 @@ export function useTaskGestures({
       ghostVisible,
       ghostPosition,
       ghostHeight,
+      triggerHaptic,
     ],
   );
 
@@ -248,7 +279,6 @@ export function useTaskGestures({
 
       // Handle ending over remove button
       if (isOverRemove) {
-        console.log('Over remove button');
         runOnJS(onStateChange)(task.id, false, null);
         previewVisible.value = false;
         animations.translateX.value = withSpring(0);
@@ -258,6 +288,9 @@ export function useTaskGestures({
         } else {
           animations.isOverTimeline.value = false;
         }
+
+        // Trigger warning haptic for removing a task
+        runOnJS(triggerHaptic)('warning');
       }
       // Handle ending over cancel button
       else if (isOverCancel) {
@@ -269,6 +302,9 @@ export function useTaskGestures({
         } else {
           animations.isOverTimeline.value = false;
         }
+
+        // Trigger medium haptic for canceling
+        runOnJS(triggerHaptic)('medium');
       }
       // Handle task scheduling/rescheduling
       else if (task.scheduled) {
@@ -276,6 +312,12 @@ export function useTaskGestures({
           const newTime = positionToTime(previewPosition.value);
           animations.taskTime.value = newTime;
           runOnJS(onStateChange)(task.id, true, newTime);
+
+          // Task successfully rescheduled - trigger success haptic
+          runOnJS(triggerHaptic)('success');
+        } else {
+          // Failed to reschedule - trigger warning haptic
+          runOnJS(triggerHaptic)('warning');
         }
         animations.translateY.value = 0;
         animations.translateX.value = 0;
@@ -287,10 +329,16 @@ export function useTaskGestures({
         if (animations.isOverTimeline.value && isPreviewValid && isPreviewValid.value) {
           const newTime = positionToTime(previewPosition.value);
           runOnJS(onStateChange)(task.id, true, newTime);
+
+          // Task successfully scheduled - trigger success haptic
+          runOnJS(triggerHaptic)('success');
         } else {
           animations.translateX.value = withSpring(0);
           animations.translateY.value = withSpring(0);
           animations.isOverTimeline.value = false;
+
+          // Failed to schedule - trigger warning haptic
+          runOnJS(triggerHaptic)('warning');
         }
         previewVisible.value = false;
       }
@@ -317,6 +365,7 @@ export function useTaskGestures({
       ghostVisible,
       isPreviewValid,
       previewPosition,
+      triggerHaptic,
     ],
   );
 
