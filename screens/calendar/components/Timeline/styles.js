@@ -133,6 +133,7 @@ const styles = StyleSheet.create({
   taskItem: {
     borderRadius: 8,
     padding: 10,
+    paddingLeft: 16,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
@@ -244,7 +245,6 @@ const styles = StyleSheet.create({
     right: 0,
     marginHorizontal: 5,
     backgroundColor: '#a8e6cf',
-    // Height will be applied dynamically
   },
 
   // Unscheduled task styles
@@ -362,3 +362,25 @@ export const getClippedEventStyle = (isClippedStart, isClippedEnd) => {
 
   return style;
 };
+
+// Priority indicator styles
+export const priorityIndicatorStyles = StyleSheet.create({
+  container: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 8,
+    borderTopLeftRadius: 8,
+    borderBottomLeftRadius: 8,
+  },
+  high: {
+    backgroundColor: '#ff5252', // Red color for high priority
+  },
+  medium: {
+    backgroundColor: '#ffca28', // Yellow color for medium priority
+  },
+  low: {
+    backgroundColor: '#4caf50', // Green color for low priority
+  },
+});

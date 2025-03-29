@@ -80,7 +80,8 @@ const TimelineComponent = ({ selectedDate }) => {
 
     const newTasks = tasksForSelectedDate.map((task) => ({
       id: task.id,
-      title: `${task.title} (${task.priority})`,
+      title: task.title, // Original title without priority in it
+      priority: task.priority, // One of 'Low', 'Medium', or 'High'
       duration: minutesToHours(task.duration),
       scheduled: !!task.scheduledTime,
       startTime: dateToHours(task.scheduledTime),

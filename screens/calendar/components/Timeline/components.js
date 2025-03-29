@@ -13,6 +13,7 @@ import styles, {
   getClippedEventStyle,
   getEventBaseStyle,
   getEventWidthStyle,
+  priorityIndicatorStyles,
   stylesTooltip,
 } from './styles';
 import { Feather } from '@expo/vector-icons';
@@ -419,7 +420,7 @@ const TaskItem = React.memo(
             ? '#a8e6cf'
             : !isSchedulable
               ? '#e0e0e0'
-              : '#ffd3b6',
+              : 'rgba(222, 222, 222, 1)',
           zIndex: animations.isPressed.value ? 1000 : 1,
         };
       }
@@ -427,9 +428,13 @@ const TaskItem = React.memo(
 
     // Render task content based on scheduled state
     const renderTaskContent = () => {
+      // Access priority directly from task object
+      const priority = task.priority || 'Medium';
+
       if (task.scheduled) {
         return (
           <>
+            <PriorityIndicator priority={priority} />
             <Text style={styles.scheduledTaskTitle} numberOfLines={1}>
               {task.title}
             </Text>
@@ -445,6 +450,7 @@ const TaskItem = React.memo(
       } else {
         return (
           <>
+            <PriorityIndicator priority={priority} />
             <Text style={styles.unscheduledTaskTitle} numberOfLines={1}>
               {task.title}
             </Text>
@@ -453,7 +459,6 @@ const TaskItem = React.memo(
         );
       }
     };
-
     // Render task item
     return (
       <GestureDetector gesture={composedGestures}>
@@ -603,7 +608,7 @@ export const UnscheduledTasksSection = React.memo(
 
           {/* Conditionally render the overlay with absolute positioning */}
           {taskDragging && (
-            <Animated.View style={styles.actionButtonContainer}>
+            <Animated.View style={styles.actionButtonsContainer}>
               <Animated.View
                 ref={cancelButtonRef}
                 onLayout={handleCancelButtonLayout}
@@ -725,3 +730,22 @@ export const Tooltip = ({ message, position, isVisible, onDismiss, parentViewLay
     </Animated.View>
   );
 };
+
+export const PriorityIndicator = React.memo(({ priority }) => {
+  // Determine the style based on priority
+  const getPriorityStyle = () => {
+    // Handle exactly the three possible values
+    switch (priority) {
+      case 'High':
+        return priorityIndicatorStyles.high;
+      case 'Medium':
+        return priorityIndicatorStyles.medium;
+      case 'Low':
+      default:
+        return priorityIndicatorStyles.low;
+    }
+  };
+
+  return <View style={[priorityIndicatorStyles.container, getPriorityStyle()]} />;
+});
+PriorityIndicator.displayName = 'PriorityIndicator';
