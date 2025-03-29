@@ -34,41 +34,23 @@ const TimelineComponent = ({ selectedDate }) => {
   // Get all tasks from the store to reduce selector recalculations
   const allTasks = useTaskStore((state) => state.tasks);
   const taskMapCache = useRef({});
+  const [cacheVersion, setCacheVersion] = useState(0);
 
   // Get all calendar events
   const allEvents = useCalendarStore((state) => state.events);
 
-  const tasksForSelectedDate = useMemo(() => {
-    if (!selectedDate) return [];
-
-    // Convert selected date to string key (use ISO format for consistency)
-    const dateKey = selectedDate.toISOString().split('T')[0];
-
-    // Check if we already have this date cached
-    if (taskMapCache.current[dateKey]) {
-      console.log('Using cached tasks for date:', dateKey);
-      return taskMapCache.current[dateKey];
-    }
-
-    console.log('Fetching tasks for date:', dateKey);
-
-    // Get tasks for date using the store method (which has good error handling)
-    const tasks = useTaskStore.getState().getTasksOnDate(selectedDate);
-
-    // Store in cache for future use
-    taskMapCache.current[dateKey] = tasks;
-
-    return tasks;
-  }, [selectedDate]);
-
   useEffect(() => {
+    console.log('alltasks:', allTasks);
+    console.log('selectedDate:', selectedDate);
     // Get the currently selected date key
     if (!selectedDate) return;
     const dateKey = selectedDate.toISOString().split('T')[0];
 
     // Update the cache for current date only
-    const tasks = useTaskStore.getState().getTasksOnDate(selectedDate);
-    taskMapCache.current[dateKey] = tasks;
+    const storeTasks = useTaskStore.getState().getTasksOnDate(selectedDate);
+    console.log('storeTasks:', storeTasks);
+    taskMapCache.current[dateKey] = storeTasks;
+    setCacheVersion((prev) => prev + 1);
 
     // limit cache size to prevent memory issues (keep last 10 dates)
     const keys = Object.keys(taskMapCache.current);
@@ -79,6 +61,29 @@ const TimelineComponent = ({ selectedDate }) => {
       taskMapCache.current = newCache;
     }
   }, [allTasks, selectedDate]);
+
+  const tasksForSelectedDate = useMemo(() => {
+    if (!selectedDate) return [];
+
+    // use ISO format for consistency
+    const dateKey = selectedDate.toISOString().split('T')[0];
+
+    // Check if we already have this date cached
+    if (taskMapCache.current[dateKey]) {
+      console.log('Using cached tasks for date:', dateKey);
+      return taskMapCache.current[dateKey];
+    }
+
+    // Get tasks for date using the store method
+    const tasks = useTaskStore.getState().getTasksOnDate(selectedDate);
+
+    // Store in cache for future use
+    taskMapCache.current[dateKey] = tasks;
+
+    console.log('Fetched tasks for date:', dateKey, tasks);
+
+    return tasks;
+  }, [selectedDate, cacheVersion]);
 
   // Memoize events for selected date
   const eventsForSelectedDate = useMemo(() => {
@@ -98,7 +103,6 @@ const TimelineComponent = ({ selectedDate }) => {
     });
   }, [allEvents, selectedDate]);
 
-  // Only log when tasks or events actually change
   useEffect(() => {
     const currentDateString = selectedDate ? selectedDate.toDateString() : null;
     const prevDateString = previousDateRef.current ? previousDateRef.current.toDateString() : null;
@@ -106,7 +110,7 @@ const TimelineComponent = ({ selectedDate }) => {
     if (currentDateString !== prevDateString) {
       previousDateRef.current = selectedDate;
     }
-  }, [tasksForSelectedDate, eventsForSelectedDate, selectedDate]);
+  }, [tasksForSelectedDate, eventsForSelectedDate, selectedDate, allTasks]);
 
   // Task state for the timeline
   const [tasks, setTasks] = useState([]);
@@ -118,19 +122,14 @@ const TimelineComponent = ({ selectedDate }) => {
 
     const newTasks = tasksForSelectedDate.map((task) => ({
       id: task.id,
-      title: `${task.title} (${task.priority})`, // Include priority in title for visibility
-      duration: minutesToHours(task.duration), // Convert minutes to hours
+      title: `${task.title} (${task.priority})`,
+      duration: minutesToHours(task.duration),
       scheduled: !!task.scheduledTime,
       startTime: dateToHours(task.scheduledTime),
     }));
 
-    // Only update if tasks have changed
-    const areTasksEqual = JSON.stringify(tasks) === JSON.stringify(newTasks);
-
-    if (!areTasksEqual) {
-      setTasks(newTasks);
-    }
-  }, [tasksForSelectedDate, tasks]);
+    setTasks(newTasks);
+  }, [tasksForSelectedDate, selectedDate, allTasks]);
 
   // Set up hooks
   const { tooltipVisible, tooltipPosition, tooltipMessage, showTooltip, hideTooltip } =

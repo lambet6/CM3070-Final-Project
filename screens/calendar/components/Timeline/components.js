@@ -142,7 +142,7 @@ export const TimelineContent = React.memo(
         style={styles.timelineContainer}
         onLayout={handleTimelineLayout}>
         <Animated.ScrollView
-          style={{ overflow: 'visible' }}
+          // style={{ overflow: 'visible' }}
           ref={scrollViewRef}
           scrollEventThrottle={16}>
           <View style={styles.timelineSideBar}>

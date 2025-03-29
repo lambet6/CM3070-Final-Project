@@ -74,8 +74,7 @@ const styles = StyleSheet.create({
   // Timeline styles
   timelineContainer: {
     flex: 1,
-    overflow: 'visible',
-    // zIndex: 1,
+    // overflow: 'hidden',
   },
   timelineSideBar: {
     position: 'absolute',
