@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createMaterialBottomTabNavigator } from 'react-native-paper/react-navigation';
 import TasksScreen from '../screens/tasks/TaskScreen';
 import CalendarScreen from '../screens/calendar/CalendarScreen';
 import GoalsScreen from '../screens/GoalsScreen';
@@ -12,8 +13,9 @@ import { QuickTaskSheet } from '../components/QuickTaskSheet';
 import { BottomSheetContext } from '../contexts/BottomSheetContext';
 
 const Tab = createBottomTabNavigator();
+// const Tab = createMaterialBottomTabNavigator();
 
-export function RootNavigator() {
+export function RootNavigator({ theme }) {
   const bottomSheetRef = useRef(null);
   const [taskToEdit, setTaskToEdit] = useState(null);
 
@@ -34,7 +36,7 @@ export function RootNavigator() {
 
   return (
     <BottomSheetContext.Provider value={{ openSheet: handleOpenSheet }}>
-      <NavigationContainer>
+      <NavigationContainer theme={theme}>
         <Tab.Navigator
           initialRouteName="Calendar"
           screenOptions={{

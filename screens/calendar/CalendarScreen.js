@@ -1,6 +1,6 @@
 /*global setTimeout*/
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, TouchableOpacity } from 'react-native';
 import { Calendar, useCalendar, toDateId, fromDateId } from '@marceloterreiro/flash-calendar';
 import {
   startOfMonth,
@@ -13,6 +13,7 @@ import {
   addMonths,
 } from 'date-fns';
 import Animated, { withTiming } from 'react-native-reanimated';
+import { Surface, ActivityIndicator, Text, useTheme, IconButton } from 'react-native-paper';
 
 // Import components, styles, and hooks
 import { useCalendarStore } from '../../store/calendarStore';
@@ -86,9 +87,10 @@ export default function CalenarScreen() {
   });
 
   // Define calendar theme
+  const theme = useTheme();
   const calendarTheme = useMemo(
-    () => createCalendarTheme(selectedDate, todayId),
-    [selectedDate, todayId],
+    () => createCalendarTheme(selectedDate, todayId, theme),
+    [selectedDate, todayId, theme],
   );
 
   // Filter weeks based on view mode
@@ -223,10 +225,11 @@ export default function CalenarScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.calendarContainer}>
+      <Surface style={styles.calendarContainer}>
         {isLoading && (
           <View style={styles.loadingIndicator}>
-            <Text>Loading calendar events...</Text>
+            <ActivityIndicator animating={true} />
+            <Text style={styles.loadingIndicatorText}>Loading calendar events...</Text>
           </View>
         )}
 
@@ -236,7 +239,7 @@ export default function CalenarScreen() {
           </View>
         )}
 
-        <View style={styles.calendar}>
+        <Surface mode="flat" style={styles.calendar}>
           <Calendar.VStack>
             {/* Calendar header */}
             <CalendarHeader
@@ -273,16 +276,19 @@ export default function CalenarScreen() {
               </View>
 
               {/* View toggle button */}
-              <TouchableOpacity
-                onPress={toggleViewMode}
+              <IconButton
+                selected={true}
                 style={styles.toggleButton}
-                activeOpacity={0.7}>
-                <Text style={styles.navButtonText}>{isWeekView ? '∨' : '∧'} </Text>
-              </TouchableOpacity>
+                icon={isWeekView ? 'chevron-down' : 'chevron-up'}
+                size={30}
+                onPress={toggleViewMode}
+                accessibilityLabel="Toggle calendar view"
+                accessibilityHint="Switch to {weekly/monthly} calendar"
+              />
             </Animated.View>
           </Calendar.VStack>
-        </View>
-      </View>
+        </Surface>
+      </Surface>
       {/* Daily Timeline - Pass memoized date object */}
       <View style={styles.dragList}>
         <TimelineComponent selectedDate={memoizedSelectedDateObj} />

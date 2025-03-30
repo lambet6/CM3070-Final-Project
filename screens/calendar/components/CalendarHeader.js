@@ -1,27 +1,41 @@
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View } from 'react-native';
 import { Calendar } from '@marceloterreiro/flash-calendar';
 import { styles } from '../CalendarStyles';
+import { IconButton, Button, Text } from 'react-native-paper';
 
 export const CalendarHeader = ({ calendarRowMonth, onPrev, onNext, onReset, isToday }) => (
   <Calendar.HStack style={styles.headerContainer}>
-    <TouchableOpacity onPress={onPrev} style={styles.navButton} activeOpacity={0.7}>
-      <Text style={styles.navButtonText}>❮</Text>
-    </TouchableOpacity>
+    <IconButton
+      selected={true}
+      // mode="contained"
+      icon="chevron-left-circle"
+      size={30}
+      onPress={onPrev}
+      accessibilityLabel="Previous week/month"
+    />
 
     <View style={styles.titleContainer}>
-      <Text style={styles.monthTitle}>{calendarRowMonth}</Text>
-      <TouchableOpacity
+      <Text variant="titleMedium">{calendarRowMonth}</Text>
+      <Button
+        // compact={true}
+        icon="calendar-today"
+        mode="contained-tonal"
         onPress={onReset}
         disabled={isToday}
-        style={styles.todayButton}
-        activeOpacity={0.7}>
-        <Text style={styles.todayButtonText}>Today</Text>
-      </TouchableOpacity>
+        accessibilityLabel="Today"
+        accessibilityHint="Resets the calendar to today">
+        Today
+      </Button>
     </View>
 
-    <TouchableOpacity onPress={onNext} style={styles.navButton} activeOpacity={0.7}>
-      <Text style={styles.navButtonText}>❯</Text>
-    </TouchableOpacity>
+    <IconButton
+      selected={true}
+      // mode="contained"
+      icon="chevron-right-circle"
+      size={30}
+      onPress={onNext}
+      accessibilityLabel="Next week/month"
+    />
   </Calendar.HStack>
 );

@@ -2,50 +2,88 @@
 import { CONSTANTS } from './CalendarConstants';
 import { StyleSheet } from 'react-native';
 
-// Pre-create static styles
+// Structure only (colors will be applied from theme)
 const staticStyles = StyleSheet.create({
   baseContainer: {
     borderRadius: CONSTANTS.CALENDAR.BORDER_RADIUS,
   },
   selectedContainer: {
     borderRadius: CONSTANTS.CALENDAR.SELECTED_BORDER_RADIUS,
-    backgroundColor: CONSTANTS.COLORS.primary,
   },
   selectedContent: {
-    color: CONSTANTS.COLORS.white,
     fontWeight: 'bold',
   },
   todayContainer: {
-    borderColor: CONSTANTS.COLORS.primary,
     borderWidth: 1,
     borderRadius: CONSTANTS.CALENDAR.TODAY_BORDER_RADIUS,
-    backgroundColor: CONSTANTS.COLORS.primaryLight,
   },
   todayContent: {
-    color: CONSTANTS.COLORS.primary,
     fontWeight: 'bold',
   },
   todayPressedContent: {
-    color: CONSTANTS.COLORS.white,
     fontWeight: 'bold',
   },
-  activeContainer: {
-    backgroundColor: CONSTANTS.COLORS.primaryLight,
-  },
+  activeContainer: {},
   activeContent: {
-    color: CONSTANTS.COLORS.primary,
     fontWeight: 'bold',
   },
   activePressedContent: {
-    color: CONSTANTS.COLORS.white,
     fontWeight: 'bold',
   },
-  fadedContent: {
-    color: CONSTANTS.COLORS.textFaded,
-  },
+  fadedContent: {},
 });
 
-export function createCalendarTheme(selectedDate, todayId) {
+export function createCalendarTheme(selectedDate, todayId, theme) {
+  // Get all needed colors from theme or fall back to constants
+  const primaryColor = theme?.colors?.primary || CONSTANTS.COLORS.primary;
+  const primaryLightColor = theme?.colors?.primaryContainer || CONSTANTS.COLORS.primaryLight;
+  const whiteColor = theme?.colors?.onPrimary || CONSTANTS.COLORS.white;
+  const fadedColor = theme?.colors?.outline || CONSTANTS.COLORS.textFaded;
+
+  // Create theme-aware styles
+  const styles = {
+    baseContainer: {
+      ...staticStyles.baseContainer,
+    },
+    selectedContainer: {
+      ...staticStyles.selectedContainer,
+      backgroundColor: primaryColor,
+    },
+    selectedContent: {
+      ...staticStyles.selectedContent,
+      color: whiteColor,
+    },
+    todayContainer: {
+      ...staticStyles.todayContainer,
+      borderColor: primaryColor,
+      backgroundColor: primaryLightColor,
+    },
+    todayContent: {
+      ...staticStyles.todayContent,
+      color: primaryColor,
+    },
+    todayPressedContent: {
+      ...staticStyles.todayPressedContent,
+      color: whiteColor,
+    },
+    activeContainer: {
+      ...staticStyles.activeContainer,
+      backgroundColor: primaryLightColor,
+    },
+    activeContent: {
+      ...staticStyles.activeContent,
+      color: primaryColor,
+    },
+    activePressedContent: {
+      ...staticStyles.activePressedContent,
+      color: whiteColor,
+    },
+    fadedContent: {
+      ...staticStyles.fadedContent,
+      color: fadedColor,
+    },
+  };
+
   return {
     itemDay: {
       // Base style for all days
@@ -55,13 +93,13 @@ export function createCalendarTheme(selectedDate, todayId) {
 
         if (isSelected) {
           return {
-            container: staticStyles.selectedContainer,
-            content: staticStyles.selectedContent,
+            container: styles.selectedContainer,
+            content: styles.selectedContent,
           };
         }
 
         return {
-          container: staticStyles.baseContainer,
+          container: styles.baseContainer,
         };
       },
 
@@ -73,33 +111,33 @@ export function createCalendarTheme(selectedDate, todayId) {
 
         if (isSelected) {
           return {
-            container: staticStyles.selectedContainer,
-            content: staticStyles.selectedContent,
+            container: styles.selectedContainer,
+            content: styles.selectedContent,
           };
         }
 
         if (isToday) {
           return {
             container: {
-              ...staticStyles.todayContainer,
+              ...styles.todayContainer,
               borderTopLeftRadius: isStartOfRange ? CONSTANTS.CALENDAR.BORDER_RADIUS : 4,
               borderBottomLeftRadius: isStartOfRange ? CONSTANTS.CALENDAR.BORDER_RADIUS : 4,
               borderTopRightRadius: isEndOfRange ? CONSTANTS.CALENDAR.BORDER_RADIUS : 4,
               borderBottomRightRadius: isEndOfRange ? CONSTANTS.CALENDAR.BORDER_RADIUS : 4,
             },
-            content: isPressed ? staticStyles.todayPressedContent : staticStyles.todayContent,
+            content: isPressed ? styles.todayPressedContent : styles.todayContent,
           };
         }
 
         return {
           container: {
-            ...staticStyles.activeContainer,
+            ...styles.activeContainer,
             borderTopLeftRadius: isStartOfRange ? CONSTANTS.CALENDAR.BORDER_RADIUS : 0,
             borderBottomLeftRadius: isStartOfRange ? CONSTANTS.CALENDAR.BORDER_RADIUS : 0,
             borderTopRightRadius: isEndOfRange ? CONSTANTS.CALENDAR.BORDER_RADIUS : 0,
             borderBottomRightRadius: isEndOfRange ? CONSTANTS.CALENDAR.BORDER_RADIUS : 0,
           },
-          content: isPressed ? staticStyles.activePressedContent : staticStyles.activeContent,
+          content: isPressed ? styles.activePressedContent : styles.activeContent,
         };
       },
 
@@ -109,17 +147,17 @@ export function createCalendarTheme(selectedDate, todayId) {
 
         if (isSelected) {
           return {
-            container: staticStyles.selectedContainer,
-            content: staticStyles.selectedContent,
+            container: styles.selectedContainer,
+            content: styles.selectedContent,
           };
         }
 
         return {
           container: {
-            ...staticStyles.todayContainer,
-            backgroundColor: isPressed ? CONSTANTS.COLORS.primary : 'transparent',
+            ...styles.todayContainer,
+            backgroundColor: isPressed ? primaryColor : 'transparent',
           },
-          content: isPressed ? staticStyles.todayPressedContent : staticStyles.todayContent,
+          content: isPressed ? styles.todayPressedContent : styles.todayContent,
         };
       },
 
@@ -129,13 +167,13 @@ export function createCalendarTheme(selectedDate, todayId) {
 
         if (isSelected) {
           return {
-            container: staticStyles.selectedContainer,
-            content: staticStyles.selectedContent,
+            container: styles.selectedContainer,
+            content: styles.selectedContent,
           };
         }
 
         return {
-          content: isDifferentMonth ? staticStyles.fadedContent : undefined,
+          content: isDifferentMonth ? styles.fadedContent : undefined,
         };
       },
     },
