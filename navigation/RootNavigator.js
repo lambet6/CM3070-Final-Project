@@ -4,7 +4,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createMaterialBottomTabNavigator } from 'react-native-paper/react-navigation';
 import TasksScreen from '../screens/tasks/TaskScreen';
 import CalendarScreen from '../screens/calendar/CalendarScreen';
-import GoalsScreen from '../screens/GoalsScreen';
+import GoalsScreen from '../screens/goals/GoalsScreen';
 import WellbeingScreen from '../screens/WellbeingScreen';
 import BottomSheet from '@gorhom/bottom-sheet';
 import { TouchableOpacity } from 'react-native';
