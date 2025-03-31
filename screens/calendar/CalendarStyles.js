@@ -11,7 +11,6 @@ export const styles = StyleSheet.create({
   },
   calendar: {
     padding: 3,
-    // backgroundColor: 'red',
     overflow: 'hidden',
   },
   loadingIndicator: {

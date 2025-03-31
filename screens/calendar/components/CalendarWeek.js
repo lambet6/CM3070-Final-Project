@@ -4,9 +4,12 @@ import { Calendar } from '@marceloterreiro/flash-calendar';
 import { format } from 'date-fns';
 import { CONSTANTS } from '../CalendarConstants';
 import { styles } from '../CalendarStyles';
+import { useTheme } from 'react-native-paper';
 
 export const CalendarWeek = React.memo(
   ({ week, isWeekView, calendarTheme, onDatePress, events, tasks, selectedDate }) => {
+    const theme = useTheme();
+
     const eventMap = useMemo(() => {
       if (!events || events.length === 0) return new Map();
 
@@ -81,7 +84,8 @@ export const CalendarWeek = React.memo(
                   <Text
                     style={{
                       flex: 1,
-                      color: day.id === selectedDate ? CONSTANTS.COLORS.white : 'default',
+                      color:
+                        day.id === selectedDate ? theme.colors.onPrimary : theme.colors.onSurface,
                     }}>
                     {day.displayLabel}
                   </Text>

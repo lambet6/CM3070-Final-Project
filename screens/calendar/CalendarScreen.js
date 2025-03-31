@@ -251,7 +251,7 @@ export default function CalenarScreen() {
             />
 
             {/* Week days header */}
-            <WeekdaysHeader weekDaysList={weekDaysList} />
+            <WeekdaysHeader weekDaysList={weekDaysList} theme={theme} />
 
             {/* Calendar days */}
             <Animated.View style={[styles.animatedContainer, animatedStyle]}>
