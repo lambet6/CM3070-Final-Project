@@ -1,21 +1,22 @@
 import React, { useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
-import { useWellbeingStore } from '../store/wellbeingStore';
+import { useWellbeingStore } from '../../store/wellbeingStore';
+import { useWellbeingManager } from '../../hooks/useWellbeingManager';
 import { LineChart } from 'react-native-chart-kit';
 import { format } from 'date-fns';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { moodValues } from '../utilities/constants';
+import { moodValues } from './constants';
 
 export default function WellbeingScreen() {
-  const { moodData, loadMoodData, addMood, getLast14DaysMoodData, error, isLoading } =
-    useWellbeingStore();
+  const { moodData, error, isLoading } = useWellbeingStore();
+  const wellbeingManager = useWellbeingManager();
 
   useEffect(() => {
-    loadMoodData();
-  }, [loadMoodData]);
+    wellbeingManager.getMoodData();
+  }, [wellbeingManager]);
 
   const handleMoodPress = (mood) => {
-    addMood(mood);
+    wellbeingManager.saveMood(mood);
   };
 
   const todayMood = moodData.find((entry) => entry.isToday())?.mood;
@@ -26,7 +27,7 @@ export default function WellbeingScreen() {
     return isFirstEntryOfMonth ? format(date, 'd MMM') : format(date, 'd');
   };
 
-  const { labels, data } = getLast14DaysMoodData();
+  const { labels, data } = wellbeingManager.getLast14DaysMoodData();
 
   // Filter out days with zero moodValue
   const filtered = labels
@@ -106,7 +107,7 @@ const styles = StyleSheet.create({
     marginVertical: 16,
   },
   subtitle: {
-    ontSize: 16,
+    fontSize: 16,
     textAlign: 'center',
     marginVertical: 8,
   },

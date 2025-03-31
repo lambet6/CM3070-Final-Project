@@ -40,8 +40,7 @@ export class Mood {
   }
 
   toJSON() {
-    // This method is automatically called by JSON.stringify
-    // It ensures proper serialization of the date when saving to storage
+    // ensure proper serialization of the date when saving to storage
     return {
       mood: this.mood,
       date: this.date.toISOString(),

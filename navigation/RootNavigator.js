@@ -5,7 +5,7 @@ import { createMaterialBottomTabNavigator } from 'react-native-paper/react-navig
 import TasksScreen from '../screens/tasks/TaskScreen';
 import CalendarScreen from '../screens/calendar/CalendarScreen';
 import GoalsScreen from '../screens/goals/GoalsScreen';
-import WellbeingScreen from '../screens/WellbeingScreen';
+import WellbeingScreen from '../screens/wellbeing/WellbeingScreen';
 import BottomSheet from '@gorhom/bottom-sheet';
 import { TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -38,7 +38,7 @@ export function RootNavigator({ theme }) {
     <BottomSheetContext.Provider value={{ openSheet: handleOpenSheet }}>
       <NavigationContainer theme={theme}>
         <Tab.Navigator
-          initialRouteName="Goals"
+          initialRouteName="Wellbeing"
           screenOptions={{
             headerShown: false,
           }}>
