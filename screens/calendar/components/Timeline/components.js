@@ -1,22 +1,22 @@
 /* global setTimeout clearTimeout */
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
-import { View, Text, Dimensions, useWindowDimensions } from 'react-native';
+import { View, Dimensions } from 'react-native';
 import Animated, {
   runOnJS,
   useAnimatedReaction,
   useAnimatedStyle,
   useSharedValue,
-  measure,
 } from 'react-native-reanimated';
-import { GestureDetector, BaseButton, FlatList } from 'react-native-gesture-handler';
-import styles, {
+import { GestureDetector, FlatList } from 'react-native-gesture-handler';
+import { Divider, Text, useTheme } from 'react-native-paper';
+import {
+  useTimelineStyles,
   getClippedEventStyle,
   getEventBaseStyle,
   getEventWidthStyle,
   priorityIndicatorStyles,
   stylesTooltip,
 } from './styles';
-import { Feather } from '@expo/vector-icons';
 import {
   HOURS,
   QUARTERS,
@@ -44,32 +44,47 @@ import { useTaskGestures } from './hooks';
 // Timeline components
 // ========================================================================
 export const HourMarkers = React.memo(() => {
-  return HOURS.flatMap((hour, hourIndex) => {
-    const markers = [
-      <View key={`hour-${hourIndex}`} style={styles.hourContainer}>
-        <Text style={styles.hourText}>{hour}</Text>
-        <View style={styles.hourLine} />
-      </View>,
-    ];
-    if (hourIndex < HOURS.length - 1) {
-      markers.push(
-        ...QUARTERS.slice(1).map((quarter, qIndex) => (
-          <View
-            key={`hour-${hourIndex}-q-${qIndex}`}
-            style={[
-              styles.quarterContainer,
-              { top: hourIndex * HOUR_HEIGHT + (qIndex + 1) * QUARTER_HEIGHT },
-            ]}>
-            <Text style={styles.quarterText}>{quarter}</Text>
-            <View style={styles.quarterLine} />
+  const styles = useTimelineStyles();
+
+  return HOURS.map((hour, hourIndex) => (
+    <View key={`hour-${hourIndex}`} style={styles.hourContainer}>
+      {/* Hour label */}
+      <View style={styles.hourLabelRow}>
+        <Text variant="labelMedium" style={styles.hourText}>
+          {hour}
+        </Text>
+      </View>
+
+      {/* Quarter markers in flex containers */}
+      <View style={styles.quartersContainer}>
+        {QUARTERS.slice(1).map((quarter, qIndex) => (
+          <View key={`quarter-${qIndex}`} style={[styles.quarterRow, { height: `${25}%` }]}>
+            {qIndex === 1 && (
+              <Text variant="labelSmall" style={styles.quarterText}>
+                {quarter}
+              </Text>
+            )}
+            <View style={styles.quarterDot} />
           </View>
-        )),
-      );
-    }
-    return markers;
-  });
+        ))}
+      </View>
+    </View>
+  ));
 });
 HourMarkers.displayName = 'HourMarkers';
+
+export const HourDividers = React.memo(() => {
+  const styles = useTimelineStyles();
+
+  return HOURS.map((hour, hourIndex) => (
+    <Divider
+      horizontalInset={true}
+      key={`hour-divider-${hourIndex}`}
+      style={[styles.hourDivider, { top: hourIndex * HOUR_HEIGHT }]}
+    />
+  ));
+});
+HourDividers.displayName = 'HourDividers';
 
 // Helper function to render event items
 const renderEvents = (events, eventLayoutMap) => {
@@ -136,6 +151,7 @@ export const TimelineContent = React.memo(
       ghostPosition,
       ghostHeight,
     } = dragAnimationValues;
+    const styles = useTimelineStyles();
 
     return (
       <Animated.View
@@ -150,6 +166,8 @@ export const TimelineContent = React.memo(
             <HourMarkers />
           </View>
           <View style={styles.timelineContent}>
+            <HourDividers />
+
             {/* Fixed events - render before tasks so they appear behind tasks */}
             {renderEvents(events, eventLayoutMap)}
 
@@ -203,6 +221,8 @@ export const GhostSquare = ({ visible, position, height, style }) => {
 // Event components
 // ========================================================================
 export const EventItem = React.memo(({ event, layout = null }) => {
+  const styles = useTimelineStyles();
+  const theme = useTheme();
   // Calculate position and height from event times
   const startTime = dateToDecimalHours(event.startDate);
   const endTime = dateToDecimalHours(event.endDate);
@@ -232,7 +252,7 @@ export const EventItem = React.memo(({ event, layout = null }) => {
   const isClippedEnd = endTime > timelineEndHour;
 
   // Combine all style aspects using the helper functions
-  const baseStyle = getEventBaseStyle(position, height);
+  const baseStyle = getEventBaseStyle(position, height, theme);
   const widthStyle = getEventWidthStyle(layout);
   const clippedStyle = getClippedEventStyle(isClippedStart, isClippedEnd);
 
@@ -243,22 +263,20 @@ export const EventItem = React.memo(({ event, layout = null }) => {
   };
 
   const isNarrow = layout && layout.columnCount > 1;
-  const titleFontSize = isNarrow ? { fontSize: 12 } : {};
-  const detailsFontSize = isNarrow ? { fontSize: 10 } : {};
+  const titleFontSize = isNarrow ? 'titleSmall' : 'titleMedium';
+  const detailsFontSize = isNarrow ? 'labelSmall' : 'labelMedium';
 
   return (
     <View style={viewStyle}>
-      <Text
-        style={[styles.scheduledTaskTitle, { fontWeight: '500' }, titleFontSize]}
-        numberOfLines={1}>
+      <Text variant={titleFontSize} style={styles.eventText} numberOfLines={1}>
         {event.title}
         {(isClippedStart || isClippedEnd) && ' ⋯'}
       </Text>
       <View style={isNarrow ? styles.smallEventDetails : styles.EventDetails}>
-        <Text style={[styles.scheduledTaskTime, detailsFontSize]}>
+        <Text variant={detailsFontSize} style={styles.eventText}>
           {formatTimeFromDecimal(startTime)} - {formatTimeFromDecimal(endTime)}
         </Text>
-        <Text style={[styles.scheduledTaskDuration, detailsFontSize]}>
+        <Text variant={detailsFontSize} style={styles.scheduledTaskDuration}>
           {Math.floor(duration)}h
           {Math.round((duration % 1) * 60) ? ` ${Math.round((duration % 1) * 60)}m` : ''}
         </Text>
@@ -328,6 +346,7 @@ const TaskItem = React.memo(
     onDismissTooltip,
     isAnyTaskDragging = false, // Accept new prop with default value
   }) => {
+    const styles = useTimelineStyles();
     // Extract props from animation and layout values
     const props = extractTaskProps(dragAnimationValues, layoutValues);
 
@@ -417,10 +436,10 @@ const TaskItem = React.memo(
           ...commonTransform,
           opacity: opacity,
           backgroundColor: animations.isOverTimeline.value
-            ? '#a8e6cf'
+            ? styles.unscheduledTaskDragged.backgroundColor
             : !isSchedulable
               ? '#e0e0e0'
-              : 'rgba(222, 222, 222, 1)',
+              : styles.unscheduledTaskStatic.backgroundColor,
           zIndex: animations.isPressed.value ? 1000 : 1,
         };
       }
@@ -435,15 +454,19 @@ const TaskItem = React.memo(
         return (
           <>
             <PriorityIndicator priority={priority} />
-            <Text style={styles.scheduledTaskTitle} numberOfLines={1}>
-              {task.title}
-            </Text>
+
             <View style={styles.scheduledTaskDetails}>
-              <Text style={styles.scheduledTaskTime}>{formatTimeFromDecimal(task.startTime)}</Text>
-              <Text style={styles.scheduledTaskDuration}>{task.duration.toFixed(1)}h</Text>
-              {!isSchedulable && (
-                <Text style={styles.nonSchedulableText}>No time slots available</Text>
-              )}
+              <Text variant="labelSmall" style={styles.scheduledTaskTime}>
+                {formatTimeFromDecimal(task.startTime)}
+              </Text>
+
+              <Text variant="titleMedium" style={styles.scheduledTaskTitle} numberOfLines={1}>
+                {task.title}
+              </Text>
+
+              <Text variant="labelSmall" style={styles.scheduledTaskDuration}>
+                {task.duration.toFixed(1)}h
+              </Text>
             </View>
           </>
         );
@@ -451,10 +474,12 @@ const TaskItem = React.memo(
         return (
           <>
             <PriorityIndicator priority={priority} />
-            <Text style={styles.unscheduledTaskTitle} numberOfLines={1}>
+            <Text variant="labelLarge" style={styles.unscheduledTaskTitle} numberOfLines={1}>
               {task.title}
             </Text>
-            <Text style={styles.unscheduledTaskDuration}>{task.duration.toFixed(1)}h</Text>
+            <Text variant="labelSmall" style={styles.unscheduledTaskDuration}>
+              {task.duration.toFixed(1)}h
+            </Text>
           </>
         );
       }
@@ -501,6 +526,7 @@ export const UnscheduledTasksSection = React.memo(
     handleCancelButtonLayout,
     handleRemoveButtonLayout,
   }) => {
+    const styles = useTimelineStyles();
     const { cancelButtonStyle, removeButtonStyle, removeButtonTextStyle, cancelButtonTextStyle } =
       useDragActionButtonsStyles(isRemoveHovered, isCancelHovered);
     const [taskDragging, setTaskDragging] = useState(false);
@@ -546,7 +572,7 @@ export const UnscheduledTasksSection = React.memo(
             onDismissTooltip={onDismissTooltip}
             removeButtonRef={removeButtonRef}
             cancelButtonRef={cancelButtonRef}
-            isAnyTaskDragging={taskDragging} // Add this new prop
+            isAnyTaskDragging={taskDragging}
           />
         );
       },
@@ -562,23 +588,29 @@ export const UnscheduledTasksSection = React.memo(
         scrollViewRef,
         removeButtonRef,
         cancelButtonRef,
-        taskDragging, // Add this dependency
+        taskDragging,
       ],
     );
 
     // Render the empty state when no unscheduled tasks
     const renderEmptyState = () => (
       <View style={styles.emptyStateContainer}>
-        <Text style={styles.emptyStateText}>No tasks due</Text>
+        <Text style={styles.emptyStateText} variant="bodyLarge">
+          No tasks due
+        </Text>
       </View>
     );
 
     return (
       <View style={styles.unscheduledArea}>
         <View style={styles.unscheduledHeader}>
-          <Text style={styles.sectionTitle}>Tasks</Text>
+          <Text style={styles.sectionTitle} variant="titleMedium">
+            Tasks
+          </Text>
           {unscheduledTasks.length > 0 && (
-            <Text style={styles.taskCount}>{unscheduledTasks.length} due</Text>
+            <Text variant="labelMedium" style={styles.taskCount}>
+              {unscheduledTasks.length} due
+            </Text>
           )}
         </View>
         <View style={styles.unscheduledTasksContainer}>
@@ -613,8 +645,8 @@ export const UnscheduledTasksSection = React.memo(
                 ref={cancelButtonRef}
                 onLayout={handleCancelButtonLayout}
                 style={[styles.actionButton, cancelButtonStyle]}>
-                <Animated.Text style={[styles.actionButtonIcon, cancelButtonTextStyle]}>
-                  ↩
+                <Animated.Text style={[styles.cancelButtonIcon, cancelButtonTextStyle]}>
+                  ↺
                 </Animated.Text>
                 <Animated.Text style={[styles.actionButtonText, cancelButtonTextStyle]}>
                   Cancel
@@ -625,7 +657,7 @@ export const UnscheduledTasksSection = React.memo(
                   ref={removeButtonRef}
                   onLayout={handleRemoveButtonLayout}
                   style={[styles.actionButton, removeButtonStyle]}>
-                  <Animated.Text style={[styles.actionButtonIcon, removeButtonTextStyle]}>
+                  <Animated.Text style={[styles.removeButtonIcon, removeButtonTextStyle]}>
                     ✕
                   </Animated.Text>
                   <Animated.Text style={[styles.actionButtonText, removeButtonTextStyle]}>

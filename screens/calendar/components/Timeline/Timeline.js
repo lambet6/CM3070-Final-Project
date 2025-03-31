@@ -2,7 +2,7 @@ import React, { useCallback, useState, useEffect, useMemo, useRef } from 'react'
 import { View, Platform } from 'react-native';
 import { useAnimatedRef, useScrollViewOffset, useAnimatedReaction } from 'react-native-reanimated';
 import { dateToHours, hoursToDate, minutesToHours, SCREEN_HEIGHT } from './utils';
-import styles from './styles';
+import { useTimelineStyles } from './styles';
 
 // Import refactored utilities
 import { calculateEventLayout } from './utils';
@@ -20,6 +20,7 @@ import { useTaskStore } from '../../../../store/taskStore';
 import { useTaskManager } from '../../../../hooks/useTaskManager';
 // Import calendar store
 import { useCalendarStore } from '../../../../store/calendarStore';
+import { Divider } from 'react-native-paper';
 
 const TimelineComponent = ({ selectedDate }) => {
   // Get task manager for updating tasks
@@ -199,6 +200,7 @@ const TimelineComponent = ({ selectedDate }) => {
     },
     [tasksForSelectedDate, selectedDate, taskManager],
   );
+  const styles = useTimelineStyles();
 
   // Group layout values for passing to subcomponents
   const layoutValues = {
@@ -239,6 +241,8 @@ const TimelineComponent = ({ selectedDate }) => {
         handleRemoveButtonLayout={handleRemoveButtonLayout}
         handleCancelButtonLayout={handleCancelButtonLayout}
       />
+
+      {/* <Divider bold horizontalInset /> */}
 
       {/* Timeline */}
       <TimelineContent

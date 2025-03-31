@@ -6,7 +6,7 @@ export const styles = StyleSheet.create({
     flex: 1,
   },
   calendarContainer: {
-    padding: 10,
+    paddingHorizontal: 10,
     borderRadius: 16,
   },
   calendar: {
@@ -84,7 +84,6 @@ export const styles = StyleSheet.create({
     gap: 2, // adds small spacing between dots
   },
   dragList: {
-    backgroundColor: 'blue',
     flex: 1,
   },
 });

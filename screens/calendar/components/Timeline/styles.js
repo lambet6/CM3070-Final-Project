@@ -1,267 +1,275 @@
 import { StyleSheet, Dimensions } from 'react-native';
 import { HOUR_HEIGHT, QUARTER_HEIGHT, TASK_ITEM_WIDTH, TIMELINE_OFFSET } from './utils';
 import { TASK_ITEM_HEIGHT } from './utils';
+import { useTheme } from 'react-native-paper';
 import { useMemo } from 'react';
+import { te } from 'date-fns/locale';
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8f9fa',
-    overflow: 'hidden',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    margin: 16,
-    textAlign: 'center',
-  },
+export const useTimelineStyles = () => {
+  const theme = useTheme();
 
-  // Unscheduled tasks
-  unscheduledArea: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-    backgroundColor: 'rgba(39, 245, 140, 1)',
-    paddingVertical: 10,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 10,
-  },
-  unscheduledTasksContainer: {
-    width: '100%',
-    height: TASK_ITEM_HEIGHT / 2 + 20,
-    // zIndex: 1,
-  },
-  unscheduledTaskList: {
-    overflow: 'visible',
-  },
-  unscheduledHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-    paddingHorizontal: 16,
-  },
-  taskCount: {
-    fontSize: 12,
-    color: '#666',
-    backgroundColor: 'rgba(0, 0, 0, 0.05)',
-    borderRadius: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-  },
-  emptyStateContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  emptyStateText: {
-    color: '#888',
-    fontSize: 14,
-    fontStyle: 'italic',
-  },
-  taskListContent: {
-    paddingHorizontal: 10,
-    gap: 10,
-  },
-  unscheduledTaskItem: {
-    marginHorizontal: 5,
-  },
+  return useMemo(
+    () =>
+      StyleSheet.create({
+        container: {
+          flex: 1,
+          overflow: 'hidden',
+        },
+        title: {
+          fontSize: 24,
+          fontWeight: 'bold',
+          margin: 16,
+          textAlign: 'center',
+        },
 
-  // Timeline styles
-  timelineContainer: {
-    flex: 1,
-    // overflow: 'hidden',
-  },
-  timelineSideBar: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    width: TIMELINE_OFFSET,
-    height: '100%',
-  },
-  timelineContent: {
-    marginLeft: TIMELINE_OFFSET,
-    position: 'relative',
-    minHeight: 13 * HOUR_HEIGHT, // HOURS.length * HOUR_HEIGHT
-    overflow: 'visible',
-  },
-  hourContainer: {
-    height: HOUR_HEIGHT,
-    justifyContent: 'center',
-    paddingHorizontal: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  hourText: {
-    fontSize: 12,
-    color: '#333',
-  },
-  hourLine: {
-    position: 'absolute',
-    right: 0,
-    left: TIMELINE_OFFSET,
-    height: 1,
-    backgroundColor: '#e0e0e0',
-  },
-  quarterContainer: {
-    position: 'absolute',
-    left: 0,
-    width: TIMELINE_OFFSET,
-    height: QUARTER_HEIGHT,
-    justifyContent: 'top',
-    paddingHorizontal: 10,
-  },
-  quarterText: {
-    fontSize: 10,
-    color: '#888',
-    textAlign: 'right',
-    width: '100%',
-    paddingRight: 35,
-  },
-  quarterLine: {
-    position: 'absolute',
-    right: 0,
-    left: TIMELINE_OFFSET - 20,
-    height: 1,
-    backgroundColor: '#e8e8e8',
-  },
+        // Unscheduled tasks
+        unscheduledArea: {
+          // borderBottomWidth: 1,
+          // borderBottomColor: '#e0e0e0',
+          backgroundColor: theme.colors.primary,
+          paddingVertical: 10,
+        },
+        sectionTitle: {
+          color: theme.colors.onPrimary,
+        },
+        unscheduledTasksContainer: {
+          width: '100%',
+          height: TASK_ITEM_HEIGHT / 2 + 20,
+          // zIndex: 1,
+          zIndex: 100,
+        },
+        unscheduledTaskList: {
+          overflow: 'visible',
+        },
+        unscheduledHeader: {
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: 10,
+          paddingHorizontal: 16,
+        },
+        taskCount: {
+          color: theme.colors.onSurfaceVariant,
+          backgroundColor: theme.colors.surfaceVariant,
+          borderRadius: 12,
+          paddingHorizontal: 8,
+          paddingVertical: 2,
+        },
+        emptyStateContainer: {
+          flex: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+        },
+        emptyStateText: {
+          color: theme.colors.onPrimary,
+        },
+        taskListContent: {
+          paddingHorizontal: 10,
+          gap: 10,
+        },
+        unscheduledTaskItem: {
+          marginHorizontal: 5,
+        },
 
-  // Base task item shared styles
-  taskItem: {
-    borderRadius: 8,
-    padding: 10,
-    paddingLeft: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    zIndex: 200,
-  },
+        // Timeline styles
+        timelineContainer: {
+          flex: 1,
+          // backgroundColor: theme.colors.surface,
+          // overflow: 'hidden',
+        },
+        timelineSideBar: {
+          position: 'absolute',
+          left: 0,
+          top: 0,
+          width: TIMELINE_OFFSET,
+          height: '100%',
+          backgroundColor: theme.colors.surfaceVariant,
+          borderTopRightRadius: 12,
+          borderBottomRightRadius: 12,
+        },
+        timelineContent: {
+          marginLeft: TIMELINE_OFFSET,
+          position: 'relative',
+          minHeight: 13 * HOUR_HEIGHT,
+          overflow: 'visible',
+        },
+        hourContainer: {
+          height: HOUR_HEIGHT,
+          width: TIMELINE_OFFSET,
+          flexDirection: 'row',
+          borderColor: theme.colors.outline,
+          borderBottomWidth: 0.5,
+        },
+        hourLabelRow: {
+          paddingHorizontal: 5,
+          flex: 1,
+          // height: QUARTER_HEIGHT,
+          // justifyContent: 'flex-start',
+          // alignItems: 'flex-start',
+        },
+        hourText: {
+          color: theme.colors.onSurfaceVariant,
+        },
+        quartersContainer: {
+          flexDirection: 'column',
+          justifyContent: 'center',
+          // borderWidth: 1,
+          // justifyContent: 'flex-start',
+          // alignItems: 'flex-start',
+        },
+        quarterRow: {
+          flexDirection: 'row',
+          justifyContent: 'flex-end',
+          alignItems: 'center',
+          // paddingHorizontal: 16,
+          // borderWidth: 1,
+        },
+        quarterText: {
+          color: theme.colors.outline,
+          // opacity: 0.8,
+          textAlign: 'right',
+          marginRight: 8,
+        },
+        quarterDot: {
+          width: 4,
+          height: 2,
+          borderRadius: 2,
+          backgroundColor: theme.colors.outline,
+          // opacity: 0.6,
+        },
+        hourDivider: {
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          zIndex: 30,
+        },
 
-  // Text styles
-  taskTitle: {
-    fontWeight: '600',
-    fontSize: 16,
-  },
-  taskDuration: {
-    fontSize: 14,
-    color: '#555',
-  },
-  unscheduledTaskTitle: {
-    fontWeight: '600',
-    fontSize: 12,
-  },
-  unscheduledTaskDuration: {
-    fontSize: 10,
-    color: '#555',
-  },
-  scheduledTaskTitle: {
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  scheduledTaskDetails: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-    marginTop: 4,
-    textAlign: 'center',
-  },
-  EventDetails: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-    marginTop: 4,
-  },
-  smallEventDetails: {
-    flexDirection: 'column',
-    justifyContent: 'space-between',
-    width: '100%',
-    marginTop: 4,
-  },
-  scheduledTaskTime: {
-    fontSize: 12,
-    color: '#444',
-    fontWeight: '500',
-  },
-  scheduledTaskDuration: {
-    fontSize: 12,
-    color: '#555',
-  },
+        // Base task item shared styles
+        taskItem: {
+          borderRadius: 8,
+          paddingRight: 10,
+          paddingLeft: 16,
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 200,
+        },
 
-  // Action buttons styles
-  actionButtonsContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    backgroundColor: 'transparent',
-  },
-  actionButton: {
-    width: 120,
-    height: 50,
-    borderRadius: 25,
-    borderWidth: 2,
-    borderColor: 'rgb(224, 133, 0)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    flexDirection: 'row',
-    padding: 10,
-  },
-  actionButtonText: {
-    fontWeight: 'bold',
-    fontSize: 14,
-    marginLeft: 5,
-  },
-  actionButtonIcon: {
-    fontSize: 18,
-  },
-  expandButton: {
-    paddingVertical: 2,
-    paddingHorizontal: 12,
-    alignSelf: 'center',
-    marginTop: 10,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#ddd',
-  },
-  expandButtonText: {
-    fontSize: 14,
-    color: '#555',
-    fontWeight: '500',
-  },
+        // Text styles
+        taskTitle: {
+          fontWeight: '600',
+          fontSize: 16,
+        },
+        taskDuration: {
+          fontSize: 14,
+          color: '#555',
+        },
+        unscheduledTaskTitle: {
+          color: theme.colors.onPrimaryContainer,
+        },
+        unscheduledTaskDuration: {
+          color: theme.colors.onPrimaryContainer,
+        },
+        scheduledTaskTitle: {
+          color: theme.colors.onSecondaryContainer,
+        },
+        scheduledTaskDetails: {
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          width: '100%',
+          // marginTop: 4,
+          textAlign: 'center',
+        },
+        EventDetails: {
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          width: '100%',
+          marginTop: 4,
+        },
+        smallEventDetails: {
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+          width: '100%',
+          marginTop: 4,
+        },
+        scheduledTaskTime: {
+          color: theme.colors.onSecondaryContainer,
+        },
+        scheduledTaskDuration: {
+          color: theme.colors.outline,
+        },
 
-  // Scheduled task styles
-  scheduledTaskStatic: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    marginHorizontal: 5,
-    backgroundColor: '#a8e6cf',
-  },
+        // Event item styles
+        eventText: {
+          color: theme.colors.onTertiaryContainer,
+        },
 
-  // Unscheduled task styles
-  unscheduledTaskStatic: {
-    width: TASK_ITEM_WIDTH / 2,
-    height: TASK_ITEM_HEIGHT / 2,
-    padding: 5,
-  },
+        // Action buttons styles
+        actionButtonsContainer: {
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          flexDirection: 'row',
+          justifyContent: 'space-around',
+          backgroundColor: 'transparent',
+        },
+        actionButton: {
+          width: 120,
+          height: 50,
+          borderRadius: 25,
+          borderWidth: 2,
+          borderColor: theme.colors.onPrimary,
+          justifyContent: 'center',
+          alignItems: 'center',
+          flexDirection: 'row',
+          padding: 10,
+        },
+        actionButtonText: {
+          fontWeight: 'bold',
+          fontSize: 14,
+          marginLeft: 5,
+        },
+        cancelButtonIcon: {
+          fontSize: 18,
+        },
+        removeButtonIcon: {
+          fontSize: 14,
+        },
 
-  // Non-schedulable task styles
-  nonSchedulableTaskStatic: {
-    borderWidth: 1,
-    borderColor: '#bdbdbd',
-    borderStyle: 'dashed',
-  },
-});
-export default styles;
+        // Scheduled task styles
+        scheduledTaskStatic: {
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          marginHorizontal: 5,
+          backgroundColor: theme.colors.secondaryContainer,
+        },
+
+        // Unscheduled task styles
+        unscheduledTaskStatic: {
+          width: TASK_ITEM_WIDTH / 2,
+          height: TASK_ITEM_HEIGHT / 2,
+          padding: 5,
+          backgroundColor: theme.colors.primaryContainer,
+          zIndex: 1000,
+        },
+
+        unscheduledTaskDragged: {
+          backgroundColor: theme.colors.secondaryContainer,
+          zIndex: 1000,
+        },
+
+        // Non-schedulable task styles
+        nonSchedulableTaskStatic: {
+          borderWidth: 1,
+          borderColor: '#bdbdbd',
+          borderStyle: 'dashed',
+        },
+      }),
+    [theme],
+  );
+};
 
 export const stylesTooltip = StyleSheet.create({
   container: {
@@ -302,16 +310,16 @@ export const stylesTooltip = StyleSheet.create({
 });
 
 // Helper functions for EventItem styling
-export const getEventBaseStyle = (position, height) => ({
+export const getEventBaseStyle = (position, height, theme) => ({
   position: 'absolute',
   top: position,
   height: height,
-  backgroundColor: 'rgba(149, 175, 192, 0.6)',
+  backgroundColor: theme.colors.tertiaryContainer,
   borderRadius: 8,
   padding: 8,
   borderLeftWidth: 4,
-  borderLeftColor: '#4b6584',
-  zIndex: 50,
+  borderLeftColor: '#ff00ff',
+  zIndex: 1,
 });
 
 export const getEventWidthStyle = (layout) => {

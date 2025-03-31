@@ -280,10 +280,10 @@ export default function CalenarScreen() {
                 selected={true}
                 style={styles.toggleButton}
                 icon={isWeekView ? 'chevron-down' : 'chevron-up'}
-                size={30}
+                size={20}
                 onPress={toggleViewMode}
                 accessibilityLabel="Toggle calendar view"
-                accessibilityHint="Switch to {weekly/monthly} calendar"
+                accessibilityHint={`Switch to ${isWeekView ? 'monthly' : 'weekly'} calendar`}
               />
             </Animated.View>
           </Calendar.VStack>

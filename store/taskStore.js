@@ -49,8 +49,12 @@ export const useTaskStore = create((set, get) => {
         return [];
       }
 
-      // Create a cache key using ISO date string for consistency
-      const dateKey = date.toISOString().split('T')[0];
+      // Create a normalized date at noon to avoid timezone issues
+      const normalizedDate = new Date(date);
+      normalizedDate.setHours(12, 0, 0, 0);
+
+      // Create a cache key using consistent date components
+      const dateKey = `${normalizedDate.getFullYear()}-${String(normalizedDate.getMonth() + 1).padStart(2, '0')}-${String(normalizedDate.getDate()).padStart(2, '0')}`;
 
       // Check if we have cache for this date
       if (tasksByDateCache[dateKey]) {
@@ -61,7 +65,6 @@ export const useTaskStore = create((set, get) => {
       // If not in cache, compute and store in cache
       const { tasks } = get();
       const allTasks = [...tasks.high, ...tasks.medium, ...tasks.low];
-      const targetDateString = date.toDateString();
 
       const tasksOnDate = allTasks.filter((task) => {
         // Skip tasks without due dates
@@ -75,8 +78,12 @@ export const useTaskStore = create((set, get) => {
             return false;
           }
 
-          // Compare using string representation to avoid reference equality issues
-          return taskDate.toDateString() === targetDateString;
+          // Compare year, month and day directly instead of string representation
+          return (
+            taskDate.getFullYear() === normalizedDate.getFullYear() &&
+            taskDate.getMonth() === normalizedDate.getMonth() &&
+            taskDate.getDate() === normalizedDate.getDate()
+          );
         } catch (error) {
           console.error('Error processing task date for task:', task.id, error);
           return false;

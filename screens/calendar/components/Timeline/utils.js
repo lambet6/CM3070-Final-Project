@@ -7,8 +7,8 @@ export const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('wi
 export const HOUR_HEIGHT = 80;
 export const QUARTER_HEIGHT = HOUR_HEIGHT / 4;
 export const TASK_ITEM_HEIGHT = 75;
-export const TASK_ITEM_WIDTH = 120;
-export const TIMELINE_OFFSET = SCREEN_WIDTH * 0.25;
+export const TASK_ITEM_WIDTH = 200;
+export const TIMELINE_OFFSET = SCREEN_WIDTH * 0.2;
 export const MIN_HOUR = 8; // 8 AM
 export const MAX_HOUR = 21; // 9 PM
 export const TIMELINE_HEIGHT = 13 * HOUR_HEIGHT;
@@ -231,7 +231,12 @@ export const calculateInvalidZones = (eventsData) => {
 
 export const calculateValidZonesForDuration = (taskDuration, invalidZones) => {
   const taskDurationInPixels = taskDuration * HOUR_HEIGHT;
-  const timelineHeight = HOURS.length * HOUR_HEIGHT; // Total timeline height
+  const timelineHeight = HOURS.length * HOUR_HEIGHT;
+
+  // Early return if task is longer than the entire timeline
+  if (taskDuration > HOURS.length) {
+    return [];
+  }
 
   const validZones = [];
 

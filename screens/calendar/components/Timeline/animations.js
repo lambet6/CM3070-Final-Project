@@ -25,6 +25,7 @@ import {
   timeToPosition,
   TIMELINE_HEIGHT,
 } from './utils';
+import { useTheme } from 'react-native-paper';
 
 // ========================================================================
 // MODULE: ANIMATION CONSTANTS
@@ -131,6 +132,7 @@ export const useDragAnimations = () => {
  * Creates animated styles for the timeline indicator (preview of task placement)
  */
 export const useTimelineIndicatorStyle = (visible, position, height, style, isValid) => {
+  const theme = useTheme();
   return useAnimatedStyle(() => {
     // Dynamic styling based on position validity
     const validStyle = {
@@ -415,23 +417,24 @@ export const useTaskAnimations = (task) => {
  * Creates animated styles for drag action buttons
  */
 export const useDragActionButtonsStyles = (isRemoveHovered, isCancelHovered) => {
+  const theme = useTheme();
   // Cancel button style
   const cancelButtonStyle = useAnimatedStyle(() => ({
-    backgroundColor: isCancelHovered.value ? 'rgb(224, 133, 0)' : 'transparent',
+    backgroundColor: isCancelHovered.value ? theme.colors.onPrimary : 'transparent',
   }));
 
   // Remove button style
   const removeButtonStyle = useAnimatedStyle(() => ({
-    backgroundColor: isRemoveHovered.value ? 'rgb(224, 133, 0)' : 'transparent',
+    backgroundColor: isRemoveHovered.value ? theme.colors.onPrimary : 'transparent',
   }));
 
   // Text styles
   const removeButtonTextStyle = useAnimatedStyle(() => ({
-    color: isRemoveHovered.value ? 'white' : 'rgb(224, 133, 0)',
+    color: isRemoveHovered.value ? theme.colors.primary : theme.colors.onPrimary,
   }));
 
   const cancelButtonTextStyle = useAnimatedStyle(() => ({
-    color: isCancelHovered.value ? 'white' : 'rgb(224, 133, 0)',
+    color: isCancelHovered.value ? theme.colors.primary : theme.colors.onPrimary,
   }));
 
   return {
