@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,15 +11,16 @@ import {
   TouchableWithoutFeedback,
 } from 'react-native';
 import { useGoalsStore } from '../store/goalsStore';
+import { useGoalsManager } from '../hooks/useGoalManager';
 import GoalItem from '../components/GoalItem';
 
 export default function GoalsScreen() {
-  const { goals, error, isLoading, loadGoals, addNewGoal, updateGoal, deleteGoal } =
-    useGoalsStore();
+  const { goals, error, isLoading } = useGoalsStore();
+  const goalsManager = useGoalsManager();
 
   useEffect(() => {
-    loadGoals();
-  }, [loadGoals]);
+    goalsManager.fetchGoals();
+  }, [goalsManager]);
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
@@ -46,13 +47,16 @@ export default function GoalsScreen() {
                 <Pressable
                   style={styles.addButton}
                   onPress={() => {
-                    // Here you might prompt the user to enter details.
-                    addNewGoal('New Goal', 0);
+                    goalsManager.addGoal('New Goal', 0);
                   }}>
                   <Text style={styles.addButtonText}>➕ Add Goal</Text>
                 </Pressable>
               ) : (
-                <GoalItem item={item} updateGoal={updateGoal} deleteGoal={deleteGoal} />
+                <GoalItem
+                  item={item}
+                  updateGoal={(id, title, hours) => goalsManager.updateGoalData(id, title, hours)}
+                  deleteGoal={(id) => goalsManager.deleteGoal(id)}
+                />
               )
             }
           />
