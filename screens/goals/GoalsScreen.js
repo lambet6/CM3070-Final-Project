@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
 import { useGoalsStore } from '../../store/goalsStore';
 import { useGoalsManager } from '../../hooks/useGoalManager';
+import { useCalendarManager } from '../../hooks/useCalendarManager';
 import {
   Text,
   useTheme,
@@ -16,11 +17,15 @@ import {
 import EditGoalForm from './components/EditGoalForm';
 import NewGoalForm from './components/NewGoalForm';
 import GoalItem from './components/GoalItem';
+import ScheduleGoalDialog from './components/ScheduleGoalDialog';
+import * as Calendar from 'expo-calendar';
 
 // Main GoalsScreen component
 export default function GoalsScreen() {
   const { goals, error, isLoading } = useGoalsStore();
   const goalsManager = useGoalsManager();
+  const calendarManager = useCalendarManager();
+
   const [editingGoal, setEditingGoal] = useState(null);
   const [editTitle, setEditTitle] = useState('');
   const [editHours, setEditHours] = useState('');
@@ -31,7 +36,12 @@ export default function GoalsScreen() {
   const [goalToDelete, setGoalToDelete] = useState(null);
 
   const [showSnackbar, setShowSnackbar] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
   const [deletedGoalInfo, setDeletedGoalInfo] = useState(null);
+
+  // New state for scheduling
+  const [schedulingGoal, setSchedulingGoal] = useState(null);
+  const [showScheduleDialog, setShowScheduleDialog] = useState(false);
 
   const theme = useTheme();
   const styles = getStyles(theme);
@@ -116,6 +126,7 @@ export default function GoalsScreen() {
 
         // Store deleted goal info and show snackbar
         setDeletedGoalInfo(goalToRestore);
+        setSnackbarMessage('Goal deleted');
         setShowSnackbar(true);
       } catch (error) {
         console.error('Failed to delete goal:', error);
@@ -141,9 +152,42 @@ export default function GoalsScreen() {
     setDeletedGoalInfo(null);
   };
 
+  // Updated Schedule Goal function
   const handleScheduleGoal = (goalId) => {
-    // Placeholder for future scheduling functionality
-    console.log('Schedule goal with ID:', goalId);
+    const goalToSchedule = goals.find((goal) => goal.id === goalId);
+    if (goalToSchedule) {
+      setSchedulingGoal(goalToSchedule);
+      setShowScheduleDialog(true);
+    }
+  };
+
+  // Function to handle scheduling a goal
+  const handleScheduleEvent = async (eventData) => {
+    try {
+      // Format the event title to include the goal name
+      const eventTitle = `${eventData.title}`;
+
+      // Use enhanced calendar manager to create the event
+      const newEvent = await calendarManager.createGoalCalendarEvent(
+        eventTitle,
+        eventData.startDate,
+        eventData.endDate,
+        eventData.isRecurring,
+        eventData.recurrenceType,
+      );
+
+      // Close the dialog
+      setShowScheduleDialog(false);
+
+      // Show confirmation message
+      const recurringText = eventData.isRecurring ? ' as recurring event' : '';
+      setSnackbarMessage(`${eventData.title} scheduled successfully${recurringText}`);
+      setShowSnackbar(true);
+    } catch (error) {
+      console.error('Failed to schedule goal:', error);
+      setSnackbarMessage(`Failed to schedule: ${error.message}`);
+      setShowSnackbar(true);
+    }
   };
 
   return (
@@ -204,6 +248,7 @@ export default function GoalsScreen() {
 
       {/* Portal section */}
       <Portal>
+        {/* Edit Goal Dialog */}
         <EditGoalForm
           goal={editingGoal}
           visible={showEditDialog}
@@ -225,17 +270,29 @@ export default function GoalsScreen() {
           </Dialog.Actions>
         </Dialog>
 
-        {/* Undo functionality */}
+        {/* Schedule Goal Dialog */}
+        <ScheduleGoalDialog
+          goal={schedulingGoal}
+          visible={showScheduleDialog}
+          onDismiss={() => setShowScheduleDialog(false)}
+          onSchedule={handleScheduleEvent}
+        />
+
+        {/* Snackbar for notifications */}
         <Snackbar
           wrapperStyle={{ paddingHorizontal: 16, marginVertical: 50 }}
           visible={showSnackbar}
           onDismiss={handleSnackbarDismiss}
-          action={{
-            label: 'Undo',
-            onPress: handleUndoDelete,
-          }}
+          action={
+            deletedGoalInfo
+              ? {
+                  label: 'Undo',
+                  onPress: handleUndoDelete,
+                }
+              : undefined
+          }
           duration={5000}>
-          Goal deleted
+          {snackbarMessage}
         </Snackbar>
       </Portal>
     </View>

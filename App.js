@@ -17,6 +17,9 @@ import { lightTheme, darkTheme } from './themes';
 import { PreferencesContext } from './Preferences';
 import { useCallback, useMemo, useState } from 'react';
 
+import { enGB, registerTranslation } from 'react-native-paper-dates';
+registerTranslation('en-GB', enGB);
+
 const customTheme = {
   ...MD3LightTheme,
   colors: lightTheme.colors,
@@ -83,9 +86,9 @@ export default function App() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <TaskProvider>
         <PreferencesContext.Provider value={preferences}>
-          <PaperProvider theme={MD3LightTheme}>
+          <PaperProvider theme={MD3DarkTheme}>
             <SafeAreaView style={{ flex: 1 }}>
-              <RootNavigator theme={MD3LightTheme} />
+              <RootNavigator theme={MD3DarkTheme} />
               <StatusBar style="dark" />
             </SafeAreaView>
           </PaperProvider>

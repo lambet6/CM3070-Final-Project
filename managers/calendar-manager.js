@@ -90,9 +90,97 @@ export const createCalendarManager = (repository, getStore) => {
     }
   };
 
+  /**
+   * Creates a new recurring calendar event.
+   * @param {string} title - The event title.
+   * @param {Date|string} startDate - The event start date.
+   * @param {Date|string} endDate - The event end date.
+   * @param {string} recurrenceType - The recurrence type (daily, weekly, monthly).
+   * @returns {Promise<CalendarEvent>}
+   */
+  const createRecurringCalendarEvent = async (title, startDate, endDate, recurrenceType) => {
+    const store = getStore();
+
+    try {
+      // Convert recurrenceType to a frequency rule recognized by calendar providers
+      let frequency;
+      switch (recurrenceType) {
+        case 'daily':
+          frequency = 'daily';
+          break;
+        case 'weekly':
+          frequency = 'weekly';
+          break;
+        case 'monthly':
+          frequency = 'monthly';
+          break;
+        default:
+          throw new Error('Invalid recurrence type');
+      }
+
+      // Let the domain model handle validation for the base event
+      const event = new CalendarEvent({
+        id: 'temp',
+        title,
+        startDate,
+        endDate,
+      });
+
+      // Add recurrence information
+      const recurrenceRule = {
+        frequency,
+        interval: 1, // Every 1 day, week, or month
+        endDate: null, // No end date (can be updated to support ending after X occurrences)
+      };
+
+      // Use repository to create the recurring event
+      const newEvent = await repository.addRecurringCalendarEvent(event, recurrenceRule);
+
+      // Update store with the new event
+      store.addEvent(newEvent);
+      store.setError(null);
+
+      return newEvent;
+    } catch (error) {
+      console.error('Error creating recurring calendar event:', error);
+      store.setError(`Failed to create recurring calendar event: ${error.message}`);
+      throw error;
+    }
+  };
+
+  /**
+   * Creates a calendar event for a goal, which could be recurring or one-time.
+   * @param {string} title - The event title (usually the goal title).
+   * @param {Date} startDate - The event start date and time.
+   * @param {Date} endDate - The event end date and time.
+   * @param {boolean} isRecurring - Whether this is a recurring event.
+   * @param {string} recurrenceType - The type of recurrence (daily, weekly, monthly).
+   * @returns {Promise<CalendarEvent>} The created calendar event.
+   */
+  const createGoalCalendarEvent = async (
+    title,
+    startDate,
+    endDate,
+    isRecurring = false,
+    recurrenceType = null,
+  ) => {
+    try {
+      if (isRecurring && recurrenceType) {
+        return await createRecurringCalendarEvent(title, startDate, endDate, recurrenceType);
+      } else {
+        return await createCalendarEvent(title, startDate, endDate);
+      }
+    } catch (error) {
+      console.error('Error creating goal calendar event:', error);
+      throw error;
+    }
+  };
+
   return {
     loadWeeklyCalendarEvents,
     loadYearlyCalendarEvents,
     createCalendarEvent,
+    createRecurringCalendarEvent,
+    createGoalCalendarEvent,
   };
 };

@@ -94,6 +94,62 @@ export const createCalendarRepository = (calendarApi = Calendar) => {
   };
 
   /**
+   * Adds a recurring calendar event to the default calendar.
+   * @param {CalendarEvent} event - The base event
+   * @param {Object} recurrenceRule - The recurrence rule with frequency, interval, and endDate
+   * @returns {Promise<CalendarEvent>}
+   * @throws {Error} with context if creation fails.
+   */
+  const addRecurringCalendarEvent = async (event, recurrenceRule) => {
+    try {
+      const { status } = await calendarApi.requestCalendarPermissionsAsync();
+      if (status !== 'granted') throw new Error('Calendar permission not granted');
+
+      const defaultCalendarId = await getDefaultCalendarId();
+      if (!defaultCalendarId) throw new Error('No default calendar found');
+
+      // Create new event using the domain model for validation
+      const newEvent = new CalendarEvent({
+        id: 'temp', // Temporary ID
+        title: event.title,
+        startDate: event.startDate,
+        endDate: event.endDate,
+      });
+
+      // Set up recurrence rule according to expo-calendar format
+      // See: https://docs.expo.dev/versions/latest/sdk/calendar/#recurrencerule
+      const recurrenceRuleObject = {
+        frequency: recurrenceRule.frequency,
+        interval: recurrenceRule.interval,
+      };
+
+      // Add end date if specified
+      if (recurrenceRule.endDate) {
+        recurrenceRuleObject.endDate = recurrenceRule.endDate;
+      }
+
+      // Create the recurring event
+      const eventId = await calendarApi.createEventAsync(defaultCalendarId, {
+        title: newEvent.title,
+        startDate: newEvent.startDate,
+        endDate: newEvent.endDate,
+        timeZone: 'UTC',
+        recurrenceRule: recurrenceRuleObject,
+      });
+
+      return new CalendarEvent({
+        id: eventId,
+        title: newEvent.title,
+        startDate: newEvent.startDate,
+        endDate: newEvent.endDate,
+      });
+    } catch (error) {
+      console.error('Error adding recurring calendar event:', error);
+      throw new Error(`Failed to add recurring calendar event: ${error.message}`);
+    }
+  };
+
+  /**
    * Gets the default calendar ID based on the platform
    * @returns {Promise<string>} Calendar ID
    * @throws {Error} if no suitable calendar is found
@@ -126,6 +182,7 @@ export const createCalendarRepository = (calendarApi = Calendar) => {
   return {
     getStoredCalendarEvents,
     addCalendarEvent,
+    addRecurringCalendarEvent,
   };
 };
 
