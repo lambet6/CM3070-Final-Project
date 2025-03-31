@@ -17,8 +17,8 @@ import { lightTheme, darkTheme } from './themes';
 import { PreferencesContext } from './Preferences';
 import { useCallback, useMemo, useState } from 'react';
 
-import { enGB, registerTranslation } from 'react-native-paper-dates'
-registerTranslation('en-GB', enGB)
+import { enGB, registerTranslation } from 'react-native-paper-dates';
+registerTranslation('en-GB', enGB);
 
 const customTheme = {
   ...MD3LightTheme,

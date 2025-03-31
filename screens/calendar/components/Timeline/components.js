@@ -97,6 +97,7 @@ const renderEvents = (events, eventLayoutMap) => {
 const renderTasks = (
   tasks,
   onStateChange,
+  onTaskComplete,
   scrollY,
   timelineLayout,
   animationValues,
@@ -106,14 +107,14 @@ const renderTasks = (
   onDismissTooltip,
   scrollViewRef,
 ) => {
-  const scheduledTasks = tasks.filter((task) => task.scheduled);
-
-  return scheduledTasks.map((task, index) => (
+  // No longer filtering tasks here since they're already filtered in the parent
+  return tasks.map((task, index) => (
     <TaskItem
       key={task.id}
       task={task}
       index={index}
       onStateChange={onStateChange}
+      onTaskComplete={onTaskComplete}
       scrollY={scrollY}
       timelineLayout={timelineLayout}
       dragAnimationValues={animationValues}
@@ -137,6 +138,7 @@ export const TimelineContent = React.memo(
     dragAnimationValues,
     layoutValues,
     onStateChange,
+    onTaskComplete,
     scrollY,
     validZonesByDuration,
     onTapUnScheduled,
@@ -190,6 +192,7 @@ export const TimelineContent = React.memo(
             {renderTasks(
               tasks,
               onStateChange,
+              onTaskComplete,
               scrollY,
               layoutValues.timelineLayout,
               dragAnimationValues,
@@ -335,6 +338,7 @@ const TaskItem = React.memo(
     task,
     index,
     onStateChange,
+    onTaskComplete,
     scrollY,
     timelineLayout,
     dragAnimationValues,
@@ -379,6 +383,7 @@ const TaskItem = React.memo(
       task,
       animations,
       onStateChange,
+      onTaskComplete,
       scrollY,
       timelineLayout,
       previewVisible: props.previewVisible,

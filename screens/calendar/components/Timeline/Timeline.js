@@ -81,15 +81,31 @@ const TimelineComponent = ({ selectedDate }) => {
 
     const newTasks = tasksForSelectedDate.map((task) => ({
       id: task.id,
-      title: task.title, // Original title without priority in it
-      priority: task.priority, // One of 'Low', 'Medium', or 'High'
+      title: task.title,
+      priority: task.priority,
       duration: minutesToHours(task.duration),
       scheduled: !!task.scheduledTime,
       startTime: dateToHours(task.scheduledTime),
+      completed: task.completed,
     }));
 
     setTasks(newTasks);
   }, [tasksForSelectedDate, selectedDate, allTasks]);
+
+  // Filter tasks by completion status
+  const uncompletedTasks = useMemo(() => {
+    return tasks.filter((task) => !task.completed);
+  }, [tasks]);
+
+  // Filter tasks for unscheduled tasks section (uncompleted & unscheduled)
+  const unscheduledTasks = useMemo(() => {
+    return uncompletedTasks.filter((task) => !task.scheduled);
+  }, [uncompletedTasks]);
+
+  // Filter tasks for timeline (scheduled tasks, both completed and uncompleted)
+  const scheduledTasks = useMemo(() => {
+    return tasks.filter((task) => task.scheduled);
+  }, [tasks]);
 
   // Set up hooks
   const { tooltipVisible, tooltipPosition, tooltipMessage, showTooltip, hideTooltip } =
@@ -186,7 +202,7 @@ const TimelineComponent = ({ selectedDate }) => {
               originalTask.title,
               originalTask.priority,
               originalTask.dueDate,
-              originalTask.duration, // Keep original duration in minutes
+              originalTask.duration,
               scheduledTime,
             );
           } catch (error) {
@@ -200,6 +216,37 @@ const TimelineComponent = ({ selectedDate }) => {
     },
     [tasksForSelectedDate, selectedDate, taskManager],
   );
+
+  const handleTaskCompletion = useCallback(
+    async (taskId) => {
+      if (isUpdatingRef.current) return;
+      isUpdatingRef.current = true;
+
+      try {
+        // First update local state for immediate feedback
+        setTasks((prev) =>
+          prev.map((task) => (task.id === taskId ? { ...task, completed: !task.completed } : task)),
+        );
+
+        // Find the original task in tasksForSelectedDate
+        const originalTask = tasksForSelectedDate.find((task) => task.id === taskId);
+
+        if (originalTask) {
+          console.log('Toggling task completion:', originalTask.title, originalTask.completed);
+          try {
+            // Edit the task with the task manager
+            await taskManager.toggleTaskCompletion(taskId);
+          } catch (error) {
+            console.error('Failed to update task completion:', error);
+          }
+        }
+      } finally {
+        isUpdatingRef.current = false;
+      }
+    },
+    [tasksForSelectedDate, taskManager],
+  );
+
   const styles = useTimelineStyles();
 
   // Group layout values for passing to subcomponents
@@ -224,7 +271,7 @@ const TimelineComponent = ({ selectedDate }) => {
 
       {/* Unscheduled Tasks Area */}
       <UnscheduledTasksSection
-        tasks={tasks}
+        tasks={unscheduledTasks}
         onStateChange={handleTaskStateChange}
         scrollY={scrollY}
         timelineLayout={timelineLayout}
@@ -249,12 +296,13 @@ const TimelineComponent = ({ selectedDate }) => {
         scrollViewRef={scrollViewRef}
         timelineLayoutRef={timelineLayoutRef}
         handleTimelineLayout={handleTimelineLayout}
-        tasks={tasks}
+        tasks={scheduledTasks}
         events={eventsForSelectedDate}
         eventLayoutMap={eventLayoutMap}
         dragAnimationValues={dragAnimationValues}
         layoutValues={layoutValues}
         onStateChange={handleTaskStateChange}
+        onTaskComplete={handleTaskCompletion}
         scrollY={scrollY}
         validZonesByDuration={validZonesByDuration}
         onTapUnScheduled={showTooltip}

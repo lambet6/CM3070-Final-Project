@@ -115,6 +115,7 @@ export function useTaskGestures({
   task,
   animations,
   onStateChange,
+  onTaskComplete,
   scrollY,
   timelineLayout,
   previewVisible,
@@ -169,22 +170,26 @@ export function useTaskGestures({
   const tapGesture = useMemo(
     () =>
       Gesture.Tap().onStart((event) => {
-        if (!onTapUnScheduled || task.scheduled) return;
+        if (!onTapUnScheduled) return;
 
-        // Calculate position for the tooltip
-        const position = {
-          x: event.absoluteX - event.x,
-          y: event.absoluteY - event.y,
-        };
+        if (task.scheduled) {
+          runOnJS(onTaskComplete)(task.id);
+        } else {
+          // Calculate position for the tooltip
+          const position = {
+            x: event.absoluteX - event.x,
+            y: event.absoluteY - event.y,
+          };
 
-        // Select appropriate message based on schedulability
-        const message = !isSchedulable
-          ? 'This task is too long for your available time slots'
-          : 'Drag to schedule this task';
+          // Select appropriate message based on schedulability
+          const message = !isSchedulable
+            ? 'This task is too long for your available time slots'
+            : 'Drag to schedule this task';
 
-        runOnJS(onTapUnScheduled)(position, message);
+          runOnJS(onTapUnScheduled)(position, message);
+        }
       }),
-    [isSchedulable, onTapUnScheduled, task.scheduled],
+    [isSchedulable, onTapUnScheduled, onTaskComplete, task.id, task.scheduled],
   );
 
   // Handle gesture start
