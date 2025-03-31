@@ -1,148 +1,210 @@
-import React, { useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { View, StyleSheet, ScrollView } from 'react-native';
 import { useWellbeingStore } from '../../store/wellbeingStore';
 import { useWellbeingManager } from '../../hooks/useWellbeingManager';
-import { LineChart } from 'react-native-chart-kit';
-import { format } from 'date-fns';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { moodValues } from './constants';
+import {
+  Surface,
+  Text,
+  ActivityIndicator,
+  useTheme,
+  IconButton,
+  Card,
+  Divider,
+} from 'react-native-paper';
+import MoodTasksChart from './components/MoodTaskChart'; // Import the chart component
 
 export default function WellbeingScreen() {
   const { moodData, error, isLoading } = useWellbeingStore();
   const wellbeingManager = useWellbeingManager();
+  const [todayMood, setTodayMood] = useState(null);
+
+  const [chartData, setChartData] = useState({
+    mood: { labels: [], data: [] },
+    tasks: { data: [] },
+  });
+
+  const theme = useTheme();
+  const styles = createStyles(theme);
 
   useEffect(() => {
-    wellbeingManager.getMoodData();
-  }, [wellbeingManager]);
+    loadMoodData();
+  }, []);
 
-  const handleMoodPress = (mood) => {
-    wellbeingManager.saveMood(mood);
+  useEffect(() => {
+    // Find today's mood entry if it exists
+    const todayEntry = moodData.find((entry) => entry.isToday());
+    setTodayMood(todayEntry ? todayEntry.mood : null);
+
+    // Update chart data whenever mood data changes
+    updateChartData();
+  }, [moodData]);
+
+  const loadMoodData = async () => {
+    try {
+      await wellbeingManager.getMoodData();
+    } catch (error) {
+      // Error is already handled in the manager and store
+    }
   };
 
-  const todayMood = moodData.find((entry) => entry.isToday())?.mood;
-
-  // Format dates for chart labels.
-  const formatDate = (date, index, labels) => {
-    const isFirstEntryOfMonth = index === 0 || format(labels[index - 1], 'M') !== format(date, 'M');
-    return isFirstEntryOfMonth ? format(date, 'd MMM') : format(date, 'd');
+  const handleMoodSelection = async (moodValue) => {
+    try {
+      await wellbeingManager.saveMood(moodValue);
+      setTodayMood(moodValue);
+    } catch (error) {
+      // Error is already handled in the manager and store
+    }
   };
 
-  const { labels, data } = wellbeingManager.getLast14DaysMoodData();
+  const staticRandomTaskData = useMemo(() => {
+    // Generate 14 random values (assuming 14 days of data)
+    return Array(14)
+      .fill(0)
+      .map(() => Math.floor(Math.random() * 7) + 1);
+  }, []);
+  // Add new function for chart data
+  const updateChartData = () => {
+    // Get mood data for the last 14 days
+    const moodChartData = wellbeingManager.getLast14DaysMoodData();
 
-  // Filter out days with zero moodValue
-  const filtered = labels
-    .map((label, index) => ({ label, value: data[index] }))
-    .filter((item) => item.value > 0);
-  const finalLabels = filtered.map((item) => item.label);
-  const finalData = filtered.map((item) => item.value);
+    // Use the pre-generated static random data
+    const taskData = {
+      data: staticRandomTaskData.slice(0, moodChartData.labels.length),
+    };
 
-  const shouldShowChart = finalData.length > 0;
+    setChartData({
+      mood: moodChartData,
+      tasks: taskData,
+    });
+  };
+  const renderMoodButtons = () => {
+    return Object.entries(moodValues).map(([key, [label, icon]]) => (
+      <IconButton
+        key={key}
+        icon={icon}
+        mode={todayMood === label ? 'contained' : 'outlined'}
+        size={30}
+        onPress={() => handleMoodSelection(label)}
+        style={styles.moodButton}
+        iconColor={todayMood === label ? theme.colors.background : theme.colors.primary}
+        containerColor={todayMood === label ? theme.colors.primary : 'transparent'}
+        disabled={isLoading}
+        accessibilityLabel={`Select mood: ${label}`}
+      />
+    ));
+  };
 
   return (
+    // <ScrollView>
     <View testID="wellbeing-screen" style={styles.container}>
-      <Text testID="wellbeing-title" style={styles.title}>
-        Track your mood and tasks completed over time
-      </Text>
-      {error && <Text style={styles.errorText}>{error}</Text>}
-      {isLoading && <Text style={styles.loadingText}>Loading mood data...</Text>}
-      <Text testID="mood-prompt" style={styles.subtitle}>
-        How are you feeling today?
-      </Text>
-      <View testID="mood-buttons-container" style={styles.moodContainer}>
-        {Object.values(moodValues).map((mood, index) => (
-          <TouchableOpacity
-            key={index}
-            testID={`mood-button-${mood[0].toLowerCase()}`}
-            onPress={() => handleMoodPress(mood[0])}
-            style={todayMood === mood[0] ? styles.selectedMoodButton : styles.moodButton}>
-            <MaterialCommunityIcons name={mood[1]} size={44} color="black" />
-            <Text testID={`mood-text-${mood[0].toLowerCase()}`} style={styles.moodText}>
-              {mood[0]}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-      {shouldShowChart && (
-        <View testID="mood-chart">
-          <LineChart
-            testID="mood-line-chart"
-            data={{
-              labels: finalLabels.map((label, index) =>
-                formatDate(new Date(label), index, finalLabels),
-              ),
-              datasets: [{ data: finalData }],
-            }}
-            width={Dimensions.get('window').width - 16}
-            height={220}
-            yAxisLabel=""
-            yAxisSuffix=""
-            yLabelsOffset={5}
-            xLabelsOffset={5}
-            verticalLabelRotation={-45}
-            chartConfig={{
-              backgroundColor: '#e26a00',
-              backgroundGradientFrom: '#fb8c00',
-              backgroundGradientTo: '#ffa726',
-              decimalPlaces: 0,
-              propsForVerticalLabels: { margin: 20 },
-              color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
-            }}
-            style={{ borderRadius: 16, paddingRight: 75 }}
-          />
+      <Surface style={styles.intro}>
+        <View style={styles.header}>
+          <Text style={styles.headerText} variant="titleMedium">
+            Track your mood over time
+          </Text>
         </View>
-      )}
+        {error && (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        )}
+        {isLoading && (
+          <View style={styles.loading}>
+            <ActivityIndicator style={styles.indicator} />
+            <Text style={styles.loadingText}>Loading wellbeing data...</Text>
+          </View>
+        )}
+      </Surface>
+
+      {/* Daily Mood Entry Section */}
+      <Card style={styles.moodCard}>
+        <Card.Content>
+          <Text variant="headlineSmall" style={styles.moodTitle}>
+            How are you feeling today?
+          </Text>
+
+          {todayMood ? (
+            <Text variant="labelLarge" style={styles.todayMoodText}>
+              {todayMood}
+            </Text>
+          ) : (
+            <Text style={styles.todayMoodText}>You haven't recorded your mood today</Text>
+          )}
+
+          <Divider style={styles.divider} />
+
+          <Text variant="bodyMedium" style={styles.moodInstructions}>
+            Select an emoji that best represents your mood:
+          </Text>
+
+          <View style={styles.moodButtonContainer}>{renderMoodButtons()}</View>
+        </Card.Content>
+      </Card>
+
+      {/* Mood & Tasks Chart */}
+      <MoodTasksChart moodData={chartData.mood} taskData={chartData.tasks} />
     </View>
+    // </ScrollView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 8,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginVertical: 16,
-  },
-  subtitle: {
-    fontSize: 16,
-    textAlign: 'center',
-    marginVertical: 8,
-  },
-  moodContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginVertical: 16,
-  },
-  moodButton: {
-    flex: 1,
-    alignItems: 'center',
-    margin: 3,
-    padding: 4,
-    borderRadius: 5,
-    backgroundColor: '#ddd',
-  },
-  selectedMoodButton: {
-    flex: 1,
-    alignItems: 'center',
-    margin: 3,
-    padding: 5,
-    borderRadius: 5,
-    backgroundColor: '#ffa726',
-  },
-  moodText: {
-    fontSize: 12,
-  },
-  errorText: {
-    color: 'red',
-    textAlign: 'center',
-    marginVertical: 5,
-  },
-  loadingText: {
-    color: '#666',
-    textAlign: 'center',
-    marginVertical: 5,
-  },
-});
+const createStyles = (theme) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      padding: 10,
+    },
+    intro: {
+      paddingVertical: 16,
+      marginBottom: 16,
+    },
+    header: {
+      padding: 10,
+      alignItems: 'center',
+    },
+    headerText: {
+      textAlign: 'center',
+    },
+    errorContainer: {
+      padding: 16,
+    },
+    errorText: {
+      color: theme.colors.error,
+    },
+    loading: {
+      justifyContent: 'center',
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: 8,
+    },
+    indicator: {
+      marginRight: 8,
+    },
+    loadingText: {
+      color: theme.colors.secondary,
+    },
+    moodCard: {
+      marginBottom: 16,
+    },
+    moodTitle: {
+      marginBottom: 8,
+    },
+    todayMoodText: {
+      marginBottom: 16,
+    },
+    divider: {
+      marginBottom: 16,
+    },
+    moodInstructions: {
+      marginBottom: 16,
+    },
+    moodButtonContainer: {
+      flexDirection: 'row',
+      justifyContent: 'space-around',
+      alignItems: 'center',
+    },
+    moodButton: {
+      margin: 8,
+    },
+  });

@@ -69,13 +69,16 @@ export const createWellbeingManager = (repository, getStore) => {
    */
   const getLast14DaysMoodData = () => {
     const store = getStore();
-    const moodData = store.moodData;
+    const moodData = store.moodData || [];
     const today = startOfDay(new Date());
     const last14Days = Array.from({ length: 14 }, (_, i) => subDays(today, 13 - i));
 
     const fullData = last14Days.map((date) => {
-      const entry = moodData.find((entry) => isSameDay(entry.date, date));
-      return { date, moodValue: entry ? entry.moodValue : 0 };
+      const entry = moodData.find((entry) => entry && entry.date && isSameDay(entry.date, date));
+      return {
+        date,
+        moodValue: entry ? entry.moodValue : 0,
+      };
     });
 
     return {
