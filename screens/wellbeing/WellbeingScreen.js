@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
 import { useWellbeingStore } from '../../store/wellbeingStore';
 import { useWellbeingManager } from '../../hooks/useWellbeingManager';
+import { useTaskStore } from '../../store/taskStore';
 import { moodValues } from './constants';
 import {
   Surface,
@@ -12,11 +13,12 @@ import {
   Card,
   Divider,
 } from 'react-native-paper';
-import MoodTasksChart from './components/MoodTaskChart'; // Import the chart component
+import MoodTasksChart from './components/MoodTaskChart';
 
 export default function WellbeingScreen() {
   const { moodData, error, isLoading } = useWellbeingStore();
   const wellbeingManager = useWellbeingManager();
+  const taskStore = useTaskStore();
   const [todayMood, setTodayMood] = useState(null);
 
   const [chartData, setChartData] = useState({
@@ -52,25 +54,21 @@ export default function WellbeingScreen() {
     try {
       await wellbeingManager.saveMood(moodValue);
       setTodayMood(moodValue);
-    } catch (error) {
-      // Error is already handled in the manager and store
-    }
+    } catch (error) {}
   };
 
-  const staticRandomTaskData = useMemo(() => {
-    // Generate 14 random values (assuming 14 days of data)
-    return Array(14)
-      .fill(0)
-      .map(() => Math.floor(Math.random() * 7) + 1);
-  }, []);
-  // Add new function for chart data
+  // Update the updateChartData function
   const updateChartData = () => {
     // Get mood data for the last 14 days
     const moodChartData = wellbeingManager.getLast14DaysMoodData();
 
-    // Use the pre-generated static random data
+    // Get actual task completion data for the corresponding dates
+    const taskCounts = taskStore.getCompletedTasksCountByDates(
+      moodChartData.labels.map((label) => new Date(label)),
+    );
+
     const taskData = {
-      data: staticRandomTaskData.slice(0, moodChartData.labels.length),
+      data: taskCounts,
     };
 
     setChartData({

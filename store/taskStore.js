@@ -131,6 +131,36 @@ export const useTaskStore = create((set, get) => {
       });
     },
 
+    /**
+     * Get counts of completed tasks for specific dates
+     * @param {Date[]} dates - Array of dates to get counts for
+     * @returns {number[]} Array of task counts corresponding to input dates
+     */
+    getCompletedTasksCountByDates: (dates) => {
+      const { completedTasks } = get();
+
+      // Return empty array if no dates are specified
+      if (!dates || !Array.isArray(dates) || dates.length === 0) return [];
+
+      // Create normalized date strings for comparison (YYYY-MM-DD format)
+      const normalizedDates = dates.map((date) => {
+        const d = new Date(date);
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      });
+
+      // Get counts for each date
+      return normalizedDates.map((normalizedDate) => {
+        // Count tasks completed on this date
+        return completedTasks.filter((task) => {
+          if (!task.completedAt) return false;
+          const completedAt = new Date(task.completedAt);
+          const normalizedCompletedDate = `${completedAt.getFullYear()}-${String(completedAt.getMonth() + 1).padStart(2, '0')}-${String(completedAt.getDate()).padStart(2, '0')}`;
+
+          return normalizedCompletedDate === normalizedDate;
+        }).length;
+      });
+    },
+
     clearTasksCache: () => {
       Object.keys(tasksByDateCache).forEach((key) => delete tasksByDateCache[key]);
     },
