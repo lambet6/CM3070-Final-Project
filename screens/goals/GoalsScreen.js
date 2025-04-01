@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { useGoalsStore } from '../../store/goalsStore';
 import { useGoalsManager } from '../../hooks/useGoalManager';
 import { useCalendarManager } from '../../hooks/useCalendarManager';
@@ -53,6 +54,7 @@ export default function GoalsScreen() {
   const handleAddGoal = async (title, hours) => {
     try {
       await goalsManager.addGoal(title, hours);
+      triggerHaptic('success');
     } catch (error) {
       console.error('Failed to add goal:', error);
     }
@@ -103,6 +105,7 @@ export default function GoalsScreen() {
       try {
         await goalsManager.updateGoalData(editingGoal.id, editTitle, Number(editHours));
         setShowEditDialog(false);
+        triggerHaptic('success');
       } catch (error) {
         console.error('Failed to update goal:', error);
       }
@@ -114,6 +117,31 @@ export default function GoalsScreen() {
     setShowDeleteDialog(true);
   };
 
+  const triggerHaptic = useCallback((type) => {
+    switch (type) {
+      case 'light':
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        break;
+      case 'medium':
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        break;
+      case 'heavy':
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+        break;
+      case 'success':
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        break;
+      case 'warning':
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        break;
+      case 'error':
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        break;
+      default:
+        break;
+    }
+  }, []);
+
   const handleDeleteGoal = async () => {
     if (goalToDelete) {
       try {
@@ -123,6 +151,7 @@ export default function GoalsScreen() {
         // Delete the goal
         await goalsManager.deleteGoal(goalToDelete);
         setShowDeleteDialog(false);
+        triggerHaptic('medium');
 
         // Store deleted goal info and show snackbar
         setDeletedGoalInfo(goalToRestore);
@@ -178,6 +207,7 @@ export default function GoalsScreen() {
 
       // Close the dialog
       setShowScheduleDialog(false);
+      triggerHaptic('success');
 
       // Show confirmation message
       const recurringText = eventData.isRecurring ? ' as recurring event' : '';

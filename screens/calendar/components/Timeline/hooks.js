@@ -174,6 +174,7 @@ export function useTaskGestures({
 
         if (task.scheduled) {
           runOnJS(onTaskComplete)(task.id);
+          runOnJS(triggerHaptic)('success');
         } else {
           // Calculate position for the tooltip
           const position = {
