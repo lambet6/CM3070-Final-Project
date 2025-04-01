@@ -38,7 +38,7 @@ export function RootNavigator({ theme }) {
     <BottomSheetContext.Provider value={{ openSheet: handleOpenSheet }}>
       <NavigationContainer theme={theme}>
         <Tab.Navigator
-          initialRouteName="Wellbeing"
+          initialRouteName="Calendar"
           screenOptions={{
             headerShown: false,
           }}>

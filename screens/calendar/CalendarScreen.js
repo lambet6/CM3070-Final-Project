@@ -27,6 +27,7 @@ import { styles } from './CalendarStyles';
 import { createCalendarTheme } from './CalendarTheme';
 import { useCalendarAnimations } from './hooks/useCalendarAnimations';
 import TimelineComponent from './components/Timeline/Timeline';
+import FloatingActionButton from './components/FloatingActionButton';
 
 const today = new Date();
 
@@ -289,10 +290,14 @@ export default function CalenarScreen() {
           </Calendar.VStack>
         </Surface>
       </Surface>
-      {/* Daily Timeline - Pass memoized date object */}
+
+      {/* Daily Timeline */}
       <View style={styles.dragList}>
         <TimelineComponent selectedDate={memoizedSelectedDateObj} />
       </View>
+
+      {/* FAB */}
+      <FloatingActionButton />
     </View>
   );
 }
