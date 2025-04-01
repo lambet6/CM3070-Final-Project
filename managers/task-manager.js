@@ -340,6 +340,77 @@ export const createTaskManager = (repository, getStore) => {
     }
   };
 
+  /**
+   * Removes completed tasks and archives them to history
+   * @returns {Promise<GroupedTasks>} Updated tasks after removal
+   */
+  const cleanupCompletedTasks = async () => {
+    const store = getStore();
+
+    try {
+      const tasks = await repository.getTasks();
+      const completedTasks = tasks.filter((task) => task.completed);
+      const remainingTasks = tasks.filter((task) => !task.completed);
+
+      // If there are completed tasks, save them to history
+      if (completedTasks.length > 0) {
+        // Save each completed task to history
+        for (const task of completedTasks) {
+          await repository.saveCompletedTask(task);
+        }
+
+        // Update active tasks list without completed ones
+        await repository.saveTasks(remainingTasks);
+        const groupedTasks = groupAndSortTasks(remainingTasks);
+        store.setTasks(groupedTasks);
+        store.setError(null);
+        return groupedTasks;
+      }
+
+      // If no completed tasks, just return the current state
+      return groupAndSortTasks(tasks);
+    } catch (error) {
+      const errorMessage = `Failed to cleanup completed tasks: ${error.message}`;
+      store.setError(errorMessage);
+      throw new Error(errorMessage);
+    }
+  };
+
+  /**
+   * Checks if the day has changed since last check and performs cleanup if needed
+   * @returns {Promise<boolean>} Whether cleanup was performed
+   */
+  const checkDayChangeAndCleanup = async () => {
+    const store = getStore();
+    try {
+      const lastCleanup = await repository.getLastCleanupDate();
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Start of today
+
+      let shouldCleanup = false;
+
+      if (lastCleanup) {
+        const lastCleanupDay = new Date(lastCleanup);
+        lastCleanupDay.setHours(0, 0, 0, 0); // Start of last cleanup day
+        shouldCleanup = today > lastCleanupDay;
+      }
+
+      // Update the last cleanup date
+      await repository.updateLastCleanupDate();
+
+      if (shouldCleanup) {
+        await cleanupCompletedTasks();
+        return true;
+      }
+
+      return false;
+    } catch (error) {
+      console.error('Failed day change check:', error);
+      store.setError(`Day change check failed: ${error.message}`);
+      return false;
+    }
+  };
+
   return {
     loadTasks,
     createNewTask,
@@ -347,5 +418,7 @@ export const createTaskManager = (repository, getStore) => {
     toggleTaskCompletion,
     deleteTasks,
     rescheduleOverdueTasks,
+    cleanupCompletedTasks,
+    checkDayChangeAndCleanup,
   };
 };

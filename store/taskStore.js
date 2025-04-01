@@ -11,6 +11,7 @@ export const useTaskStore = create((set, get) => {
   return {
     // State
     tasks: { high: [], medium: [], low: [] },
+    completedTasks: [],
     error: null,
     hasRescheduledThisSession: false,
 
@@ -20,6 +21,7 @@ export const useTaskStore = create((set, get) => {
       Object.keys(tasksByDateCache).forEach((key) => delete tasksByDateCache[key]);
       set({ tasks });
     },
+    setCompletedTasks: (completedTasks) => set({ completedTasks }),
     setError: (error) => set({ error }),
     setHasRescheduledThisSession: (value) => set({ hasRescheduledThisSession: value }),
 
@@ -104,7 +106,31 @@ export const useTaskStore = create((set, get) => {
       return tasksOnDate;
     },
 
-    // Clear the cache manually if needed
+    /**
+     * Get completed tasks by date range
+     * @param {Date} startDate - Start of range (inclusive)
+     * @param {Date} endDate - End of range (inclusive)
+     * @returns {Array} Filtered completed tasks
+     */
+    getCompletedTasksByDateRange: (startDate, endDate) => {
+      const { completedTasks } = get();
+
+      // Return all completed tasks if no date range is specified
+      if (!startDate || !endDate) return completedTasks;
+
+      // Normalize dates to avoid time issues
+      const normalizedStartDate = new Date(startDate);
+      normalizedStartDate.setHours(0, 0, 0, 0);
+
+      const normalizedEndDate = new Date(endDate);
+      normalizedEndDate.setHours(23, 59, 59, 999);
+
+      return completedTasks.filter((task) => {
+        const completedAt = new Date(task.completedAt);
+        return completedAt >= normalizedStartDate && completedAt <= normalizedEndDate;
+      });
+    },
+
     clearTasksCache: () => {
       Object.keys(tasksByDateCache).forEach((key) => delete tasksByDateCache[key]);
     },
