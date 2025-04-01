@@ -461,15 +461,22 @@ const TaskItem = React.memo(
             <PriorityIndicator priority={priority} />
 
             <View style={styles.scheduledTaskDetails}>
-              <Text variant="labelSmall" style={styles.scheduledTaskTime}>
+              <Text
+                variant="labelSmall"
+                style={[styles.scheduledTaskTime, task.completed && styles.completedTaskText]}>
                 {formatTimeFromDecimal(task.startTime)}
               </Text>
 
-              <Text variant="titleMedium" style={styles.scheduledTaskTitle} numberOfLines={1}>
+              <Text
+                variant="titleMedium"
+                style={[styles.scheduledTaskTitle, task.completed && styles.completedTaskText]}
+                numberOfLines={1}>
                 {task.title}
               </Text>
 
-              <Text variant="labelSmall" style={styles.scheduledTaskDuration}>
+              <Text
+                variant="labelSmall"
+                style={[styles.scheduledTaskDuration, task.completed && styles.completedTaskText]}>
                 {task.duration.toFixed(1)}h
               </Text>
             </View>

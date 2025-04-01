@@ -237,7 +237,7 @@ export const useTimelineStyles = () => {
           fontSize: 14,
         },
 
-        // Scheduled task styles
+        // Task item styles
         scheduledTaskStatic: {
           position: 'absolute',
           left: 0,
@@ -245,8 +245,6 @@ export const useTimelineStyles = () => {
           marginHorizontal: 5,
           backgroundColor: theme.colors.secondaryContainer,
         },
-
-        // Unscheduled task styles
         unscheduledTaskStatic: {
           width: TASK_ITEM_WIDTH / 2,
           height: TASK_ITEM_HEIGHT / 2,
@@ -254,13 +252,14 @@ export const useTimelineStyles = () => {
           backgroundColor: theme.colors.primaryContainer,
           zIndex: 1000,
         },
-
+        completedTaskText: {
+          color: theme.colors.outline,
+          textDecorationLine: 'line-through',
+        },
         unscheduledTaskDragged: {
           backgroundColor: theme.colors.secondaryContainer,
           zIndex: 1000,
         },
-
-        // Non-schedulable task styles
         nonSchedulableTaskStatic: {
           borderWidth: 1,
           borderColor: '#bdbdbd',

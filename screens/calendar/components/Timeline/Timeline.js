@@ -289,8 +289,6 @@ const TimelineComponent = ({ selectedDate }) => {
         handleCancelButtonLayout={handleCancelButtonLayout}
       />
 
-      {/* <Divider bold horizontalInset /> */}
-
       {/* Timeline */}
       <TimelineContent
         scrollViewRef={scrollViewRef}
