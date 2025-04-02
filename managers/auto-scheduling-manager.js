@@ -40,10 +40,10 @@ export const createAutoSchedulingManager = (dependencies) => {
         throw new Error('Auto-scheduling service is currently unavailable');
       }
 
-      // 1. Get tasks for the selected date using the new method
+      // 1. Get tasks for the selected date
       const { dueTodayOrBefore: tasksForScheduling } = await taskManager.getTasksForDate(date);
 
-      // 2. Get events for the selected date using the new method
+      // 2. Get events for the selected date
       const eventsForScheduling = await calendarManager.getEventsForDate(date);
 
       // If there are no tasks to schedule, return early
@@ -66,7 +66,7 @@ export const createAutoSchedulingManager = (dependencies) => {
       });
 
       // 4. Process the scheduling response
-      const { scheduled_tasks = [], unscheduled_tasks = [] } = schedulingResult;
+      const { scheduled_tasks = [] } = schedulingResult;
 
       // 5. Update task scheduled times
       const updatePromises = scheduled_tasks.map(async (scheduledTask) => {
@@ -74,7 +74,7 @@ export const createAutoSchedulingManager = (dependencies) => {
         if (!task) return null;
 
         // Convert the scheduled time from API response to a Date object
-        const scheduledTime = parseISO(scheduledTask.scheduled_time);
+        const scheduledTime = parseISO(scheduledTask.start);
 
         // Use task manager to update the scheduled time
         await taskManager.editExistingTask(
@@ -96,16 +96,33 @@ export const createAutoSchedulingManager = (dependencies) => {
       const updatedTasks = await Promise.all(updatePromises);
       const scheduledTaskIds = scheduled_tasks.map((t) => t.id);
 
+      // Find tasks that couldn't be scheduled
+      const unscheduledTasks = tasksForScheduling.filter(
+        (task) => !scheduledTaskIds.includes(task.id),
+      );
+
       // 6. Return information about the scheduling result
+      let resultMessage =
+        scheduled_tasks.length > 0
+          ? `Successfully scheduled ${scheduled_tasks.length} tasks`
+          : 'No tasks could be scheduled for the selected date';
+
+      // Customize message for partial schedules
+      if (schedulingResult.isPartialSchedule || schedulingResult.status === 'partial') {
+        resultMessage =
+          unscheduledTasks.length > 0
+            ? `Created partial schedule with ${scheduled_tasks.length} tasks. ${unscheduledTasks.length} tasks couldn't be scheduled due to time constraints.`
+            : 'Created partial schedule.';
+      }
+
       return {
-        status: 'success',
-        message:
-          scheduled_tasks.length > 0
-            ? `Successfully scheduled ${scheduled_tasks.length} tasks`
-            : 'No tasks could be scheduled for the selected date',
+        status: schedulingResult.isPartialSchedule ? 'partial' : 'success',
+        message: resultMessage,
         scheduledTasks: updatedTasks.filter(Boolean),
-        unscheduledTasks: unscheduled_tasks,
+        unscheduledTasks: unscheduledTasks,
         date: date,
+        isPartialSchedule:
+          schedulingResult.isPartialSchedule || schedulingResult.status === 'partial',
       };
     } catch (error) {
       console.error('Error in auto-scheduling:', error);

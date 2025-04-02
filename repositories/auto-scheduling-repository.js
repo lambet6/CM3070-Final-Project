@@ -119,14 +119,26 @@ export const createAutoSchedulingRepository = (options = {}) => {
       // Parse the response
       const result = await response.json();
 
+      // Handle partial schedules - treat as success but add a warning flag
+      if (result.status === 'partial') {
+        console.warn('Partial schedule created:', result.message);
+
+        // Return with a flag indicating it's a partial schedule
+        return {
+          ...result,
+          isPartialSchedule: true,
+        };
+      }
+
       // Check for API-level errors
       if (result.status === 'error') {
         throw new Error(`Scheduling failed: ${result.message || 'Unknown error'}`);
       }
 
+      // Return successful result
       return result;
     } catch (error) {
-      // Handle network errors or other exceptions
+      // Handle specific error cases
       if (error.name === 'AbortError') {
         throw new Error('Request was aborted');
       } else if (error.name === 'TypeError' && error.message.includes('NetworkError')) {
