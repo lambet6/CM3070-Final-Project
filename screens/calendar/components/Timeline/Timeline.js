@@ -1,6 +1,12 @@
 import React, { useCallback, useState, useEffect, useMemo, useRef } from 'react';
 import { View, Platform } from 'react-native';
-import { useAnimatedRef, useScrollViewOffset, useAnimatedReaction } from 'react-native-reanimated';
+import {
+  useAnimatedRef,
+  useScrollViewOffset,
+  useAnimatedReaction,
+  runOnJS,
+  useDerivedValue,
+} from 'react-native-reanimated';
 import { dateToHours, hoursToDate, minutesToHours, SCREEN_HEIGHT } from './utils';
 import { useTimelineStyles } from './styles';
 
@@ -22,7 +28,7 @@ import { useTaskManager } from '../../../../hooks/useTaskManager';
 import { useCalendarStore } from '../../../../store/calendarStore';
 import { Divider } from 'react-native-paper';
 
-const TimelineComponent = ({ selectedDate }) => {
+const TimelineComponent = ({ selectedDate, setIsScrolled }) => {
   // Get task manager for updating tasks
   const taskManager = useTaskManager();
 
@@ -133,6 +139,17 @@ const TimelineComponent = ({ selectedDate }) => {
   // Scroll handling
   const scrollViewRef = useAnimatedRef();
   const scrollY = useScrollViewOffset(scrollViewRef);
+  const isScrolledValue = useDerivedValue(() => {
+    return scrollY.value > 10;
+  });
+  useAnimatedReaction(
+    () => isScrolledValue.value,
+    (isCurrentlyScrolled, wasScrolled) => {
+      if (isCurrentlyScrolled !== wasScrolled) {
+        runOnJS(setIsScrolled)(!isCurrentlyScrolled);
+      }
+    },
+  );
 
   // Calculate event layout with memoization to prevent unnecessary recalculations
   const eventLayoutMap = useMemo(

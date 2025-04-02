@@ -85,4 +85,10 @@ export const styles = StyleSheet.create({
   dragList: {
     flex: 1,
   },
+  fab: {
+    position: 'absolute',
+    margin: 16,
+    right: 0,
+    bottom: 0,
+  },
 });

@@ -341,6 +341,63 @@ export const createTaskManager = (repository, getStore) => {
   };
 
   /**
+   * Clears scheduling for all tasks scheduled on a specific date
+   * @param {Date} date - The date to clear schedules for
+   * @returns {Promise<{tasks: GroupedTasks, count: number}>} - Updated tasks and count of affected tasks
+   */
+  const clearSchedulesForDate = async (date) => {
+    const store = getStore();
+
+    // Validate the date parameter
+    if (!(date instanceof Date) || isNaN(date.getTime())) {
+      const errorMessage = 'Valid date is required';
+      store.setError(errorMessage);
+      throw new Error(errorMessage);
+    }
+
+    // Convert input date to start of day for comparison
+    const targetDate = new Date(date);
+    targetDate.setHours(0, 0, 0, 0);
+
+    try {
+      const tasks = await repository.getTasks();
+      let clearedCount = 0;
+
+      const updatedTasks = tasks.map((task) => {
+        // Check if task has a scheduledTime and it falls on the target date
+        if (task.scheduledTime) {
+          const scheduledDate = new Date(task.scheduledTime);
+          scheduledDate.setHours(0, 0, 0, 0);
+
+          // If scheduled time is on the target date, clear it
+          if (scheduledDate.getTime() === targetDate.getTime()) {
+            task.setScheduledTime(null);
+            clearedCount++;
+          }
+        }
+        return task;
+      });
+
+      if (clearedCount > 0) {
+        await repository.saveTasks(updatedTasks);
+        const groupedTasks = groupAndSortTasks(updatedTasks);
+        store.setTasks(groupedTasks);
+      }
+
+      store.setError(null);
+
+      return {
+        tasks: groupAndSortTasks(updatedTasks),
+        count: clearedCount,
+      };
+    } catch (error) {
+      const errorMessage = `Failed to clear schedules: ${error.message}`;
+      store.setError(errorMessage);
+      throw new Error(errorMessage);
+    }
+  };
+
+  /**
    * Removes completed tasks and archives them to history
    * @returns {Promise<GroupedTasks>} Updated tasks after removal
    */
@@ -418,6 +475,7 @@ export const createTaskManager = (repository, getStore) => {
     toggleTaskCompletion,
     deleteTasks,
     rescheduleOverdueTasks,
+    clearSchedulesForDate,
     cleanupCompletedTasks,
     checkDayChangeAndCleanup,
   };

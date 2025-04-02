@@ -13,7 +13,14 @@ import {
   addMonths,
 } from 'date-fns';
 import Animated, { withTiming } from 'react-native-reanimated';
-import { Surface, ActivityIndicator, Text, useTheme, IconButton } from 'react-native-paper';
+import {
+  Surface,
+  ActivityIndicator,
+  Text,
+  useTheme,
+  IconButton,
+  AnimatedFAB,
+} from 'react-native-paper';
 
 // Import components, styles, and hooks
 import { useCalendarStore } from '../../store/calendarStore';
@@ -28,6 +35,7 @@ import { createCalendarTheme } from './CalendarTheme';
 import { useCalendarAnimations } from './hooks/useCalendarAnimations';
 import TimelineComponent from './components/Timeline/Timeline';
 import FloatingActionButton from './components/FloatingActionButton';
+import { useTaskManager } from '../../hooks/useTaskManager';
 
 const today = new Date();
 
@@ -37,8 +45,12 @@ export default function CalenarScreen() {
   const error = useCalendarStore((state) => state.error);
   const isLoading = useCalendarStore((state) => state.isLoading);
 
+  // Create a shared state for timeline scroll position
+  const [timelineScrollY, setTimelineScrollY] = useState(null);
+
   // Get manager functions
   const calendarManager = useCalendarManager();
+  const taskManager = useTaskManager();
 
   // Get tasks from task store
   const tasks = useTaskStore((state) => state.tasks);
@@ -138,6 +150,11 @@ export default function CalenarScreen() {
     [isWeekView],
   );
 
+  // Callback to receive scroll position from Timeline
+  const handleTimelineScrollChange = useCallback((scrollY) => {
+    setTimelineScrollY(scrollY);
+  }, []);
+
   const handleReset = useCallback(() => {
     if (selectedDate === todayId) return;
 
@@ -224,6 +241,11 @@ export default function CalenarScreen() {
   // Prevent unnecessary re-renders
   const memoizedSelectedDateObj = useMemo(() => fromDateId(selectedDate), [selectedDate]);
 
+  const [isScrolled, setIsScrolled] = useState(false);
+  const clearSchedule = useCallback(() => {
+    taskManager.clearSchedulesForDate(memoizedSelectedDateObj);
+  }, [taskManager, memoizedSelectedDateObj]);
+
   return (
     <View style={styles.container}>
       <Surface style={styles.calendarContainer}>
@@ -293,11 +315,18 @@ export default function CalenarScreen() {
 
       {/* Daily Timeline */}
       <View style={styles.dragList}>
-        <TimelineComponent selectedDate={memoizedSelectedDateObj} />
+        <TimelineComponent selectedDate={memoizedSelectedDateObj} setIsScrolled={setIsScrolled} />
       </View>
 
       {/* FAB */}
-      <FloatingActionButton />
+      <AnimatedFAB
+        variant={'primary'}
+        icon={'creation'}
+        label={'Auto schedule'}
+        extended={isScrolled}
+        onPress={clearSchedule}
+        style={styles.fab}
+      />
     </View>
   );
 }
