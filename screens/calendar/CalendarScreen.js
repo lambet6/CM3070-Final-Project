@@ -36,6 +36,7 @@ import { useCalendarAnimations } from './hooks/useCalendarAnimations';
 import TimelineComponent from './components/Timeline/Timeline';
 import FloatingActionButton from './components/FloatingActionButton';
 import { useTaskManager } from '../../hooks/useTaskManager';
+import { useAutoSchedulingManager } from '../../hooks/useAutoSchedulingManager';
 
 const today = new Date();
 
@@ -51,6 +52,7 @@ export default function CalenarScreen() {
   // Get manager functions
   const calendarManager = useCalendarManager();
   const taskManager = useTaskManager();
+  const autoSchedulingManager = useAutoSchedulingManager();
 
   // Get tasks from task store
   const tasks = useTaskStore((state) => state.tasks);
@@ -150,11 +152,6 @@ export default function CalenarScreen() {
     [isWeekView],
   );
 
-  // Callback to receive scroll position from Timeline
-  const handleTimelineScrollChange = useCallback((scrollY) => {
-    setTimelineScrollY(scrollY);
-  }, []);
-
   const handleReset = useCallback(() => {
     if (selectedDate === todayId) return;
 
@@ -246,6 +243,10 @@ export default function CalenarScreen() {
     taskManager.clearSchedulesForDate(memoizedSelectedDateObj);
   }, [taskManager, memoizedSelectedDateObj]);
 
+  const autoSchedule = useCallback(() => {
+    autoSchedulingManager.generateScheduleForDate(memoizedSelectedDateObj);
+  }, [autoSchedulingManager, memoizedSelectedDateObj]);
+
   return (
     <View style={styles.container}>
       <Surface style={styles.calendarContainer}>
@@ -324,7 +325,7 @@ export default function CalenarScreen() {
         icon={'creation'}
         label={'Auto schedule'}
         extended={isScrolled}
-        onPress={clearSchedule}
+        onPress={autoSchedule}
         style={styles.fab}
       />
     </View>

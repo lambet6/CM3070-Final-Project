@@ -1,4 +1,14 @@
-import { endOfWeek, startOfWeek, addYears, subYears } from 'date-fns';
+import {
+  endOfWeek,
+  startOfWeek,
+  addYears,
+  subYears,
+  startOfDay,
+  endOfDay,
+  isSameDay,
+  isBefore,
+  isAfter,
+} from 'date-fns';
 import { CalendarEvent } from '../domain/CalendarEvent';
 
 /**
@@ -176,11 +186,47 @@ export const createCalendarManager = (repository, getStore) => {
     }
   };
 
+  /**
+   * Fetches calendar events specifically for a given date
+   * @param {Date} date - The date to get events for
+   * @returns {Promise<Array<CalendarEvent>>} Array of calendar events for the specified date
+   */
+  const getEventsForDate = async (date) => {
+    try {
+      const targetDate = startOfDay(new Date(date));
+      const endDate = endOfDay(new Date(date));
+
+      // Get events directly for this date from the repository
+      const events = await repository.getStoredCalendarEvents(targetDate, endDate);
+
+      // Filter events that occur on this date (starting, ending, or spanning)
+      const eventsForDate = events.filter((event) => {
+        // Event starts on the target day
+        const startsOnDay = isSameDay(event.startDate, targetDate);
+
+        // Event ends on the target day
+        const endsOnDay = isSameDay(event.endDate, targetDate);
+
+        // Event spans across the target day (starts before, ends after)
+        const spansAcrossDay =
+          isBefore(event.startDate, targetDate) && isAfter(event.endDate, endDate);
+
+        return startsOnDay || endsOnDay || spansAcrossDay;
+      });
+
+      return eventsForDate;
+    } catch (error) {
+      console.error('Error getting events for date:', error);
+      return [];
+    }
+  };
+
   return {
     loadWeeklyCalendarEvents,
     loadYearlyCalendarEvents,
     createCalendarEvent,
     createRecurringCalendarEvent,
     createGoalCalendarEvent,
+    getEventsForDate,
   };
 };

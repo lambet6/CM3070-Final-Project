@@ -1,3 +1,4 @@
+import { endOfDay, isAfter, isSameDay, startOfDay } from 'date-fns';
 import { Task } from '../domain/Task';
 
 /**
@@ -468,6 +469,44 @@ export const createTaskManager = (repository, getStore) => {
     }
   };
 
+  /**
+   * Retrieves tasks filtered by their relationship to the specified date
+   * @param {Date} date - The date to filter tasks by
+   * @param {boolean} [excludeCompleted=true] - Whether to exclude completed tasks
+   * @returns {Promise<DateFilteredTasks>} Tasks categorized by their relationship to the specified date
+   */
+  const getTasksForDate = async (date, excludeCompleted = true) => {
+    const targetDate = startOfDay(new Date(date));
+    const endDate = endOfDay(new Date(date));
+
+    try {
+      // Get all tasks
+      const tasks = await repository.getTasks();
+
+      // Filter tasks based on date criteria
+      const filteredTasks = tasks.filter((task) => !excludeCompleted || !task.completed);
+
+      // Categorize tasks based on due date and scheduled time
+      const dueTodayOrBefore = filteredTasks.filter((task) => !isAfter(task.dueDate, endDate));
+
+      const dueAfter = filteredTasks.filter((task) => isAfter(task.dueDate, endDate));
+
+      const scheduledToday = filteredTasks.filter((task) => {
+        if (!task.scheduledTime) return false;
+        return isSameDay(task.scheduledTime, targetDate);
+      });
+
+      return {
+        dueTodayOrBefore,
+        dueAfter,
+        scheduledToday,
+      };
+    } catch (error) {
+      console.error('Failed to get tasks for date:', error);
+      throw error;
+    }
+  };
+
   return {
     loadTasks,
     createNewTask,
@@ -478,5 +517,6 @@ export const createTaskManager = (repository, getStore) => {
     clearSchedulesForDate,
     cleanupCompletedTasks,
     checkDayChangeAndCleanup,
+    getTasksForDate,
   };
 };
