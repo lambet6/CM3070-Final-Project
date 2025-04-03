@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { createSelector } from 'reselect';
 
 /**
  * Direct Zustand store for task management
@@ -7,6 +8,28 @@ export const useTaskStore = create((set, get) => {
   // Private cache object (not exposed in state)
   const tasksByDateCache = {};
   const MAX_CACHE_SIZE = 10; // Maximum number of dates to cache
+
+  const getConsolidatedTasksSelector = createSelector(
+    (state) => state.tasks.high,
+    (state) => state.tasks.medium,
+    (state) => state.tasks.low,
+    (high, medium, low) => {
+      return [
+        ...high.map((task) => ({ ...task, priority: 'High' })),
+        ...medium.map((task) => ({ ...task, priority: 'Medium' })),
+        ...low.map((task) => ({ ...task, priority: 'Low' })),
+      ].sort((a, b) => {
+        // Compare dates first
+        const dateCompare = new Date(a.dueDate) - new Date(b.dueDate);
+        // If dates are equal, sort by priority
+        return (
+          dateCompare ||
+          ['High', 'Medium', 'Low'].indexOf(a.priority) -
+            ['High', 'Medium', 'Low'].indexOf(b.priority)
+        );
+      });
+    },
+  );
 
   return {
     // State
@@ -25,24 +48,7 @@ export const useTaskStore = create((set, get) => {
     setError: (error) => set({ error }),
     setHasRescheduledThisSession: (value) => set({ hasRescheduledThisSession: value }),
 
-    // Helper selectors
-    getConsolidatedTasks: () => {
-      const { tasks } = get();
-      return [
-        ...tasks.high.map((task) => ({ ...task, priority: 'High' })),
-        ...tasks.medium.map((task) => ({ ...task, priority: 'Medium' })),
-        ...tasks.low.map((task) => ({ ...task, priority: 'Low' })),
-      ].sort((a, b) => {
-        // Compare dates first
-        const dateCompare = new Date(a.dueDate) - new Date(b.dueDate);
-        // If dates are equal, sort by priority
-        return (
-          dateCompare ||
-          ['High', 'Medium', 'Low'].indexOf(a.priority) -
-            ['High', 'Medium', 'Low'].indexOf(b.priority)
-        );
-      });
-    },
+    getConsolidatedTasks: () => getConsolidatedTasksSelector(get()),
 
     getTasksOnDate: (date) => {
       // Handle invalid date inputs
