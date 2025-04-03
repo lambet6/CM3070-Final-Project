@@ -45,7 +45,6 @@ export const useTaskStore = create((set, get) => {
     },
 
     getTasksOnDate: (date) => {
-      
       // Handle invalid date inputs
       if (!date || !(date instanceof Date) || isNaN(date.getTime())) {
         console.warn('Invalid date passed to getTasksOnDate:', date);

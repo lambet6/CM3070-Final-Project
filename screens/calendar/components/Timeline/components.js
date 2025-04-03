@@ -107,10 +107,9 @@ const renderTasks = (
   onDismissTooltip,
   scrollViewRef,
 ) => {
-  // No longer filtering tasks here since they're already filtered in the parent
   return tasks.map((task, index) => (
     <TaskItem
-      key={task.id}
+      key={`${task.id}-${task.startTime || 'unscheduled'}`}
       task={task}
       index={index}
       onStateChange={onStateChange}
