@@ -519,20 +519,29 @@ export const createTaskManager = (repository, getStore) => {
       const tasks = await repository.getTasks();
       let updatedCount = 0;
 
-      // Update all tasks in one pass
       const updatedTasks = tasks.map((task) => {
         const scheduledTimeUpdate = tasksWithScheduledTimes.find((t) => t.id === task.id);
         if (scheduledTimeUpdate) {
-          task.setScheduledTime(scheduledTimeUpdate.scheduledTime);
           updatedCount++;
+          // Create a completely new Task object
+          return new Task({
+            id: task.id,
+            title: task.title,
+            priority: task.priority,
+            dueDate: task.dueDate,
+            completed: task.completed,
+            duration: task.duration,
+            scheduledTime: scheduledTimeUpdate.scheduledTime,
+          });
         }
         return task;
       });
 
       if (updatedCount > 0) {
         await repository.saveTasks(updatedTasks);
+
         const groupedTasks = groupAndSortTasks(updatedTasks);
-        store.setTasks(groupedTasks);
+        store.setTasks(groupedTasks); // This needs to create NEW references
       }
 
       store.setError(null);
