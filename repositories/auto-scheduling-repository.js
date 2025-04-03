@@ -16,16 +16,22 @@ export const createAutoSchedulingRepository = (options = {}) => {
 
   /**
    * Formats Task objects to the structure expected by the API
+   * Ensures dates are consistently formatted
    * @param {Array} tasks - Array of Task objects from the app
+   * @param {Date} targetDate - The date we're scheduling for
    * @returns {Array} Formatted task objects for the API
    */
-  const formatTasks = (tasks) => {
+  const formatTasks = (tasks, targetDate) => {
+    // Create midnight for the target date
+    const targetDateMidnight = new Date(targetDate);
+    targetDateMidnight.setHours(23, 59, 59, 59);
+
     return tasks.map((task) => ({
       id: task.id,
       title: task.title,
       priority: task.priority,
       estimated_duration: task.duration, // Map duration to estimated_duration
-      due: task.dueDate.toISOString(), // Format due date as ISO string
+      due: targetDateMidnight.toISOString(), // Set all tasks' due date to the target date
     }));
   };
 
@@ -44,6 +50,36 @@ export const createAutoSchedulingRepository = (options = {}) => {
   };
 
   /**
+   * Converts API scheduled task responses back to domain-compatible format
+   * @param {Array} scheduledTasks - The API scheduled tasks response
+   * @param {Array} originalTasks - The original domain task objects
+   * @returns {Array} Tasks with updated scheduled times in domain format
+   */
+  const convertScheduledTasksToDomain = (scheduledTasks, originalTasks) => {
+    return scheduledTasks
+      .map((scheduledTask) => {
+        const originalTask = originalTasks.find((t) => t.id === scheduledTask.id);
+        if (!originalTask) return null;
+
+        // Parse the scheduled time from API response to a Date object
+        try {
+          const scheduledTime = new Date(scheduledTask.start);
+
+          // Return the task with updated scheduled time
+          return {
+            id: originalTask.id,
+            scheduledTime,
+            originalTask,
+          };
+        } catch (error) {
+          console.log(`Failed to parse scheduled time for task ${scheduledTask.id}:`, error);
+          return null;
+        }
+      })
+      .filter(Boolean);
+  };
+
+  /**
    * Sends a request to optimize the schedule with the given tasks and events
    * @param {Object} params - Scheduling parameters
    * @param {Array} params.tasks - Array of tasks to schedule
@@ -55,6 +91,7 @@ export const createAutoSchedulingRepository = (options = {}) => {
    * @param {number} [params.constraints.maxContinuousWorkMin=90] - Maximum continuous work time in minutes
    * @param {string} [params.optimizationGoal='maximize_wellbeing'] - Optimization goal
    * @param {string} [params.userId] - User ID (defaults to the configured default)
+   * @param {Date} [params.targetDate] - The date we're scheduling for (defaults to today)
    * @returns {Promise<Object>} The scheduling response with status and scheduled tasks
    * @throws {Error} If the request fails or returns an error
    */
@@ -62,11 +99,12 @@ export const createAutoSchedulingRepository = (options = {}) => {
     tasks,
     events = [],
     constraints = {
-      workHours: { start: '09:00', end: '17:00' },
+      workHours: { start: '07:00', end: '19:00' },
       maxContinuousWorkMin: 90,
     },
     optimizationGoal = 'maximize_wellbeing',
     userId = defaultUserId,
+    targetDate = new Date(),
   }) => {
     if (!Array.isArray(tasks) || tasks.length === 0) {
       throw new Error('At least one task is required for scheduling');
@@ -74,19 +112,23 @@ export const createAutoSchedulingRepository = (options = {}) => {
 
     try {
       // Format the request payload according to the API schema
+      // Pass the target date to formatTasks
       const payload = {
         user_id: userId,
-        tasks: formatTasks(tasks),
+        tasks: formatTasks(tasks, targetDate),
         calendar_events: formatEvents(events),
         constraints: {
           work_hours: {
-            start: constraints.workHours?.start || '09:00',
-            end: constraints.workHours?.end || '17:00',
+            start: constraints.workHours?.start || '08:00',
+            end: constraints.workHours?.end || '20:00',
           },
           max_continuous_work_min: constraints.maxContinuousWorkMin || 90,
         },
         optimization_goal: optimizationGoal,
+        target_date: targetDate.toISOString(),
       };
+
+      console.log('Scheduling payload:', JSON.stringify(payload, null, 2));
 
       // Send the request
       const response = await fetchImpl(`${baseUrl}/optimize_schedule`, {
@@ -117,15 +159,39 @@ export const createAutoSchedulingRepository = (options = {}) => {
       }
 
       // Parse the response
+      // Parse the response
       const result = await response.json();
 
-      // Handle partial schedules - treat as success but add a warning flag
+      console.log('Scheduling result:', JSON.stringify(result, null, 2));
+
+      // Convert scheduled tasks to domain format
+      const tasksToUpdate = convertScheduledTasksToDomain(result.scheduled_tasks || [], tasks);
+
+      // Build response with both API and domain formatted data
+      const schedulingResponse = {
+        status: result.status,
+        message: result.message,
+        tasksToUpdate, // Domain-formatted tasks ready for the manager to use
+        scheduledTasks:
+          result.scheduled_tasks?.map((task) => ({
+            id: task.id,
+            title: task.title,
+            priority: task.priority,
+            estimatedDuration: task.estimated_duration,
+            start: task.start,
+            end: task.end,
+            mandatory: task.mandatory,
+          })) || [],
+        unscheduledTaskIds: tasks
+          .filter((task) => !tasksToUpdate.some((update) => update.id === task.id))
+          .map((task) => task.id),
+      };
+
+      // Handle partial schedules
       if (result.status === 'partial') {
         console.warn('Partial schedule created:', result.message);
-
-        // Return with a flag indicating it's a partial schedule
         return {
-          ...result,
+          ...schedulingResponse,
           isPartialSchedule: true,
         };
       }
@@ -136,7 +202,7 @@ export const createAutoSchedulingRepository = (options = {}) => {
       }
 
       // Return successful result
-      return result;
+      return schedulingResponse;
     } catch (error) {
       // Handle specific error cases
       if (error.name === 'AbortError') {
@@ -148,7 +214,7 @@ export const createAutoSchedulingRepository = (options = {}) => {
       }
 
       // Re-throw with context
-      console.error('Error optimizing schedule:', error);
+      console.log('Error optimizing schedule:', error);
       throw new Error(`Failed to optimize schedule: ${error.message}`);
     }
   };
@@ -225,7 +291,7 @@ export const createAutoSchedulingRepository = (options = {}) => {
       }
 
       // Re-throw with context
-      console.error('Error recording feedback:', error);
+      console.log('Error recording feedback:', error);
       throw new Error(`Failed to record feedback: ${error.message}`);
     }
   };
@@ -257,9 +323,6 @@ export const createAutoSchedulingRepository = (options = {}) => {
     optimizeSchedule,
     recordFeedback,
     isServiceAvailable,
-
-    // _formatTasks: formatTasks,
-    // _formatEvents: formatEvents,
   };
 };
 

@@ -487,7 +487,7 @@ export const createTaskManager = (repository, getStore) => {
       const filteredTasks = tasks.filter((task) => !excludeCompleted || !task.completed);
 
       // Categorize tasks based on due date and scheduled time
-      const dueTodayOrBefore = filteredTasks.filter((task) => !isAfter(task.dueDate, endDate));
+      const dueToday = filteredTasks.filter((task) => isSameDay(task.dueDate, targetDate));
 
       const dueAfter = filteredTasks.filter((task) => isAfter(task.dueDate, endDate));
 
@@ -497,13 +497,50 @@ export const createTaskManager = (repository, getStore) => {
       });
 
       return {
-        dueTodayOrBefore,
+        dueToday,
         dueAfter,
         scheduledToday,
       };
     } catch (error) {
       console.error('Failed to get tasks for date:', error);
       throw error;
+    }
+  };
+
+  /**
+   * Updates scheduled times for multiple tasks in a single operation
+   * @param {Array<{id: string, scheduledTime: Date}>} tasksWithScheduledTimes - Array of task IDs and their scheduled times
+   * @returns {Promise<GroupedTasks>} Updated tasks
+   */
+  const updateTaskScheduledTimes = async (tasksWithScheduledTimes) => {
+    const store = getStore();
+
+    try {
+      const tasks = await repository.getTasks();
+      let updatedCount = 0;
+
+      // Update all tasks in one pass
+      const updatedTasks = tasks.map((task) => {
+        const scheduledTimeUpdate = tasksWithScheduledTimes.find((t) => t.id === task.id);
+        if (scheduledTimeUpdate) {
+          task.setScheduledTime(scheduledTimeUpdate.scheduledTime);
+          updatedCount++;
+        }
+        return task;
+      });
+
+      if (updatedCount > 0) {
+        await repository.saveTasks(updatedTasks);
+        const groupedTasks = groupAndSortTasks(updatedTasks);
+        store.setTasks(groupedTasks);
+      }
+
+      store.setError(null);
+      return groupAndSortTasks(updatedTasks);
+    } catch (error) {
+      const errorMessage = `Failed to update scheduled times: ${error.message}`;
+      store.setError(errorMessage);
+      throw new Error(errorMessage);
     }
   };
 
@@ -518,5 +555,6 @@ export const createTaskManager = (repository, getStore) => {
     cleanupCompletedTasks,
     checkDayChangeAndCleanup,
     getTasksForDate,
+    updateTaskScheduledTimes,
   };
 };

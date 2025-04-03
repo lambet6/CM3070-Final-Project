@@ -117,7 +117,6 @@ export const createCalendarRepository = (calendarApi = Calendar) => {
       });
 
       // Set up recurrence rule according to expo-calendar format
-      // See: https://docs.expo.dev/versions/latest/sdk/calendar/#recurrencerule
       const recurrenceRuleObject = {
         frequency: recurrenceRule.frequency,
         interval: recurrenceRule.interval,

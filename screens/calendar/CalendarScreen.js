@@ -20,6 +20,7 @@ import {
   useTheme,
   IconButton,
   AnimatedFAB,
+  Snackbar,
 } from 'react-native-paper';
 
 // Import components, styles, and hooks
@@ -57,6 +58,9 @@ export default function CalenarScreen() {
   // Get tasks from task store
   const tasks = useTaskStore((state) => state.tasks);
   const taskError = useTaskStore((state) => state.error);
+
+  const [snackbarVisible, setSnackbarVisible] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
 
   const isProcessingDateSelection = useRef(false);
 
@@ -243,9 +247,21 @@ export default function CalenarScreen() {
     taskManager.clearSchedulesForDate(memoizedSelectedDateObj);
   }, [taskManager, memoizedSelectedDateObj]);
 
-  const autoSchedule = useCallback(() => {
-    autoSchedulingManager.generateScheduleForDate(memoizedSelectedDateObj);
+  const autoSchedule = useCallback(async () => {
+    try {
+      await autoSchedulingManager.generateScheduleForDate(memoizedSelectedDateObj);
+      console.log('Auto scheduled tasks for', memoizedSelectedDateObj);
+      // Optional: Add success snackbar
+      setSnackbarMessage('Schedule successfully generated');
+      setSnackbarVisible(true);
+    } catch (error) {
+      console.log('Auto scheduling failed:', error);
+      setSnackbarMessage(`Auto scheduling failed: ${error.message || 'Unknown error'}`);
+      setSnackbarVisible(true);
+    }
   }, [autoSchedulingManager, memoizedSelectedDateObj]);
+
+  const onDismissSnackbar = () => setSnackbarVisible(false);
 
   return (
     <View style={styles.container}>
@@ -328,6 +344,17 @@ export default function CalenarScreen() {
         onPress={autoSchedule}
         style={styles.fab}
       />
+
+      <Snackbar
+        visible={snackbarVisible}
+        onDismiss={onDismissSnackbar}
+        action={{
+          label: 'Dismiss',
+          onPress: onDismissSnackbar,
+        }}
+        duration={3000}>
+        {snackbarMessage}
+      </Snackbar>
     </View>
   );
 }

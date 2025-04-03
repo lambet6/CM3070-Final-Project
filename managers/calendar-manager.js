@@ -213,7 +213,7 @@ export const createCalendarManager = (repository, getStore) => {
 
         return startsOnDay || endsOnDay || spansAcrossDay;
       });
-
+      console.log('Events for date:', eventsForDate);
       return eventsForDate;
     } catch (error) {
       console.error('Error getting events for date:', error);

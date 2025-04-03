@@ -38,17 +38,19 @@ const TimelineComponent = ({ selectedDate, setIsScrolled }) => {
   // Track if we're currently in the process of updating tasks
   const isUpdatingRef = useRef(false);
 
-  // Get all tasks from the store to reduce selector recalculations
-  const allTasks = useTaskStore((state) => state.tasks);
+  // Get tasks for the selected date directly from the store with caching
+  const tasksForSelectedDate = useTaskStore(
+    useCallback(
+      (state) => {
+        if (!selectedDate) return [];
+        return state.getTasksOnDate(selectedDate);
+      },
+      [selectedDate],
+    ),
+  );
 
   // Get all calendar events
   const allEvents = useCalendarStore((state) => state.events);
-
-  // Get tasks for the selected date directly from the store with caching
-  const tasksForSelectedDate = useMemo(() => {
-    if (!selectedDate) return [];
-    return useTaskStore.getState().getTasksOnDate(selectedDate);
-  }, [selectedDate, allTasks]);
 
   // Memoize events for selected date
   const eventsForSelectedDate = useMemo(() => {
@@ -75,7 +77,7 @@ const TimelineComponent = ({ selectedDate, setIsScrolled }) => {
     if (currentDateString !== prevDateString) {
       previousDateRef.current = selectedDate;
     }
-  }, [tasksForSelectedDate, eventsForSelectedDate, selectedDate, allTasks]);
+  }, [tasksForSelectedDate, eventsForSelectedDate, selectedDate]);
 
   // Task state for the timeline
   const [tasks, setTasks] = useState([]);
@@ -96,7 +98,7 @@ const TimelineComponent = ({ selectedDate, setIsScrolled }) => {
     }));
 
     setTasks(newTasks);
-  }, [tasksForSelectedDate, selectedDate, allTasks]);
+  }, [tasksForSelectedDate]);
 
   // Filter tasks by completion status
   const uncompletedTasks = useMemo(() => {

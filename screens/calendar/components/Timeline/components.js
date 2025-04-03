@@ -226,22 +226,31 @@ export const GhostSquare = ({ visible, position, height, style }) => {
 export const EventItem = React.memo(({ event, layout = null }) => {
   const styles = useTimelineStyles();
   const theme = useTheme();
+
   // Calculate position and height from event times
   const startTime = dateToDecimalHours(event.startDate);
   const endTime = dateToDecimalHours(event.endDate);
+
+  // Check if event spans multiple days (ends on a different day than it starts)
+  const startDate = new Date(event.startDate);
+  const endDate = new Date(event.endDate);
+  const isMultiDayEvent = startDate.toDateString() !== endDate.toDateString();
+
+  // For multi-day events, use 24 (end of day) instead of 0
+  const effectiveEndTime = isMultiDayEvent ? 24 : endTime;
 
   // Use the MIN_HOUR and MAX_HOUR constants directly instead of parsing HOURS
   const timelineStartHour = MIN_HOUR;
   const timelineEndHour = MAX_HOUR;
 
   // Check if event is completely outside the timeline
-  if (startTime >= timelineEndHour || endTime <= timelineStartHour) {
+  if (startTime >= timelineEndHour || effectiveEndTime <= timelineStartHour) {
     return null; // Don't render events completely outside timeline
   }
 
   // Adjust start and end times for events partially within the timeline
   const adjustedStartTime = Math.max(startTime, timelineStartHour);
-  const adjustedEndTime = Math.min(endTime, timelineEndHour);
+  const adjustedEndTime = Math.min(isMultiDayEvent ? 24 : endTime, timelineEndHour);
   const adjustedDuration = adjustedEndTime - adjustedStartTime; // in hours
 
   const position = timeToPosition(adjustedStartTime);
@@ -277,11 +286,14 @@ export const EventItem = React.memo(({ event, layout = null }) => {
       </Text>
       <View style={isNarrow ? styles.smallEventDetails : styles.EventDetails}>
         <Text variant={detailsFontSize} style={styles.eventText}>
-          {formatTimeFromDecimal(startTime)} - {formatTimeFromDecimal(endTime)}
+          {formatTimeFromDecimal(startTime)} -{' '}
+          {isMultiDayEvent ? '24:00' : formatTimeFromDecimal(endTime)}
         </Text>
         <Text variant={detailsFontSize} style={styles.scheduledTaskDuration}>
-          {Math.floor(duration)}h
-          {Math.round((duration % 1) * 60) ? ` ${Math.round((duration % 1) * 60)}m` : ''}
+          {Math.floor(isMultiDayEvent ? 24 - startTime : duration)}h
+          {Math.round(((isMultiDayEvent ? 24 - startTime : duration) % 1) * 60)
+            ? ` ${Math.round(((isMultiDayEvent ? 24 - startTime : duration) % 1) * 60)}m`
+            : ''}
         </Text>
       </View>
     </View>
@@ -646,7 +658,7 @@ export const UnscheduledTasksSection = React.memo(
                 index,
               })}
             />
-          ) : (
+          ) : taskDragging ? null : (
             renderEmptyState()
           )}
 

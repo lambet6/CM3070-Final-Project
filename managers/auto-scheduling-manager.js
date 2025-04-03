@@ -41,10 +41,11 @@ export const createAutoSchedulingManager = (dependencies) => {
       }
 
       // 1. Get tasks for the selected date
-      const { dueTodayOrBefore: tasksForScheduling } = await taskManager.getTasksForDate(date);
+      const { dueToday: tasksForScheduling } = await taskManager.getTasksForDate(date);
 
       // 2. Get events for the selected date
       const eventsForScheduling = await calendarManager.getEventsForDate(date);
+      console.log('Events for scheduling:', eventsForScheduling);
 
       // If there are no tasks to schedule, return early
       if (tasksForScheduling.length === 0) {
@@ -63,55 +64,38 @@ export const createAutoSchedulingManager = (dependencies) => {
         events: eventsForScheduling,
         constraints: options.constraints,
         optimizationGoal: options.optimizationGoal,
+        targetDate: date,
       });
 
-      // 4. Process the scheduling response
-      const { scheduled_tasks = [] } = schedulingResult;
+      // 4. Use the domain-converted tasks directly from the repository
+      const { tasksToUpdate, scheduledTasks = [], unscheduledTaskIds = [] } = schedulingResult;
 
-      // 5. Update task scheduled times
-      const updatePromises = scheduled_tasks.map(async (scheduledTask) => {
-        const task = tasksForScheduling.find((t) => t.id === scheduledTask.id);
-        if (!task) return null;
+      // 5. Update all tasks in one batch operation
+      await taskManager.updateTaskScheduledTimes(tasksToUpdate);
 
-        // Convert the scheduled time from API response to a Date object
-        const scheduledTime = parseISO(scheduledTask.start);
+      // Create the updated tasks list with the scheduled times
+      const updatedTasks = tasksToUpdate.map((update) => ({
+        ...update.originalTask,
+        scheduledTime: update.scheduledTime,
+      }));
+      console.log('Updated tasks:', updatedTasks);
 
-        // Use task manager to update the scheduled time
-        await taskManager.editExistingTask(
-          task.id,
-          task.title,
-          task.priority,
-          task.dueDate,
-          task.duration,
-          scheduledTime,
-        );
-
-        return {
-          ...task,
-          scheduledTime,
-        };
-      });
-
-      // Wait for all task updates to complete
-      const updatedTasks = await Promise.all(updatePromises);
-      const scheduledTaskIds = scheduled_tasks.map((t) => t.id);
-
-      // Find tasks that couldn't be scheduled
-      const unscheduledTasks = tasksForScheduling.filter(
-        (task) => !scheduledTaskIds.includes(task.id),
+      // Find tasks that couldn't be scheduled using the IDs the repository provided
+      const unscheduledTasks = tasksForScheduling.filter((task) =>
+        unscheduledTaskIds.includes(task.id),
       );
 
       // 6. Return information about the scheduling result
       let resultMessage =
-        scheduled_tasks.length > 0
-          ? `Successfully scheduled ${scheduled_tasks.length} tasks`
+        scheduledTasks.length > 0
+          ? `Successfully scheduled ${scheduledTasks.length} tasks`
           : 'No tasks could be scheduled for the selected date';
 
       // Customize message for partial schedules
       if (schedulingResult.isPartialSchedule || schedulingResult.status === 'partial') {
         resultMessage =
           unscheduledTasks.length > 0
-            ? `Created partial schedule with ${scheduled_tasks.length} tasks. ${unscheduledTasks.length} tasks couldn't be scheduled due to time constraints.`
+            ? `Created partial schedule with ${scheduledTasks.length} tasks. ${unscheduledTasks.length} tasks couldn't be scheduled due to time constraints.`
             : 'Created partial schedule.';
       }
 
@@ -125,7 +109,7 @@ export const createAutoSchedulingManager = (dependencies) => {
           schedulingResult.isPartialSchedule || schedulingResult.status === 'partial',
       };
     } catch (error) {
-      console.error('Error in auto-scheduling:', error);
+      console.log('Error in auto-scheduling:', error);
       throw new Error(`Failed to generate schedule: ${error.message}`);
     }
   };
@@ -163,10 +147,13 @@ export const createAutoSchedulingManager = (dependencies) => {
           completedTasks: completedTaskIds,
           adjustedTasks,
         },
-        scheduleData: scheduleData || { date: date.toISOString() },
+        scheduleData: scheduleData || {
+          date: date.toISOString(),
+          target_date: date.toISOString(), // Add explicit target date
+        },
       });
     } catch (error) {
-      console.error('Error recording schedule feedback:', error);
+      console.log('Error recording schedule feedback:', error);
       throw new Error(`Failed to record feedback: ${error.message}`);
     }
   };
@@ -188,7 +175,7 @@ export const createAutoSchedulingManager = (dependencies) => {
         date: date,
       };
     } catch (error) {
-      console.error('Error clearing schedule:', error);
+      console.log('Error clearing schedule:', error);
       throw new Error(`Failed to clear schedule: ${error.message}`);
     }
   };
