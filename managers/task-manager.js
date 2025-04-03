@@ -451,12 +451,13 @@ export const createTaskManager = (repository, getStore) => {
         const lastCleanupDay = new Date(lastCleanup);
         lastCleanupDay.setHours(0, 0, 0, 0); // Start of last cleanup day
         shouldCleanup = today > lastCleanupDay;
+      } else {
+        shouldCleanup = true;
       }
 
-      // Update the last cleanup date
-      await repository.updateLastCleanupDate();
-
       if (shouldCleanup) {
+        // Update the last cleanup date
+        await repository.updateLastCleanupDate();
         await cleanupCompletedTasks();
         return true;
       }

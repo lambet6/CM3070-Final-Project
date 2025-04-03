@@ -1,11 +1,13 @@
-import React, { useRef } from 'react';
+import React, { useRef, useMemo, useCallback } from 'react';
 import { Text, StyleSheet, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
-import Reanimated, { SharedValue, useAnimatedStyle } from 'react-native-reanimated';
+import Reanimated, { useAnimatedStyle } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 
-function RightAction({ prog, drag, onEdit, onDelete, swipeableRef }) {
+// Memoized RightAction component to prevent unnecessary recreations
+const RightAction = React.memo(({ prog, drag, onEdit, onDelete, swipeableRef }) => {
+  // Create animated style using worklet for better performance
   const styleAnimation = useAnimatedStyle(() => {
     'worklet';
     return {
@@ -13,20 +15,29 @@ function RightAction({ prog, drag, onEdit, onDelete, swipeableRef }) {
     };
   });
 
-  const tapDelete = Gesture.Tap()
-    .runOnJS(true)
-    .onStart(() => {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      onDelete();
-    });
+  // Memoize gestures to avoid recreating them on each render
+  const tapDelete = useMemo(
+    () =>
+      Gesture.Tap()
+        .runOnJS(true)
+        .onStart(() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          onDelete();
+        }),
+    [onDelete],
+  );
 
-  const tapEdit = Gesture.Tap()
-    .runOnJS(true)
-    .onStart(() => {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      swipeableRef.current?.close();
-      onEdit();
-    });
+  const tapEdit = useMemo(
+    () =>
+      Gesture.Tap()
+        .runOnJS(true)
+        .onStart(() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          swipeableRef.current?.close();
+          onEdit();
+        }),
+    [onEdit, swipeableRef],
+  );
 
   return (
     <Reanimated.View style={[styleAnimation, styles.rightButtonContainer]}>
@@ -42,9 +53,23 @@ function RightAction({ prog, drag, onEdit, onDelete, swipeableRef }) {
       </GestureDetector>
     </Reanimated.View>
   );
-}
+});
+RightAction.displayName = 'RightAction';
 
-export default function SwipeableTaskItem({
+// Format date function moved outside component to avoid recreation
+const formatDate = (dateString) => {
+  const date = new Date(dateString);
+  return date.toLocaleDateString();
+};
+
+// Mapping priority to colors
+const PRIORITY_COLORS = {
+  High: '#FF5252', // Red for high priority
+  Medium: '#FFD740', // Yellow for medium priority
+  Low: '#4CAF50', // Green for low priority
+};
+
+const SwipeableTaskItem = ({
   task,
   onEdit,
   onDelete,
@@ -52,40 +77,41 @@ export default function SwipeableTaskItem({
   onLongPress,
   selected = false,
   selectionMode = false,
-}) {
+}) => {
   const swipeableRef = useRef(null);
-  // Define a tap gesture that blocks external gestures when active.
-  const tap = Gesture.Tap()
-    .runOnJS(true)
-    .onStart(() => {
-      onTap(task);
-    });
 
-  const longPress = Gesture.LongPress()
-    .runOnJS(true)
-    .onStart((e) => {
-      onLongPress(task);
-    });
+  // Memoize gestures to prevent recreation on each render
+  const tap = useMemo(
+    () =>
+      Gesture.Tap()
+        .runOnJS(true)
+        .onStart(() => {
+          onTap(task);
+        }),
+    [onTap, task],
+  );
 
-  const taskGestures = Gesture.Exclusive(longPress, tap);
+  const longPress = useMemo(
+    () =>
+      Gesture.LongPress()
+        .runOnJS(true)
+        .onStart(() => {
+          onLongPress(task);
+        }),
+    [onLongPress, task],
+  );
 
-  // Format the date string properly
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString();
-  };
+  const taskGestures = useMemo(() => Gesture.Exclusive(longPress, tap), [longPress, tap]);
 
-  // Get the appropriate background color based on priority
-  const getBackgroundColor = () => {
+  // Get background color based on priority and selection state
+  const getBackgroundColor = useCallback(() => {
     if (selected) return '#e6f2ff'; // Light blue when selected
+    return PRIORITY_COLORS[task.priority] || '#f5f5f5';
+  }, [selected, task.priority]);
 
-    const priorityColors = {
-      High: '#FF5252', // Red for high priority
-      Medium: '#FFD740', // Yellow for medium priority
-      Low: '#4CAF50', // Green for low priority
-    };
-    return priorityColors[task.priority] || '#f5f5f5';
-  };
+  // Pre-compute values used in the render
+  const backgroundColor = getBackgroundColor();
+  const formattedDate = formatDate(task.dueDate);
 
   return (
     <ReanimatedSwipeable
@@ -107,14 +133,14 @@ export default function SwipeableTaskItem({
       )}>
       <GestureDetector gesture={taskGestures}>
         <View collapsable={false} style={styles.contentContainer}>
-          <View style={[styles.priorityIndicator, { backgroundColor: getBackgroundColor() }]} />
+          <View style={[styles.priorityIndicator, { backgroundColor }]} />
           <View style={styles.taskContent}>
             <Text
               style={[styles.taskTitle, task.completed && styles.completedTask]}
               numberOfLines={1}>
               {task.title}
             </Text>
-            <Text style={styles.taskDueDate}>{formatDate(task.dueDate)}</Text>
+            <Text style={styles.taskDueDate}>{formattedDate}</Text>
           </View>
 
           {selectionMode && (
@@ -126,7 +152,7 @@ export default function SwipeableTaskItem({
       </GestureDetector>
     </ReanimatedSwipeable>
   );
-}
+};
 
 const styles = StyleSheet.create({
   swipeable: {
@@ -210,3 +236,6 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
 });
+
+// Use React.memo to prevent unnecessary re-renders
+export default React.memo(SwipeableTaskItem);

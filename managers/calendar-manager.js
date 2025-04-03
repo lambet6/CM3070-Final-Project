@@ -198,6 +198,7 @@ export const createCalendarManager = (repository, getStore) => {
 
       // Get events directly for this date from the repository
       const events = await repository.getStoredCalendarEvents(targetDate, endDate);
+      console.log('Events for date:', events);
 
       // Filter events that occur on this date (starting, ending, or spanning)
       const eventsForDate = events.filter((event) => {
@@ -213,7 +214,7 @@ export const createCalendarManager = (repository, getStore) => {
 
         return startsOnDay || endsOnDay || spansAcrossDay;
       });
-      console.log('Events for date:', eventsForDate);
+      console.log('Events for date:', date, eventsForDate);
       return eventsForDate;
     } catch (error) {
       console.error('Error getting events for date:', error);
