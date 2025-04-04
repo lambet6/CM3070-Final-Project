@@ -186,7 +186,14 @@ const SwipeableTaskItem = ({
 
           {selectionMode && (
             <View style={[styles.checkbox, selected && styles.checkboxSelected]}>
-              {selected && <Text style={styles.checkmark}>✓</Text>}
+              {selected && (
+                <Icon
+                  size={14}
+                  color={theme.colors.onPrimary}
+                  source="check-bold"
+                  style={styles.checkmark}
+                />
+              )}
             </View>
           )}
         </View>
@@ -256,13 +263,13 @@ const getStyles = (theme) =>
       height: 22,
       borderRadius: 11,
       borderWidth: 2,
-      borderColor: '#007AFF',
+      borderColor: theme.colors.primary,
       marginLeft: 10,
       alignItems: 'center',
       justifyContent: 'center',
     },
     checkboxSelected: {
-      backgroundColor: '#007AFF',
+      backgroundColor: theme.colors.primary,
     },
     checkmark: {
       color: 'white',

@@ -3,7 +3,7 @@ import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { useTaskStore } from '../../store/taskStore';
 import { useTaskManager } from '../../hooks/useTaskManager';
-import { Snackbar } from 'react-native-paper';
+import { Icon, Snackbar, useTheme } from 'react-native-paper';
 import * as Haptics from 'expo-haptics';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useBottomSheet } from '../../contexts/BottomSheetContext';
@@ -39,6 +39,8 @@ const ITEM_TYPES = {
 
 // Section Header component with animations
 const SectionHeader = React.memo(({ title }) => {
+  const theme = useTheme();
+  const styles = getStyles(theme);
   return (
     <Animated.View entering={FadeIn.duration(300)} style={styles.priorityHeader}>
       <Text variant="headlineSmall">{title}</Text>
@@ -101,6 +103,9 @@ export default function TasksScreen() {
   // Animation values for view transitions
   const priorityOpacity = useSharedValue(1);
   const dueDateOpacity = useSharedValue(0);
+
+  const theme = useTheme();
+  const styles = getStyles(theme);
 
   const {
     snackbarState,
@@ -256,40 +261,44 @@ export default function TasksScreen() {
         No tasks yet. Add a task to get started!
       </Animated.Text>
     ),
-    [],
+    [styles.emptyText],
   );
 
   return (
     <View testID="tasks-screen" style={styles.container}>
       {error && <Text style={styles.errorMessage}>{error}</Text>}
 
-      <View style={styles.segmentContainer}>
-        <SegmentedButtons
-          value={viewMode}
-          onValueChange={handleViewModeChange}
-          buttons={[
-            { value: 'Priority', label: 'Priority', icon: 'flag-outline' },
-            { value: 'DueDate', label: 'Due Date', icon: 'calendar-clock' },
-          ]}
-        />
-      </View>
+      {!selectionMode && (
+        <View style={styles.segmentContainer}>
+          <SegmentedButtons
+            value={viewMode}
+            onValueChange={handleViewModeChange}
+            buttons={[
+              { value: 'Priority', label: 'Priority', icon: 'flag-outline' },
+              { value: 'DueDate', label: 'Due Date', icon: 'calendar-clock' },
+            ]}
+          />
+        </View>
+      )}
 
       {selectionMode && (
         <Animated.View entering={FadeIn.duration(300)} style={styles.selectionHeader}>
-          <Text style={styles.selectionText}>{selectedItems.length} selected</Text>
+          <Text style={styles.selectionHeaderText} variant="titleLarge">
+            {selectedItems.length} selected
+          </Text>
           <View style={styles.selectionActions}>
             <AnimatedTouchableOpacity
               entering={FadeIn}
               onPress={cancelSelection}
               style={styles.selectionButton}>
-              <MaterialIcons name="close" size={24} color="#777" />
+              <Icon source="close" size={24} />
             </AnimatedTouchableOpacity>
             <AnimatedTouchableOpacity
               entering={FadeIn}
               onPress={deleteSelectedItems}
               style={[styles.selectionButton, styles.deleteButton]}
               disabled={selectedItems.length === 0}>
-              <MaterialIcons name="delete" size={24} color="white" />
+              <Icon color={theme.colors.onError} source="trash-can-outline" size={24} />
             </AnimatedTouchableOpacity>
           </View>
         </Animated.View>
@@ -339,60 +348,61 @@ export default function TasksScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 10,
-  },
-  listContainer: {
-    flex: 1,
-  },
-  segmentContainer: {
-    marginBottom: 10,
-  },
-  errorMessage: {
-    color: 'red',
-    padding: 10,
-    marginBottom: 10,
-  },
-  snackbar: {
-    alignSelf: 'center',
-    width: '90%',
-  },
-  selectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 10,
-    marginBottom: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
-  },
-  selectionText: {
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  selectionActions: {
-    flexDirection: 'row',
-  },
-  selectionButton: {
-    padding: 8,
-    marginLeft: 8,
-    borderRadius: 20,
-  },
-  deleteButton: {
-    backgroundColor: 'red',
-  },
-  emptyText: {
-    textAlign: 'center',
-    marginTop: 40,
-    fontSize: 16,
-    color: '#757575',
-  },
-  priorityHeader: {
-    paddingVertical: 8,
-    marginTop: 8,
-    marginBottom: 4,
-  },
-});
+const getStyles = (theme) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      paddingHorizontal: 16,
+      paddingTop: 10,
+    },
+    listContainer: {
+      flex: 1,
+    },
+    segmentContainer: {
+      marginBottom: 10,
+    },
+    errorMessage: {
+      color: 'red',
+      padding: 10,
+      marginBottom: 10,
+    },
+    snackbar: {
+      alignSelf: 'center',
+      width: '90%',
+    },
+    selectionHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: 10,
+      marginBottom: 10,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.outline,
+    },
+    selectionHeaderText: {
+      color: theme.colors.primary,
+    },
+
+    selectionActions: {
+      flexDirection: 'row',
+    },
+    selectionButton: {
+      padding: 8,
+      marginLeft: 8,
+      borderRadius: 20,
+    },
+    deleteButton: {
+      backgroundColor: theme.colors.error,
+    },
+    emptyText: {
+      textAlign: 'center',
+      marginTop: 40,
+      fontSize: 16,
+      color: '#757575',
+    },
+    priorityHeader: {
+      paddingVertical: 8,
+      marginTop: 8,
+      marginBottom: 4,
+    },
+  });

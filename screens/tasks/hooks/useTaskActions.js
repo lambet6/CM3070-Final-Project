@@ -65,19 +65,32 @@ const useTaskActions = (tasks, createNewTask, deleteTasks) => {
     [tasks, deleteTasks, createNewTask],
   );
 
-  // Delete multiple tasks
+  // Delete multiple tasks with undo functionality
   const handleDeleteMultipleTasks = useCallback(
     async (taskIds) => {
       if (!taskIds.length) return;
 
       try {
+        // Collect information about tasks being deleted for potential restoration
+        const allTasks = [...tasks.high, ...tasks.medium, ...tasks.low];
+        const tasksToDelete = allTasks.filter((task) => taskIds.includes(task.id));
+
+        // Delete the tasks
         await deleteTasks(taskIds);
+
+        // Show success message with UNDO option
         setSnackbarState({
           visible: true,
           message: `Deleted ${taskIds.length} ${taskIds.length === 1 ? 'task' : 'tasks'}`,
           action: {
-            label: 'OK',
-            onPress: () => setSnackbarState((prev) => ({ ...prev, visible: false })),
+            label: 'UNDO',
+            onPress: async () => {
+              // Sequential recreation of all deleted tasks
+              for (const task of tasksToDelete) {
+                await createNewTask(task.title, task.priority, new Date(task.dueDate));
+              }
+              setSnackbarState((prev) => ({ ...prev, visible: false }));
+            },
           },
         });
       } catch (error) {
@@ -92,7 +105,7 @@ const useTaskActions = (tasks, createNewTask, deleteTasks) => {
         });
       }
     },
-    [deleteTasks],
+    [tasks, deleteTasks, createNewTask],
   );
 
   return {
