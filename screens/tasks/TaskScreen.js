@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { useTaskStore } from '../../store/taskStore';
 import { useTaskManager } from '../../hooks/useTaskManager';
@@ -7,7 +7,7 @@ import { Snackbar } from 'react-native-paper';
 import * as Haptics from 'expo-haptics';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useBottomSheet } from '../../contexts/BottomSheetContext';
-import { SegmentedButtons } from 'react-native-paper';
+import { SegmentedButtons, Text } from 'react-native-paper';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -15,6 +15,7 @@ import Animated, {
   FadeIn,
   FadeOut,
 } from 'react-native-reanimated';
+import { FlatList } from 'react-native-gesture-handler';
 
 // Custom hooks
 import useTaskActions from './hooks/useTaskActions';
@@ -29,7 +30,6 @@ const SECTION_HEADER_HEIGHT = 42; // Estimate based on fontSize and margins
 
 // Create animated versions of our components
 const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
-const AnimatedView = Animated.createAnimatedComponent(View);
 
 // Item types for our FlashList
 const ITEM_TYPES = {
@@ -41,7 +41,7 @@ const ITEM_TYPES = {
 const SectionHeader = React.memo(({ title }) => {
   return (
     <Animated.View entering={FadeIn.duration(300)} style={styles.priorityHeader}>
-      <Text style={styles.priorityHeaderText}>{title}</Text>
+      <Text variant="headlineSmall">{title}</Text>
     </Animated.View>
   );
 });
@@ -268,8 +268,8 @@ export default function TasksScreen() {
           value={viewMode}
           onValueChange={handleViewModeChange}
           buttons={[
-            { value: 'Priority', label: 'Priority Groups' },
-            { value: 'DueDate', label: 'Due Date' },
+            { value: 'Priority', label: 'Priority', icon: 'flag-outline' },
+            { value: 'DueDate', label: 'Due Date', icon: 'calendar-clock' },
           ]}
         />
       </View>
@@ -296,24 +296,22 @@ export default function TasksScreen() {
       )}
 
       {/* Priority view list */}
-      <AnimatedView style={[styles.listContainer, priorityAnimatedStyle]}>
-        <FlashList
+      <Animated.View style={[styles.listContainer, priorityAnimatedStyle]}>
+        <FlatList
           data={priorityData}
           renderItem={renderItem}
-          estimatedItemSize={ITEM_HEIGHT}
           keyExtractor={(item) => item.id}
           extraData={[selectionMode, selectedItems]}
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={EmptyComponent}
         />
-      </AnimatedView>
+      </Animated.View>
 
       {/* Due date view list */}
-      <AnimatedView style={[styles.listContainer, dueDateAnimatedStyle]}>
-        <FlashList
+      <Animated.View style={[styles.listContainer, dueDateAnimatedStyle]}>
+        <FlatList
           data={dueDateData}
           renderItem={renderItem}
-          estimatedItemSize={ITEM_HEIGHT}
           keyExtractor={(item) => item.id}
           extraData={[selectionMode, selectedItems]}
           showsVerticalScrollIndicator={false}
@@ -321,12 +319,12 @@ export default function TasksScreen() {
           ListHeaderComponent={
             dueDateData.length > 0 ? (
               <Animated.View entering={FadeIn.duration(300)} style={styles.priorityHeader}>
-                <Text style={styles.priorityHeaderText}>All Tasks</Text>
+                <Text variant="headlineSmall">All Tasks</Text>
               </Animated.View>
             ) : null
           }
         />
-      </AnimatedView>
+      </Animated.View>
 
       {/* Consolidated single snackbar */}
       <Snackbar
@@ -345,6 +343,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: 16,
+    paddingTop: 10,
   },
   listContainer: {
     flex: 1,
@@ -395,9 +394,5 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     marginTop: 8,
     marginBottom: 4,
-  },
-  priorityHeaderText: {
-    fontSize: 18,
-    fontWeight: 'bold',
   },
 });

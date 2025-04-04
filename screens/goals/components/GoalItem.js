@@ -25,10 +25,10 @@ const GoalItem = ({ goal, onEdit, onDelete, onSchedule }) => {
               icon="pencil"
               size={20}
               onPress={() => onEdit(goal)}
-              iconColor={theme.colors.primary}
+              iconColor={theme.colors.secondary}
             />
             <IconButton
-              icon="delete"
+              icon="trash-can-outline"
               size={20}
               onPress={() => onDelete(goal.id)}
               iconColor={theme.colors.error}
