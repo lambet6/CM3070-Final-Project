@@ -319,7 +319,7 @@ const makeStyles = (theme) =>
     sheetContainer: {
       flex: 1,
       minHeight: 410,
-      paddingHorizontal: 20,
+      paddingHorizontal: 30,
     },
     sheetTitle: {
       textAlign: 'center',
@@ -330,7 +330,7 @@ const makeStyles = (theme) =>
     inputContents: {
       flexDirection: 'row',
       alignItems: 'center',
-      width: '95%',
+      // width: '95%',
     },
     inputButton: {
       flex: 1,

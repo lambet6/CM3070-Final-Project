@@ -21,15 +21,9 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   headerContainer: {
-    paddingVertical: 12,
-    paddingHorizontal: 8,
     alignItems: 'center',
     justifyContent: 'space-between',
     width: '100%',
-  },
-  titleContainer: {
-    flexDirection: 'column',
-    alignItems: 'center',
   },
 
   todayButton: {
@@ -53,6 +47,7 @@ export const styles = StyleSheet.create({
   toggleButton: {
     alignSelf: 'center',
     width: 200,
+    height: 30,
   },
   toggleButtonText: {
     color: CONSTANTS.COLORS.white,
@@ -62,14 +57,12 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     height: '100%',
-    paddingVertical: 4, // Add some padding to ensure spacing
+    paddingVertical: 4,
   },
   eventLine: {
     width: 20,
     height: 4,
     borderRadius: 2,
-    // backgroundColor: '#ff00ff',
-    // marginBottom: 2, // Space between event line and date
   },
   TaskDot: {
     width: 4,
@@ -79,9 +72,7 @@ export const styles = StyleSheet.create({
   dotContainer: {
     flexDirection: 'row',
     height: 4,
-    // justifyContent: 'center',
-    // alignItems: 'center',
-    gap: 2, // adds small spacing between dots
+    gap: 2,
   },
   dragList: {
     flex: 1,
