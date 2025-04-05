@@ -76,13 +76,22 @@ export function RootNavigator({ theme }) {
           ref={bottomSheetRef}
           index={-1}
           bottomInset={49}
-          snapPoints={['60%']}
+          snapPoints={['65%']}
           keyboardShouldPersistTaps="always"
           keyboardBehavior="interactive"
           keyboardBlurBehavior="restore"
           enableBlurKeyboardOnGesture={true}
           enableDynamicSizing={false}
-          enablePanDownToClose={true}>
+          enablePanDownToClose={true}
+          handleStyle={{
+            backgroundColor: theme.colors.surface,
+          }}
+          handleIndicatorStyle={{
+            backgroundColor: theme.colors.onSurfaceVariant,
+          }}
+          backgroundStyle={{
+            backgroundColor: theme.colors.background,
+          }}>
           <QuickTaskSheet onClose={handleCloseSheet} taskToEdit={taskToEdit} />
         </BottomSheet>
       </NavigationContainer>

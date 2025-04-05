@@ -40,7 +40,7 @@ const useTaskActions = (tasks, createNewTask, deleteTasks) => {
           visible: true,
           message: `Deleted ${taskTitle}`,
           action: {
-            label: 'UNDO',
+            label: 'Undo',
             onPress: () => {
               if (task) {
                 // Re-create the task if user wants to undo
@@ -83,7 +83,7 @@ const useTaskActions = (tasks, createNewTask, deleteTasks) => {
           visible: true,
           message: `Deleted ${taskIds.length} ${taskIds.length === 1 ? 'task' : 'tasks'}`,
           action: {
-            label: 'UNDO',
+            label: 'Undo',
             onPress: async () => {
               // Sequential recreation of all deleted tasks
               for (const task of tasksToDelete) {

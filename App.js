@@ -86,9 +86,9 @@ export default function App() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <TaskProvider>
         <PreferencesContext.Provider value={preferences}>
-          <PaperProvider theme={MD3LightTheme}>
+          <PaperProvider theme={MD3DarkTheme}>
             <SafeAreaView style={{ flex: 1 }}>
-              <RootNavigator theme={MD3LightTheme} />
+              <RootNavigator theme={MD3DarkTheme} />
               <StatusBar style="dark" />
             </SafeAreaView>
           </PaperProvider>

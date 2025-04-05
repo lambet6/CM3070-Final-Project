@@ -1,11 +1,14 @@
 /* global setTimeout */
 import React, { useState, useCallback, useEffect } from 'react';
-import { View, Text, StyleSheet, Platform, Keyboard } from 'react-native';
+import { View, StyleSheet, Platform, Keyboard } from 'react-native';
 import { BottomSheetView, BottomSheetTextInput, TouchableOpacity } from '@gorhom/bottom-sheet';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import { DatePickerModal } from 'react-native-paper-dates';
 import { TimerPickerModal } from 'react-native-timer-picker';
 import { useTaskManager } from '../hooks/useTaskManager';
 import { format } from 'date-fns';
+import { useTheme, Text, Icon, TouchableRipple, HelperText } from 'react-native-paper';
+import * as Haptics from 'expo-haptics';
+import { LinearGradient } from 'expo-linear-gradient';
 
 export const QuickTaskSheet = ({ onClose, taskToEdit }) => {
   const taskManager = useTaskManager();
@@ -16,7 +19,7 @@ export const QuickTaskSheet = ({ onClose, taskToEdit }) => {
   const [taskPriority, setTaskPriority] = useState('Medium');
   const [taskDueDate, setTaskDueDate] = useState(new Date());
   const [titleError, setTitleError] = useState('');
-  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showDatePickerModal, setShowDatePickerModal] = useState(false);
   const [showDurationPicker, setShowDurationPicker] = useState(false);
   const [taskDuration, setTaskDuration] = useState('30');
   const [durationError, setDurationError] = useState('');
@@ -46,6 +49,7 @@ export const QuickTaskSheet = ({ onClose, taskToEdit }) => {
 
     try {
       Keyboard.dismiss();
+      onClose();
       if (isEditMode) {
         await taskManager.editExistingTask(
           taskToEdit.id,
@@ -58,7 +62,6 @@ export const QuickTaskSheet = ({ onClose, taskToEdit }) => {
         await taskManager.createNewTask(taskTitle, taskPriority, taskDueDate, durationNumber);
       }
       resetForm();
-      onClose();
     } catch (error) {
       setTitleError(error.message || `Failed to ${isEditMode ? 'update' : 'create'} task`);
     }
@@ -77,17 +80,20 @@ export const QuickTaskSheet = ({ onClose, taskToEdit }) => {
     setTaskDuration('30');
     setTitleError('');
     setDurationError('');
-    setShowDatePicker(false);
+    setShowDatePickerModal(false);
     setShowDurationPicker(false);
   }, []);
 
-  const handleDateChange = (event, selectedDate) => {
-    const currentDate = selectedDate || taskDueDate;
-    setShowDatePicker(Platform.OS === 'ios');
-    setTaskDueDate(currentDate);
-  };
+  const onDatePickerConfirm = useCallback((params) => {
+    setTaskDueDate(params.date);
+    setShowDatePickerModal(false);
+  }, []);
 
-  const showDatepicker = () => setShowDatePicker(true);
+  const onDatePickerDismiss = useCallback(() => {
+    setShowDatePickerModal(false);
+  }, []);
+
+  const showDatepicker = () => setShowDatePickerModal(true);
 
   const formatDuration = (minutes) => {
     if (!minutes) return 'Not set';
@@ -96,62 +102,89 @@ export const QuickTaskSheet = ({ onClose, taskToEdit }) => {
     return hours > 0 ? `${hours}h ${mins > 0 ? `${mins}m` : ''}` : `${mins}m`;
   };
 
+  const theme = useTheme();
+  const styles = makeStyles(theme);
+
   return (
     <BottomSheetView style={styles.sheetContainer}>
-      <Text style={styles.sheetTitle}>{isEditMode ? 'Edit Task' : 'Quick Add Task'}</Text>
+      <Text variant="headlineSmall" style={styles.sheetTitle}>
+        {isEditMode ? 'Edit Task' : 'Add Task'}
+      </Text>
 
       {/* Task Title Input */}
-      <View style={styles.inputContainer}>
-        <Text style={styles.inputLabel}>Title:</Text>
-        <BottomSheetTextInput
-          testID="quick-add-title"
-          style={[styles.textInput, titleError && styles.inputError]}
-          placeholder="What needs to be done?"
-          value={taskTitle}
-          onChangeText={(text) => {
-            setTaskTitle(text);
-            if (text.trim()) setTitleError('');
-          }}
-        />
-        {titleError ? (
-          <Text testID="title-error-message" style={styles.errorText}>
-            {titleError}
-          </Text>
-        ) : null}
+      <View>
+        <Text variant="bodyMedium" style={styles.inputLabel}>
+          Title:
+        </Text>
+        <View style={styles.inputContents}>
+          <Icon size={24} source="pencil" />
+          <View style={styles.inputButton}>
+            <BottomSheetTextInput
+              testID="quick-add-title"
+              selectionColor={theme.colors.primary}
+              underlineColorAndroid={theme.colors.primary}
+              style={[styles.textInput, titleError && styles.inputError]}
+              placeholder="What needs to be done?"
+              placeholderTextColor={theme.colors.onSurfaceVariant}
+              value={taskTitle}
+              onChangeText={(text) => {
+                setTaskTitle(text);
+                if (text.trim()) setTitleError('');
+              }}
+            />
+          </View>
+        </View>
+        <HelperText style={styles.titleError} type="error" visible={!!titleError}>
+          {titleError}
+        </HelperText>
       </View>
 
       {/* Due Date Picker */}
       <View style={styles.inputContainer}>
-        <Text style={styles.inputLabel}>Due Date:</Text>
-        <TouchableOpacity
-          style={styles.dateButton}
-          onPress={showDatepicker}
-          testID="date-picker-button">
-          <Text style={styles.dateButtonText}>{format(taskDueDate, 'MMMM d, yyyy')}</Text>
-        </TouchableOpacity>
-        {showDatePicker && (
-          <DateTimePicker
-            testID="date-time-picker"
-            value={taskDueDate}
-            mode="date"
-            display="default"
-            onChange={handleDateChange}
-            minimumDate={new Date()}
-          />
-        )}
+        <Text variant="bodyMedium" style={styles.inputLabel}>
+          Due Date:
+        </Text>
+        <View style={styles.inputContents}>
+          <Icon size={24} source="calendar-clock" />
+          <View style={styles.inputButton}>
+            <TouchableOpacity
+              style={styles.dateButton}
+              onPress={showDatepicker}
+              testID="date-picker-button">
+              <Text style={styles.dateButtonText}>{format(taskDueDate, 'MMMM d, yyyy')}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+        <DatePickerModal
+          locale="en-GB"
+          visible={showDatePickerModal}
+          mode="single"
+          onDismiss={onDatePickerDismiss}
+          date={taskDueDate}
+          onConfirm={onDatePickerConfirm}
+          saveLabel="Confirm"
+          validRange={{ startDate: new Date(new Date().setHours(0, 0, 0, 0)) }}
+        />
       </View>
 
       {/* Duration Picker */}
       <View style={styles.inputContainer}>
-        <Text style={styles.inputLabel}>Duration:</Text>
-        <TouchableOpacity
-          style={styles.dateButton}
-          onPress={() => setShowDurationPicker(true)}
-          testID="duration-picker-button">
-          <Text style={styles.dateButtonText}>
-            {taskDuration ? formatDuration(parseInt(taskDuration, 10)) : 'Set duration'}
-          </Text>
-        </TouchableOpacity>
+        <Text variant="bodyMedium" style={styles.inputLabel}>
+          Duration:
+        </Text>
+        <View style={styles.inputContents}>
+          <Icon size={24} source="timer-sand" />
+          <View style={styles.inputButton}>
+            <TouchableOpacity
+              style={styles.dateButton}
+              onPress={() => setShowDurationPicker(true)}
+              testID="duration-picker-button">
+              <Text style={styles.dateButtonText}>
+                {taskDuration ? formatDuration(parseInt(taskDuration, 10)) : 'Set duration'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
         {durationError ? (
           <Text testID="duration-error-message" style={styles.errorText}>
             {durationError}
@@ -174,85 +207,86 @@ export const QuickTaskSheet = ({ onClose, taskToEdit }) => {
           onCancel={() => setShowDurationPicker(false)}
           closeOnOverlayPress
           use12HourPicker={false}
-          initialHours={Math.floor(parseInt(taskDuration, 10) / 60)}
-          initialMinutes={parseInt(taskDuration, 10) % 60}
+          initialValue={{
+            hours: Math.floor(parseInt(taskDuration, 10) / 60),
+            minutes: parseInt(taskDuration, 10) % 60,
+          }}
+          maximumHours={12}
           hideSeconds={true}
-          styles={{ theme: 'light' }}
+          Haptics={Haptics}
+          LinearGradient={LinearGradient}
+          styles={{
+            theme: 'dark',
+            cancelButton: {
+              backgroundColor: theme.colors.errorContainer,
+              color: theme.colors.onErrorContainer,
+              borderColor: theme.colors.errorContainer,
+            },
+            confirmButton: {
+              backgroundColor: theme.colors.primary,
+              color: theme.colors.onPrimary,
+              borderColor: theme.colors.primary,
+            },
+          }}
         />
       </View>
 
       {/* Priority Buttons */}
       <View style={styles.inputContainer}>
-        <Text style={styles.inputLabel}>Priority:</Text>
-        <View style={styles.priorityButtonsContainer}>
-          <View style={styles.priorityButtonWrapper}>
-            <TouchableOpacity
-              testID="priority-low-button"
-              style={[
-                styles.priorityButton,
-                styles.lowPriorityButton,
-                taskPriority === 'Low' && [
-                  styles.priorityButtonSelected,
-                  styles.lowPrioritySelected,
-                ],
-              ]}
-              onPress={() => setTaskPriority('Low')}
-              onPressOut={() => {
-                Keyboard.dismiss();
-              }}>
-              <Text
+        <Text variant="bodyMedium" style={styles.inputLabel}>
+          Priority:
+        </Text>
+        <View style={styles.inputContents}>
+          <Icon size={24} source="flag-outline" />
+          <View style={styles.priorityButtonsContainer}>
+            <View style={styles.priorityButtonWrapper}>
+              <TouchableOpacity
+                testID="priority-low-button"
                 style={[
-                  styles.priorityButtonText,
-                  styles.lowPriorityButtonText,
-                  taskPriority === 'Low' && styles.lowPriorityTextSelected,
-                ]}>
-                Low
-              </Text>
-            </TouchableOpacity>
-          </View>
-          <View style={styles.priorityButtonWrapper}>
-            <TouchableOpacity
-              testID="priority-medium-button"
-              style={[
-                styles.priorityButton,
-                styles.mediumPriorityButton,
-                taskPriority === 'Medium' && [
-                  styles.priorityButtonSelected,
-                  styles.mediumPrioritySelected,
-                ],
-              ]}
-              onPress={() => setTaskPriority('Medium')}>
-              <Text
+                  styles.priorityButton,
+                  taskPriority === 'Low' && [
+                    styles.priorityButtonSelected,
+                    styles.lowPrioritySelected,
+                  ],
+                ]}
+                onPress={() => setTaskPriority('Low')}>
+                <Text style={taskPriority === 'Low' ? styles.lowPriorityTextSelected : null}>
+                  Low
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.priorityButtonWrapper}>
+              <TouchableOpacity
+                testID="priority-medium-button"
                 style={[
-                  styles.priorityButtonText,
-                  styles.mediumPriorityButtonText,
-                  taskPriority === 'Medium' && styles.mediumPriorityTextSelected,
-                ]}>
-                Medium
-              </Text>
-            </TouchableOpacity>
-          </View>
-          <View style={styles.priorityButtonWrapper}>
-            <TouchableOpacity
-              testID="priority-high-button"
-              style={[
-                styles.priorityButton,
-                styles.highPriorityButton,
-                taskPriority === 'High' && [
-                  styles.priorityButtonSelected,
-                  styles.highPrioritySelected,
-                ],
-              ]}
-              onPress={() => setTaskPriority('High')}>
-              <Text
+                  styles.priorityButton,
+                  taskPriority === 'Medium' && [
+                    styles.priorityButtonSelected,
+                    styles.mediumPrioritySelected,
+                  ],
+                ]}
+                onPress={() => setTaskPriority('Medium')}>
+                <Text style={taskPriority === 'Medium' ? styles.mediumPriorityTextSelected : null}>
+                  Medium
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.priorityButtonWrapper}>
+              <TouchableOpacity
+                testID="priority-high-button"
                 style={[
-                  styles.priorityButtonText,
-                  styles.highPriorityButtonText,
-                  taskPriority === 'High' && styles.highPriorityTextSelected,
-                ]}>
-                High
-              </Text>
-            </TouchableOpacity>
+                  styles.priorityButton,
+                  taskPriority === 'High' && [
+                    styles.priorityButtonSelected,
+                    styles.highPrioritySelected,
+                  ],
+                ]}
+                onPress={() => setTaskPriority('High')}>
+                <Text style={taskPriority === 'High' ? styles.highPriorityTextSelected : null}>
+                  High
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </View>
@@ -261,7 +295,7 @@ export const QuickTaskSheet = ({ onClose, taskToEdit }) => {
       <View style={styles.buttonContainer}>
         <View style={styles.actionButtonWrapper}>
           <TouchableOpacity style={styles.cancelButton} onPress={() => handleCancel()}>
-            <Text style={styles.buttonText}>Cancel</Text>
+            <Text style={styles.cancelButtonText}>Cancel</Text>
           </TouchableOpacity>
         </View>
         <View style={styles.actionButtonWrapper}>
@@ -269,7 +303,7 @@ export const QuickTaskSheet = ({ onClose, taskToEdit }) => {
             style={styles.addButton}
             onPress={() => handleSaveTask()}
             testID="quick-add-save">
-            <Text style={styles.buttonText}>{isEditMode ? 'Save Changes' : 'Add Task'}</Text>
+            <Text style={styles.addButtonText}>{isEditMode ? 'Save' : 'Add'}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -277,149 +311,145 @@ export const QuickTaskSheet = ({ onClose, taskToEdit }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  sheetContainer: {
-    flex: 1,
-    minHeight: 410, // ensure a minimum height so the sheet expands with the keyboard
-    padding: 20,
-    backgroundColor: 'white',
-  },
-  sheetTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  inputContainer: {
-    marginBottom: 12,
-  },
-  inputLabel: {
-    fontSize: 16,
-    marginBottom: 4,
-    fontWeight: '500',
-  },
-  textInput: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 10,
-    fontSize: 16,
-  },
-  inputError: {
-    borderColor: 'red',
-  },
-  errorText: {
-    color: 'red',
-    marginTop: 4,
-  },
-  priorityButtonsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 5,
-  },
-  priorityButtonWrapper: {
-    flex: 1,
-    paddingHorizontal: 4,
-  },
-  priorityButton: {
-    padding: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    height: 45,
-    width: '100%',
-  },
-  lowPriorityButton: {
-    backgroundColor: '#f0f9f0',
-    borderColor: '#d0e8d0',
-  },
-  mediumPriorityButton: {
-    backgroundColor: '#fff9e6',
-    borderColor: '#f0e8c0',
-  },
-  highPriorityButton: {
-    backgroundColor: '#fff0f0',
-    borderColor: '#f0d0d0',
-  },
-  priorityButtonSelected: {},
-  lowPrioritySelected: {
-    borderColor: '#4CAF50',
-    backgroundColor: '#e0f2e0',
-  },
-  mediumPrioritySelected: {
-    borderColor: '#FFC107',
-    backgroundColor: '#fff0c0',
-  },
-  highPrioritySelected: {
-    borderColor: '#F44336',
-    backgroundColor: '#ffe0e0',
-  },
-  priorityButtonText: {
-    fontWeight: '500',
-    fontSize: 14,
-  },
-  lowPriorityButtonText: {
-    color: '#2E7D32',
-  },
-  mediumPriorityButtonText: {
-    color: '#FF8F00',
-  },
-  highPriorityButtonText: {
-    color: '#C62828',
-  },
-  lowPriorityTextSelected: {
-    color: '#2E7D32',
-    fontWeight: 'bold',
-  },
-  mediumPriorityTextSelected: {
-    color: '#FF8F00',
-    fontWeight: 'bold',
-  },
-  highPriorityTextSelected: {
-    color: '#C62828',
-    fontWeight: 'bold',
-  },
-  dateButton: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
-    backgroundColor: '#f9f9f9',
-  },
-  dateButtonText: {
-    fontSize: 16,
-  },
-  buttonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginTop: 20,
-    gap: 16,
-  },
-  actionButtonWrapper: {
-    width: '30%',
-  },
-  cancelButton: {
-    backgroundColor: '#ccc',
-    padding: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-    height: 48,
-    width: '100%',
-  },
-  addButton: {
-    backgroundColor: '#007AFF',
-    padding: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-    height: 48,
-    width: '100%',
-  },
-  buttonText: {
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-});
+const makeStyles = (theme) =>
+  StyleSheet.create({
+    sheetContainer: {
+      flex: 1,
+      minHeight: 410,
+      paddingHorizontal: 20,
+    },
+    sheetTitle: {
+      textAlign: 'center',
+    },
+    inputContainer: {
+      marginBottom: 12,
+    },
+    inputContents: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      width: '95%',
+    },
+    inputButton: {
+      flex: 1,
+    },
+    textInput: {
+      marginLeft: 12,
+      borderWidth: 1,
+      borderColor: theme.colors.outline,
+      borderRadius: 8,
+      padding: 10,
+      fontSize: 16,
+      height: 52,
+      backgroundColor: theme.colors.surfaceVariant,
+      color: theme.colors.onBackground,
+    },
+    titleError: {
+      marginLeft: 32,
+    },
+    inputError: {
+      borderColor: 'red',
+    },
+    errorText: {
+      color: 'red',
+      marginTop: 4,
+    },
+    inputLabel: {
+      marginBottom: 8,
+    },
+    priorityButtonsContainer: {
+      flex: 1,
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginTop: 5,
+      marginLeft: 12,
+    },
+    priorityButtonWrapper: {
+      flex: 1,
+      paddingHorizontal: 4,
+    },
+    priorityButton: {
+      borderRadius: 20,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+      height: 42,
+      borderColor: theme.colors.outline,
+    },
+    priorityButtonSelected: {},
+    lowPrioritySelected: {
+      borderColor: '#4CAF50',
+      backgroundColor: '#e0f2e0',
+    },
+    mediumPrioritySelected: {
+      borderColor: '#FFC107',
+      backgroundColor: '#fff0c0',
+    },
+    highPrioritySelected: {
+      borderColor: '#F44336',
+      backgroundColor: '#ffe0e0',
+    },
+    lowPriorityButtonText: {
+      // color: '#2E7D32',
+    },
+    mediumPriorityButtonText: {
+      color: '#FF8F00',
+    },
+    highPriorityButtonText: {
+      color: '#C62828',
+    },
+    lowPriorityTextSelected: {
+      color: '#2E7D32',
+    },
+    mediumPriorityTextSelected: {
+      color: '#FF8F00',
+    },
+    highPriorityTextSelected: {
+      color: '#C62828',
+    },
+    dateButton: {
+      borderWidth: 1,
+      borderColor: theme.colors.outline,
+      borderRadius: 8,
+      marginLeft: 12,
+      padding: 12,
+      backgroundColor: theme.colors.surfaceVariant,
+    },
+    dateButtonText: {
+      fontSize: 16,
+    },
+    buttonContainer: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      marginTop: 20,
+      // marginBottom: 20,
+      // paddingBottom: 20,
+      gap: 16,
+    },
+    actionButtonWrapper: {
+      width: '30%',
+    },
+    cancelButton: {
+      borderColor: theme.colors.outline,
+      // borderRadius: 30,
+      alignItems: 'center',
+      justifyContent: 'center',
+      height: 48,
+      width: '100%',
+    },
+    addButton: {
+      backgroundColor: theme.colors.primary,
+      borderRadius: 30,
+      alignItems: 'center',
+      justifyContent: 'center',
+      height: 48,
+      width: '100%',
+    },
+    addButtonText: {
+      color: theme.colors.onPrimary,
+    },
+    cancelButtonText: {
+      color: theme.colors.primary,
+    },
+  });
 
 export default QuickTaskSheet;
