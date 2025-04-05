@@ -6,6 +6,9 @@ export function TaskProvider({ children }) {
 
   useEffect(() => {
     taskManager.loadTasks().catch((error) => console.error('Error initializing tasks:', error));
+    taskManager
+      .loadCompletedTasks()
+      .catch((error) => console.error('Error initializing completed tasks:', error));
     taskManager.checkDayChangeAndCleanup();
   }, [taskManager]);
 

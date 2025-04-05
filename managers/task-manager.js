@@ -554,6 +554,26 @@ export const createTaskManager = (repository, getStore) => {
     }
   };
 
+  /**
+   * Loads completed tasks from repository and updates the store
+   * @returns {Promise<Array>} Completed tasks
+   */
+  const loadCompletedTasks = async () => {
+    const store = getStore();
+
+    try {
+      const completedTasks = await repository.getCompletedTasks();
+      store.setCompletedTasks(completedTasks);
+      store.setError(null);
+      return completedTasks;
+    } catch (error) {
+      console.error('Failed to load completed tasks:', error);
+      store.setError(error.message || 'Failed to load completed tasks');
+      store.setCompletedTasks([]);
+      throw error;
+    }
+  };
+
   return {
     loadTasks,
     createNewTask,
@@ -566,5 +586,6 @@ export const createTaskManager = (repository, getStore) => {
     checkDayChangeAndCleanup,
     getTasksForDate,
     updateTaskScheduledTimes,
+    loadCompletedTasks,
   };
 };

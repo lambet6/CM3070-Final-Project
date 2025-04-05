@@ -144,6 +144,7 @@ export const useTaskStore = create((set, get) => {
      */
     getCompletedTasksCountByDates: (dates) => {
       const { completedTasks } = get();
+      console.log('Completed tasks:', completedTasks);
 
       // Return empty array if no dates are specified
       if (!dates || !Array.isArray(dates) || dates.length === 0) return [];
