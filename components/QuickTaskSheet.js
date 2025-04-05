@@ -38,18 +38,21 @@ export const QuickTaskSheet = ({ onClose, taskToEdit }) => {
 
   const handleSaveTask = async () => {
     if (!taskTitle?.trim()) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       setTitleError('Title is required');
       return;
     }
     const durationNumber = parseInt(taskDuration, 10);
     if (taskDuration === '' || isNaN(durationNumber) || durationNumber <= 0) {
       setDurationError('A valid duration is required');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       return;
     }
 
     try {
       Keyboard.dismiss();
       onClose();
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       if (isEditMode) {
         await taskManager.editExistingTask(
           taskToEdit.id,

@@ -58,7 +58,10 @@ const NewGoalForm = ({ onAddGoal, goalsCount }) => {
             <TextInput
               label="Goal Title"
               value={title}
-              onChangeText={setTitle}
+              onChangeText={(text) => {
+                setTitle(text);
+                if (titleError) setTitleError('');
+              }}
               onBlur={() => validateTitle(title)}
               error={!!titleError}
               style={styles.input}
@@ -69,10 +72,13 @@ const NewGoalForm = ({ onAddGoal, goalsCount }) => {
             <TextInput
               label="Hours per week"
               value={hours}
-              onChangeText={setHours}
+              onChangeText={(text) => {
+                setHours(text);
+                if (hoursError) setHoursError('');
+              }}
               onBlur={() => validateHours(hours)}
               error={!!hoursError}
-              keyboardType="numeric"
+              keyboardType="number-pad"
               style={styles.input}
               disabled={atMaxGoals}
             />

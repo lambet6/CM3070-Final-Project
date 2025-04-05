@@ -47,9 +47,6 @@ export default function CalenarScreen() {
   const error = useCalendarStore((state) => state.error);
   const isLoading = useCalendarStore((state) => state.isLoading);
 
-  // Create a shared state for timeline scroll position
-  const [timelineScrollY, setTimelineScrollY] = useState(null);
-
   // Get manager functions
   const calendarManager = useCalendarManager();
   const taskManager = useTaskManager();

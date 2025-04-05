@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { Button, TextInput, HelperText, Dialog, useTheme } from 'react-native-paper';
 
 const EditGoalForm = ({ goal, visible, onDismiss, onSave }) => {
@@ -55,48 +55,69 @@ const EditGoalForm = ({ goal, visible, onDismiss, onSave }) => {
   };
 
   return (
-    <Dialog style={styles.dialog} visible={visible} onDismiss={onDismiss}>
-      <Dialog.Title>Edit Goal</Dialog.Title>
-      <Dialog.Content>
-        <TextInput
-          label="Goal Title"
-          value={title}
-          onChangeText={setTitle}
-          onBlur={() => validateTitle(title)}
-          error={!!titleError}
-          style={styles.input}
-        />
-        {!!titleError && <HelperText type="error">{titleError}</HelperText>}
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={styles.keyboardAvoid}>
+      <Dialog style={styles.dialog} visible={visible} onDismiss={onDismiss}>
+        <Dialog.Title>Edit Goal</Dialog.Title>
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          <Dialog.Content>
+            <TextInput
+              label="Goal Title"
+              value={title}
+              onChangeText={(text) => {
+                setTitle(text);
+                if (titleError) setTitleError('');
+              }}
+              onBlur={() => validateTitle(title)}
+              error={!!titleError}
+              style={styles.input}
+            />
+            {!!titleError && <HelperText type="error">{titleError}</HelperText>}
 
-        <TextInput
-          label="Hours per week"
-          value={hours}
-          onChangeText={setHours}
-          onBlur={() => validateHours(hours)}
-          error={!!hoursError}
-          keyboardType="numeric"
-          style={styles.input}
-        />
-        {!!hoursError && <HelperText type="error">{hoursError}</HelperText>}
-      </Dialog.Content>
-      <Dialog.Actions>
-        <Button onPress={onDismiss}>Cancel</Button>
-        <Button onPress={handleSave} disabled={!title || !hours || !!titleError || !!hoursError}>
-          Save
-        </Button>
-      </Dialog.Actions>
-    </Dialog>
+            <TextInput
+              label="Hours per week"
+              value={hours}
+              onChangeText={(text) => {
+                setHours(text);
+                if (hoursError) setHoursError('');
+              }}
+              onBlur={() => validateHours(hours)}
+              error={!!hoursError}
+              keyboardType="number-pad"
+              style={styles.input}
+            />
+            {!!hoursError && <HelperText type="error">{hoursError}</HelperText>}
+          </Dialog.Content>
+        </ScrollView>
+        <Dialog.Actions>
+          <Button onPress={onDismiss}>Cancel</Button>
+          <Button onPress={handleSave} disabled={!title || !hours || !!titleError || !!hoursError}>
+            Save
+          </Button>
+        </Dialog.Actions>
+      </Dialog>
+    </KeyboardAvoidingView>
   );
 };
+
 export default EditGoalForm;
 
 const createStyles = (theme) =>
   StyleSheet.create({
+    keyboardAvoid: {
+      flex: 1,
+      justifyContent: 'center',
+    },
     dialog: {
       borderWidth: 0.5,
       borderColor: theme.colors.outline,
+      maxHeight: '80%',
     },
     input: {
       marginBottom: 8,
+    },
+    scrollContent: {
+      flexGrow: 1,
     },
   });

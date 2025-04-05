@@ -97,18 +97,13 @@ export default function GoalsScreen() {
     return true;
   };
 
-  const handleUpdateGoal = async () => {
-    const titleValid = validateEditTitle(editTitle);
-    const hoursValid = validateEditHours(editHours);
-
-    if (titleValid && hoursValid && editingGoal) {
-      try {
-        await goalsManager.updateGoalData(editingGoal.id, editTitle, Number(editHours));
-        setShowEditDialog(false);
-        triggerHaptic('success');
-      } catch (error) {
-        console.error('Failed to update goal:', error);
-      }
+  const handleUpdateGoal = async (goalId, newTitle, newHours) => {
+    try {
+      await goalsManager.updateGoalData(goalId, newTitle, newHours);
+      setShowEditDialog(false);
+      triggerHaptic('success');
+    } catch (error) {
+      console.error('Failed to update goal:', error);
     }
   };
 
@@ -323,7 +318,7 @@ export default function GoalsScreen() {
                 }
               : undefined
           }
-          duration={5000}>
+          duration={3000}>
           {snackbarMessage}
         </Snackbar>
       </Portal>

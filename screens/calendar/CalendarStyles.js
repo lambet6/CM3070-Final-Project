@@ -52,6 +52,7 @@ export const styles = StyleSheet.create({
   },
   toggleButton: {
     alignSelf: 'center',
+    width: 200,
   },
   toggleButtonText: {
     color: CONSTANTS.COLORS.white,

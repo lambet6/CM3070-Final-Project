@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
 import { useWellbeingStore } from '../../store/wellbeingStore';
 import { useWellbeingManager } from '../../hooks/useWellbeingManager';
@@ -14,6 +14,7 @@ import {
   Divider,
 } from 'react-native-paper';
 import MoodTasksChart from './components/MoodTaskChart';
+import * as Haptics from 'expo-haptics';
 
 export default function WellbeingScreen() {
   const { moodData, error, isLoading } = useWellbeingStore();
@@ -42,23 +43,30 @@ export default function WellbeingScreen() {
     updateChartData();
   }, [moodData]);
 
-  const loadMoodData = async () => {
+  const loadMoodData = () => {
     try {
-      await wellbeingManager.getMoodData();
+      wellbeingManager.getMoodData();
     } catch (error) {
       // Error is already handled in the manager and store
     }
   };
 
-  const handleMoodSelection = async (moodValue) => {
+  const handleMoodSelection = (moodValue) => {
+    // Optimistic update - update UI immediately
+    setTodayMood(moodValue);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
     try {
-      await wellbeingManager.saveMood(moodValue);
-      setTodayMood(moodValue);
-    } catch (error) {}
+      // Then perform the actual save operation
+      wellbeingManager.saveMood(moodValue);
+    } catch (error) {
+      // Revert to previous state if save fails
+      const todayEntry = moodData.find((entry) => entry.isToday());
+      setTodayMood(todayEntry ? todayEntry.mood : null);
+    }
   };
 
-  // Update the updateChartData function
-  const updateChartData = () => {
+  const updateChartData = useCallback(() => {
     // Get mood data for the last 14 days
     const moodChartData = wellbeingManager.getLast14DaysMoodData();
 
@@ -75,7 +83,8 @@ export default function WellbeingScreen() {
       mood: moodChartData,
       tasks: taskData,
     });
-  };
+  }, [wellbeingManager, taskStore]);
+
   const renderMoodButtons = () => {
     return Object.entries(moodValues).map(([key, [label, icon]]) => (
       <IconButton
