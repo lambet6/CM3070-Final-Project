@@ -94,9 +94,8 @@ export default function WellbeingScreen() {
   };
 
   return (
-    // <ScrollView>
     <View testID="wellbeing-screen" style={styles.container}>
-      <Surface style={styles.intro}>
+      <View style={styles.intro}>
         <View style={styles.header}>
           <Text style={styles.headerText} variant="titleMedium">
             Track your mood over time
@@ -113,7 +112,7 @@ export default function WellbeingScreen() {
             <Text style={styles.loadingText}>Loading wellbeing data...</Text>
           </View>
         )}
-      </Surface>
+      </View>
 
       {/* Daily Mood Entry Section */}
       <Card style={styles.moodCard}>
@@ -143,7 +142,6 @@ export default function WellbeingScreen() {
       {/* Mood & Tasks Chart */}
       <MoodTasksChart moodData={chartData.mood} taskData={chartData.tasks} />
     </View>
-    // </ScrollView>
   );
 }
 
@@ -154,11 +152,11 @@ const createStyles = (theme) =>
       padding: 10,
     },
     intro: {
-      paddingVertical: 16,
+      paddingTop: 20,
       marginBottom: 16,
     },
     header: {
-      padding: 10,
+      paddingHorizontal: 16,
       alignItems: 'center',
     },
     headerText: {

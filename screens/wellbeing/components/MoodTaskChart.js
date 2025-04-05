@@ -65,7 +65,7 @@ const MoodTasksChart = ({ moodData, taskData }) => {
   const hasValidData = formattedLabels.length > 0;
 
   return (
-    <Card style={styles.chartCard}>
+    <Card mode="contained" style={styles.chartCard}>
       <Card.Content>
         <Text variant="headlineSmall" style={styles.chartTitle}>
           Mood & Tasks Completed

@@ -222,7 +222,7 @@ export default function GoalsScreen() {
 
   return (
     <View testID="goals-screen" style={styles.container}>
-      <Surface style={styles.intro}>
+      <View style={styles.intro}>
         <View style={styles.header}>
           <Text style={styles.headerText} variant="titleMedium">
             Make time for your long-term goals, hobbies, and passions
@@ -239,10 +239,12 @@ export default function GoalsScreen() {
             <Text style={styles.loadingText}>Loading goals...</Text>
           </View>
         )}
-      </Surface>
+      </View>
 
-      <Surface style={styles.goalsContainer}>
-        <ScrollView contentContainerStyle={styles.scrollContent}>
+      <View style={styles.goalsContainer}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}>
           {/* Add new goal form */}
           <NewGoalForm onAddGoal={handleAddGoal} goalsCount={goals.length} />
 
@@ -274,7 +276,7 @@ export default function GoalsScreen() {
             </Text>
           )}
         </ScrollView>
-      </Surface>
+      </View>
 
       {/* Portal section */}
       <Portal>
@@ -336,7 +338,7 @@ const getStyles = (theme) =>
       padding: 10,
     },
     intro: {
-      paddingVertical: 20,
+      paddingTop: 20,
       marginBottom: 16,
     },
     header: {

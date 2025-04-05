@@ -1,11 +1,9 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
-import { FlashList } from '@shopify/flash-list';
 import { useTaskStore } from '../../store/taskStore';
 import { useTaskManager } from '../../hooks/useTaskManager';
 import { Icon, Snackbar, useTheme } from 'react-native-paper';
 import * as Haptics from 'expo-haptics';
-import { MaterialIcons } from '@expo/vector-icons';
 import { useBottomSheet } from '../../contexts/BottomSheetContext';
 import { SegmentedButtons, Text } from 'react-native-paper';
 import Animated, {
@@ -25,8 +23,8 @@ import useSelectionMode from './hooks/useSelectionMode';
 import SwipeableTaskItem from './components/SwipeableTaskItem';
 
 // Constants for item height calculation
-const ITEM_HEIGHT = 64; // Match the height in SwipeableTaskItem styles
-const SECTION_HEADER_HEIGHT = 42; // Estimate based on fontSize and margins
+const ITEM_HEIGHT = 64;
+const SECTION_HEADER_HEIGHT = 42;
 
 // Create animated versions of our components
 const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
@@ -35,6 +33,18 @@ const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpaci
 const ITEM_TYPES = {
   SECTION_HEADER: 'section-header',
   TASK_ITEM: 'task-item',
+};
+
+const calculateOffset = (data, index) => {
+  // Calculate the offset position of an item in the list
+  // by determining the total height of all items before it
+  let offset = 0;
+
+  for (let i = 0; i < index; i++) {
+    offset += data[i].type === ITEM_TYPES.SECTION_HEADER ? SECTION_HEADER_HEIGHT : ITEM_HEIGHT;
+  }
+
+  return offset;
 };
 
 // Section Header component with animations
@@ -75,14 +85,15 @@ const preparePriorityData = (sections) => {
 
 // MemoizedSwipeableTaskItem component (from original code)
 const MemoizedSwipeableTaskItem = React.memo(SwipeableTaskItem, (prevProps, nextProps) => {
+  // Shallow compare task properties that affect rendering
   return (
-    prevProps.task.id === nextProps.task.id &&
-    prevProps.task.title === nextProps.task.title &&
-    prevProps.task.dueDate === nextProps.task.dueDate &&
-    prevProps.task.completed === nextProps.task.completed &&
-    prevProps.task.priority === nextProps.task.priority &&
-    prevProps.selected === nextProps.selected &&
-    prevProps.selectionMode === nextProps.selectionMode
+    Object.is(prevProps.task.id, nextProps.task.id) &&
+    Object.is(prevProps.task.title, nextProps.task.title) &&
+    Object.is(prevProps.task.dueDate, nextProps.task.dueDate) &&
+    Object.is(prevProps.task.completed, nextProps.task.completed) &&
+    Object.is(prevProps.task.priority, nextProps.task.priority) &&
+    Object.is(prevProps.selected, nextProps.selected) &&
+    Object.is(prevProps.selectionMode, nextProps.selectionMode)
   );
 });
 
@@ -126,19 +137,24 @@ export default function TasksScreen() {
 
   const { openSheet } = useBottomSheet();
 
+  const [optimisticUpdates, setOptimisticUpdates] = useState({});
+
   // Handle view mode change with animations
   const handleViewModeChange = useCallback(
     (newMode) => {
       // Only process if the view is actually changing
       if (newMode !== viewMode) {
-        // Animate out current view and animate in new view
+        const sharedConfig = { duration: 200 };
+
         if (newMode === 'Priority') {
-          dueDateOpacity.value = withTiming(0, { duration: 200 });
-          priorityOpacity.value = withTiming(1, { duration: 200 });
+          dueDateOpacity.value = withTiming(0, sharedConfig);
+          priorityOpacity.value = withTiming(1, sharedConfig);
         } else {
-          priorityOpacity.value = withTiming(0, { duration: 200 });
-          dueDateOpacity.value = withTiming(1, { duration: 200 });
+          priorityOpacity.value = withTiming(0, sharedConfig);
+          dueDateOpacity.value = withTiming(1, sharedConfig);
         }
+
+        // Update state only after animation is in progress
         setViewMode(newMode);
       }
     },
@@ -177,7 +193,7 @@ export default function TasksScreen() {
       { title: 'Medium Priority', data: tasks.medium },
       { title: 'Low Priority', data: tasks.low },
     ];
-  }, [tasks]);
+  }, [tasks.high, tasks.medium, tasks.low]);
 
   // Prepare data for priority view
   const priorityData = useMemo(() => preparePriorityData(prioritySections), [prioritySections]);
@@ -214,11 +230,20 @@ export default function TasksScreen() {
         return <SectionHeader title={item.title} />;
       }
 
-      // It's a task item
+      // Apply optimistic update if available
+      const optimisticCompleted =
+        optimisticUpdates[item.id] !== undefined ? optimisticUpdates[item.id] : item.completed;
+
+      // Create a modified task with optimistic completion state
+      const displayTask =
+        optimisticUpdates[item.id] !== undefined
+          ? { ...item, completed: optimisticCompleted }
+          : item;
+
       return (
         <Animated.View entering={FadeIn.duration(300)} exiting={FadeOut.duration(200)}>
           <MemoizedSwipeableTaskItem
-            task={item}
+            task={displayTask} // Use modified task
             onEdit={() => {
               openSheet(item); // Open sheet with the task to edit
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -229,7 +254,22 @@ export default function TasksScreen() {
                 handleSelectionToggle(item.id);
               } else {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                taskManager.toggleTaskCompletion(item.id);
+
+                // Apply optimistic update first for immediate UI feedback
+                const isCompleted = !item.completed;
+                setOptimisticUpdates((prev) => ({
+                  ...prev,
+                  [item.id]: isCompleted,
+                }));
+
+                // Then perform the actual update
+                taskManager.toggleTaskCompletion(item.id).catch((error) => {
+                  // Revert the optimistic update if there's an error
+                  setOptimisticUpdates((prev) => ({
+                    ...prev,
+                    [item.id]: !isCompleted,
+                  }));
+                });
               }
             }}
             onLongPress={() => {
@@ -251,6 +291,7 @@ export default function TasksScreen() {
       handleDeleteTask,
       openSheet,
       taskManager,
+      optimisticUpdates,
     ],
   );
 
@@ -311,6 +352,18 @@ export default function TasksScreen() {
           renderItem={renderItem}
           keyExtractor={(item) => item.id}
           extraData={[selectionMode, selectedItems]}
+          // Performance optimizations
+          initialNumToRender={10} // Reduce initial render amount
+          maxToRenderPerBatch={10} // Reduce number in each render batch
+          updateCellsBatchingPeriod={50} // Increase time between batches
+          windowSize={21} // Reduce the window size (visible items = approx. 10)
+          // Only re-render items that change
+          getItemLayout={(data, index) => ({
+            length:
+              data[index].type === ITEM_TYPES.SECTION_HEADER ? SECTION_HEADER_HEIGHT : ITEM_HEIGHT,
+            offset: calculateOffset(data, index),
+            index,
+          })}
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={EmptyComponent}
         />
@@ -323,6 +376,16 @@ export default function TasksScreen() {
           renderItem={renderItem}
           keyExtractor={(item) => item.id}
           extraData={[selectionMode, selectedItems]}
+          initialNumToRender={10}
+          maxToRenderPerBatch={10}
+          updateCellsBatchingPeriod={50}
+          windowSize={21}
+          getItemLayout={(data, index) => ({
+            length:
+              data[index].type === ITEM_TYPES.SECTION_HEADER ? SECTION_HEADER_HEIGHT : ITEM_HEIGHT,
+            offset: calculateOffset(data, index),
+            index,
+          })}
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={EmptyComponent}
           ListHeaderComponent={

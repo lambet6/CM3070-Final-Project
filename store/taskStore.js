@@ -19,7 +19,11 @@ export const useTaskStore = create((set, get) => {
         ...medium.map((task) => ({ ...task, priority: 'Medium' })),
         ...low.map((task) => ({ ...task, priority: 'Low' })),
       ].sort((a, b) => {
-        // Compare dates first
+        // Completed tasks should go last
+        if (a.completed && !b.completed) return 1;
+        if (!a.completed && b.completed) return -1;
+
+        // For tasks with same completion status, compare dates
         const dateCompare = new Date(a.dueDate) - new Date(b.dueDate);
         // If dates are equal, sort by priority
         return (
@@ -144,7 +148,6 @@ export const useTaskStore = create((set, get) => {
      */
     getCompletedTasksCountByDates: (dates) => {
       const { completedTasks } = get();
-      console.log('Completed tasks:', completedTasks);
 
       // Return empty array if no dates are specified
       if (!dates || !Array.isArray(dates) || dates.length === 0) return [];
