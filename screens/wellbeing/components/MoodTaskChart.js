@@ -4,27 +4,35 @@ import { Card, Text, useTheme } from 'react-native-paper';
 import { LineChart } from 'react-native-chart-kit';
 import { Circle, Rect } from 'react-native-svg';
 
+/**
+ * MoodTasksChart - Displays a correlation chart between user mood and completed tasks
+ *
+ * @param {Object} moodData - Object containing mood data with labels and data arrays
+ * @param {Object} taskData - Object containing task completion data with data array
+ * @returns {JSX.Element} A chart comparing mood ratings and task completion over time
+ */
 const MoodTasksChart = ({ moodData, taskData }) => {
   const theme = useTheme();
-  const screenWidth = Dimensions.get('window').width - 32; // account for padding
+  // Calculate available width accounting for container padding
+  const screenWidth = Dimensions.get('window').width - 32;
 
-  // Filter out any days with missing mood data
+  // Get indices of days that have valid mood entries (value > 0)
   const validIndices = moodData.data
     .map((value, index) => (value > 0 ? index : -1))
     .filter((index) => index !== -1);
 
-  // Only keep data points with valid mood data
+  // Filter data to only include days with valid mood entries
   const filteredLabels = validIndices.map((index) => moodData.labels[index]);
   const filteredMoodData = validIndices.map((index) => moodData.data[index]);
   const filteredTaskData = validIndices.map((index) => taskData.data[index]);
 
-  // Format the labels for better display
+  // Convert date strings to DD/MM format for better readability
   const formattedLabels = filteredLabels.map((label) => {
     const date = new Date(label);
     return `${date.getDate()}/${date.getMonth() + 1}`;
   });
 
-  // Combine data for the chart
+  // Prepare datasets for the chart visualization
   const chartData = {
     labels: formattedLabels,
     datasets: [
@@ -42,6 +50,7 @@ const MoodTasksChart = ({ moodData, taskData }) => {
     legend: ['Mood', 'Tasks'],
   };
 
+  // Chart styling and configuration
   const chartConfig = {
     backgroundGradientFrom: theme.colors.surface,
     backgroundGradientTo: theme.colors.surface,
@@ -61,7 +70,7 @@ const MoodTasksChart = ({ moodData, taskData }) => {
     },
   };
 
-  // Check if we have valid data to display
+  // Determine if we have data to display
   const hasValidData = formattedLabels.length > 0;
 
   return (
@@ -103,6 +112,9 @@ const MoodTasksChart = ({ moodData, taskData }) => {
   );
 };
 
+/**
+ * Component styles
+ */
 const styles = StyleSheet.create({
   chartCard: {
     marginBottom: 16,

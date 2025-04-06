@@ -1,4 +1,25 @@
-import React, { useEffect, useMemo, useState, useCallback, useContext } from 'react';
+/**
+ * WellbeingScreen
+ *
+ * Primary wellbeing tracking interface that allows users to record their daily mood
+ * and view correlations between mood and task completion over time.
+ *
+ * Features:
+ * - Daily mood tracking with emoji-based selection (Very sad to Very happy)
+ * - 14-day visualization chart comparing mood and completed tasks
+ * - Dark/light theme toggle for user preference
+ * - Single mood entry per day with ability to update until midnight
+ * - Optimistic UI updates for immediate feedback
+ *
+ * UX enhancements:
+ * - Visual indicators for current mood selection
+ * - Haptic feedback for mood selection
+ * - Clear loading and error states
+ * - Accessibility support with proper labels
+ * - Responsive layout with theme-aware styling
+ */
+
+import React, { useEffect, useState, useCallback, useContext } from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
 import { useWellbeingStore } from '../../store/wellbeingStore';
 import { useWellbeingManager } from '../../hooks/useWellbeingManager';
@@ -19,12 +40,14 @@ import * as Haptics from 'expo-haptics';
 import { PreferencesContext } from '../../Preferences';
 
 export default function WellbeingScreen() {
+  // State and store hooks
   const { moodData, error, isLoading } = useWellbeingStore();
   const wellbeingManager = useWellbeingManager();
   const taskStore = useTaskStore();
   const [todayMood, setTodayMood] = useState(null);
   const { toggleTheme, isThemeDark } = useContext(PreferencesContext);
 
+  // Chart data state
   const [chartData, setChartData] = useState({
     mood: { labels: [], data: [] },
     tasks: { data: [] },
@@ -33,61 +56,67 @@ export default function WellbeingScreen() {
   const theme = useTheme();
   const styles = createStyles(theme);
 
+  // Initial data loading
   useEffect(() => {
     loadMoodData();
   }, []);
 
+  // Update UI when mood data changes
   useEffect(() => {
-    // Find today's mood entry if it exists
     const todayEntry = moodData.find((entry) => entry.isToday());
     setTodayMood(todayEntry ? todayEntry.mood : null);
-
-    // Update chart data whenever mood data changes
     updateChartData();
   }, [moodData]);
 
+  /**
+   * Loads mood data from storage via the wellbeing manager
+   */
   const loadMoodData = () => {
     try {
       wellbeingManager.getMoodData();
     } catch (error) {
-      // Error is already handled in the manager and store
+      // Error handling is managed in the store
     }
   };
 
+  /**
+   * Updates the 14-day chart data with mood and task completion information
+   */
+  const updateChartData = useCallback(() => {
+    // Get mood data for the last 14 days
+    const moodChartData = wellbeingManager.getLast14DaysMoodData();
+
+    // Get task completion data for the same dates
+    const taskCounts = taskStore.getCompletedTasksCountByDates(
+      moodChartData.labels.map((label) => new Date(label)),
+    );
+
+    setChartData({
+      mood: moodChartData,
+      tasks: { data: taskCounts },
+    });
+  }, [wellbeingManager, taskStore]);
+
+  /**
+   * Handles mood selection and performs haptic feedback
+   */
   const handleMoodSelection = (moodValue) => {
-    // Optimistic update - update UI immediately
+    // Optimistic UI update
     setTodayMood(moodValue);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
     try {
-      // Then perform the actual save operation
       wellbeingManager.saveMood(moodValue);
     } catch (error) {
-      // Revert to previous state if save fails
+      // Revert UI if save fails
       const todayEntry = moodData.find((entry) => entry.isToday());
       setTodayMood(todayEntry ? todayEntry.mood : null);
     }
   };
 
-  const updateChartData = useCallback(() => {
-    // Get mood data for the last 14 days
-    const moodChartData = wellbeingManager.getLast14DaysMoodData();
-
-    // Get actual task completion data for the corresponding dates
-    const taskCounts = taskStore.getCompletedTasksCountByDates(
-      moodChartData.labels.map((label) => new Date(label)),
-    );
-
-    const taskData = {
-      data: taskCounts,
-    };
-
-    setChartData({
-      mood: moodChartData,
-      tasks: taskData,
-    });
-  }, [wellbeingManager, taskStore]);
-
+  /**
+   * Renders the mood selection buttons based on available mood values
+   */
   const renderMoodButtons = () => {
     return Object.entries(moodValues).map(([key, [label, icon]]) => (
       <IconButton
@@ -115,6 +144,8 @@ export default function WellbeingScreen() {
             <IconButton icon="weather-night" size={20} iconColor={theme.colors.onSurface} />
           </View>
         </View>
+
+        {/* Error and Loading States */}
         {error && (
           <View style={styles.errorContainer}>
             <Text style={styles.errorText}>{error}</Text>
@@ -159,6 +190,9 @@ export default function WellbeingScreen() {
   );
 }
 
+/**
+ * Creates styles for the component based on the current theme
+ */
 const createStyles = (theme) =>
   StyleSheet.create({
     container: {
