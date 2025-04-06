@@ -1,3 +1,24 @@
+/**
+ * CalendarScreen
+ *
+ * A calendar view that integrates device calendar events with app tasks,
+ * providing both weekly and monthly views with an interactive daily timeline.
+ *
+ * Features:
+ * - Toggleable weekly/monthly calendar views
+ * - Two-way sync with device calendar
+ * - Interactive timeline for daily task scheduling and viewing
+ * - Task drag-and-drop reordering within the daily timeline
+ * - Visual distinction between fixed calendar events and movable tasks
+ * - Auto-scheduling capability
+ *
+ * UX enhancements:
+ * - Visual indicators for today and selected dates
+ * - Animated navigation between weeks/months
+ * - Responsive FAB for triggering auto-scheduling
+ * - Accessibility features for screen readers
+ */
+
 /*global setTimeout*/
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { View, TouchableOpacity } from 'react-native';
@@ -23,66 +44,63 @@ import {
   Snackbar,
 } from 'react-native-paper';
 
-// Import components, styles, and hooks
-import { useCalendarStore } from '../../store/calendarStore';
-import { useCalendarManager } from '../../hooks/useCalendarManager';
-import { useTaskStore } from '../../store/taskStore';
+// Components
 import { CalendarHeader } from './components/CalendarHeader';
 import { WeekdaysHeader } from './components/WeekdaysHeader';
 import { CalendarWeek } from './components/CalendarWeek';
+import TimelineComponent from './components/Timeline/Timeline';
+
+// Hooks and stores
+import { useCalendarStore } from '../../store/calendarStore';
+import { useCalendarManager } from '../../hooks/useCalendarManager';
+import { useTaskStore } from '../../store/taskStore';
+import { useTaskManager } from '../../hooks/useTaskManager';
+import { useAutoSchedulingManager } from '../../hooks/useAutoSchedulingManager';
+import { useCalendarAnimations } from './hooks/useCalendarAnimations';
+
+// Constants and styles
 import { CONSTANTS } from './CalendarConstants';
 import { styles } from './CalendarStyles';
 import { createCalendarTheme } from './CalendarTheme';
-import { useCalendarAnimations } from './hooks/useCalendarAnimations';
-import TimelineComponent from './components/Timeline/Timeline';
-import FloatingActionButton from './components/FloatingActionButton';
-import { useTaskManager } from '../../hooks/useTaskManager';
-import { useAutoSchedulingManager } from '../../hooks/useAutoSchedulingManager';
 
 const today = new Date();
 
 export default function CalenarScreen() {
-  // Get state from store using selector pattern
+  // Store state
   const events = useCalendarStore((state) => state.events);
   const error = useCalendarStore((state) => state.error);
   const isLoading = useCalendarStore((state) => state.isLoading);
+  const tasks = useTaskStore((state) => state.tasks);
+  const taskError = useTaskStore((state) => state.error);
 
-  // Get manager functions
+  // Managers
   const calendarManager = useCalendarManager();
   const taskManager = useTaskManager();
   const autoSchedulingManager = useAutoSchedulingManager();
 
-  // Get tasks from task store
-  const tasks = useTaskStore((state) => state.tasks);
-  const taskError = useTaskStore((state) => state.error);
-
-  const [snackbarVisible, setSnackbarVisible] = useState(false);
-  const [snackbarMessage, setSnackbarMessage] = useState('');
-
-  const isProcessingDateSelection = useRef(false);
-
-  // Load calendar events on component mount
-  useEffect(() => {
-    calendarManager.loadYearlyCalendarEvents();
-    console.log('loadYearlyCalendarEvents');
-  }, [calendarManager]);
-
-  // Log events when they change
-  useEffect(() => {
-    console.log('events changed');
-  }, [events]);
-
-  // State management
+  // Local state
   const todayId = toDateId(today);
   const [selectedDate, setSelectedDate] = useState(todayId);
   const [isWeekView, setIsWeekView] = useState(true);
   const [currentDate, setCurrentDate] = useState(today);
+  const [snackbarVisible, setSnackbarVisible] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
+  const [isScrolled, setIsScrolled] = useState(false);
 
-  // Get animations
+  // Refs
+  const isProcessingDateSelection = useRef(false);
+
+  // Theme
+  const theme = useTheme();
+
+  // Animations
   const { animatedStyle, weekRowAnimatedStyle, animateHorizontalSlide, horizontalSlide } =
     useCalendarAnimations(isWeekView);
 
-  // Calculate active date ranges
+  // Derived state
+  const memoizedSelectedDateObj = useMemo(() => fromDateId(selectedDate), [selectedDate]);
+
+  // Calculate active date ranges for calendar
   const activeDateRanges = useMemo(() => {
     const selectedDateObj = fromDateId(selectedDate);
     const selectedWeekStart = startOfWeek(selectedDateObj);
@@ -96,20 +114,19 @@ export default function CalenarScreen() {
     ];
   }, [selectedDate]);
 
-  // Use the calendar hook
+  // Initialize calendar
   const { calendarRowMonth, weekDaysList, weeksList } = useCalendar({
     calendarMonthId: toDateId(currentDate),
     calendarActiveDateRanges: activeDateRanges,
   });
 
-  // Define calendar theme
-  const theme = useTheme();
+  // Define calendar theme based on current state
   const calendarTheme = useMemo(
     () => createCalendarTheme(selectedDate, todayId, theme),
     [selectedDate, todayId, theme],
   );
 
-  // Filter weeks based on view mode
+  // Filter weeks based on view mode (week or month)
   const visibleWeeks = useMemo(() => {
     const currentDateId = toDateId(currentDate);
 
@@ -129,7 +146,12 @@ export default function CalenarScreen() {
     return weekIndex !== -1 ? [weeksList[weekIndex]] : [weeksList[0]];
   }, [weeksList, isWeekView, currentDate]);
 
-  // Handler functions
+  // Load calendar events on component mount
+  useEffect(() => {
+    calendarManager.loadYearlyCalendarEvents();
+  }, [calendarManager]);
+
+  // Handle date selection
   const handleDatePress = useCallback(
     (dateId) => {
       // Prevent multiple rapid selections
@@ -153,6 +175,7 @@ export default function CalenarScreen() {
     [isWeekView],
   );
 
+  // Reset to today's date
   const handleReset = useCallback(() => {
     if (selectedDate === todayId) return;
 
@@ -192,6 +215,7 @@ export default function CalenarScreen() {
     }
   }, [selectedDate, todayId, isWeekView, horizontalSlide]);
 
+  // Navigate to previous week/month
   const handlePrev = useCallback(() => {
     animateHorizontalSlide(0, CONSTANTS.ANIMATION.SLIDE_DISTANCE, () => {
       if (isWeekView) {
@@ -208,6 +232,7 @@ export default function CalenarScreen() {
     });
   }, [animateHorizontalSlide, isWeekView, currentDate]);
 
+  // Navigate to next week/month
   const handleNext = useCallback(() => {
     animateHorizontalSlide(0, -CONSTANTS.ANIMATION.SLIDE_DISTANCE, () => {
       if (isWeekView) {
@@ -224,6 +249,7 @@ export default function CalenarScreen() {
     });
   }, [animateHorizontalSlide, isWeekView, currentDate]);
 
+  // Toggle between week and month view
   const toggleViewMode = useCallback(() => {
     if (isWeekView) {
       const selectedDateObj = fromDateId(selectedDate);
@@ -236,28 +262,24 @@ export default function CalenarScreen() {
     setIsWeekView(!isWeekView);
   }, [isWeekView, selectedDate]);
 
-  // Prevent unnecessary re-renders
-  const memoizedSelectedDateObj = useMemo(() => fromDateId(selectedDate), [selectedDate]);
-
-  const [isScrolled, setIsScrolled] = useState(false);
+  // Clear all scheduled tasks for the selected date
   const clearSchedule = useCallback(() => {
     taskManager.clearSchedulesForDate(memoizedSelectedDateObj);
   }, [taskManager, memoizedSelectedDateObj]);
 
+  // Auto-schedule tasks for the selected date
   const autoSchedule = useCallback(async () => {
     try {
       await autoSchedulingManager.generateScheduleForDate(memoizedSelectedDateObj);
-      console.log('Auto scheduled tasks for', memoizedSelectedDateObj);
-      // Optional: Add success snackbar
       setSnackbarMessage('Schedule successfully generated');
       setSnackbarVisible(true);
     } catch (error) {
-      console.log('Auto scheduling failed:', error);
       setSnackbarMessage(`Auto scheduling failed: ${error.message || 'Unknown error'}`);
       setSnackbarVisible(true);
     }
   }, [autoSchedulingManager, memoizedSelectedDateObj]);
 
+  // Dismiss snackbar
   const onDismissSnackbar = () => setSnackbarVisible(false);
 
   return (
@@ -278,7 +300,7 @@ export default function CalenarScreen() {
 
         <Surface mode="flat" style={styles.calendar}>
           <Calendar.VStack>
-            {/* Calendar header */}
+            {/* Calendar header with navigation controls */}
             <CalendarHeader
               calendarRowMonth={calendarRowMonth}
               onPrev={handlePrev}
@@ -287,10 +309,10 @@ export default function CalenarScreen() {
               isToday={selectedDate === todayId}
             />
 
-            {/* Week days header */}
+            {/* Weekday labels */}
             <WeekdaysHeader weekDaysList={weekDaysList} theme={theme} />
 
-            {/* Calendar days */}
+            {/* Calendar grid */}
             <Animated.View style={[styles.animatedContainer, animatedStyle]}>
               <View style={styles.daysContainer}>
                 <Animated.View style={[styles.animatedContainer, weekRowAnimatedStyle]}>
@@ -312,7 +334,7 @@ export default function CalenarScreen() {
                 </Animated.View>
               </View>
 
-              {/* View toggle button */}
+              {/* View toggle button (week/month) */}
               <IconButton
                 selected={true}
                 style={styles.toggleButton}
@@ -327,12 +349,12 @@ export default function CalenarScreen() {
         </Surface>
       </Surface>
 
-      {/* Daily Timeline */}
+      {/* Daily timeline view */}
       <View style={styles.dragList}>
         <TimelineComponent selectedDate={memoizedSelectedDateObj} setIsScrolled={setIsScrolled} />
       </View>
 
-      {/* FAB */}
+      {/* Floating action button for auto-scheduling */}
       <AnimatedFAB
         variant={'primary'}
         icon={'creation'}
@@ -342,6 +364,7 @@ export default function CalenarScreen() {
         style={styles.fab}
       />
 
+      {/* Notification snackbar */}
       <Snackbar
         visible={snackbarVisible}
         onDismiss={onDismissSnackbar}

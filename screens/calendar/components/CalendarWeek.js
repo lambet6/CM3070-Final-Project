@@ -6,10 +6,19 @@ import { CONSTANTS } from '../CalendarConstants';
 import { styles } from '../CalendarStyles';
 import { useTheme } from 'react-native-paper';
 
+/**
+ * CalendarWeek - Renders a single week in the calendar view
+ *
+ * Handles rendering of days, including:
+ * - Filtering days based on week/month view
+ * - Displaying events and tasks as indicators
+ * - Highlighting selected and current dates
+ */
 export const CalendarWeek = React.memo(
   ({ week, isWeekView, calendarTheme, onDatePress, events, tasks, selectedDate }) => {
     const theme = useTheme();
 
+    // Memoized map of events for efficient lookup
     const eventMap = useMemo(() => {
       if (!events || events.length === 0) return new Map();
 
@@ -21,24 +30,23 @@ export const CalendarWeek = React.memo(
       return map;
     }, [events]);
 
+    // Memoized map of tasks by priority for efficient lookup
     const taskMap = useMemo(() => {
       if (!tasks) return { low: new Map(), medium: new Map(), high: new Map() };
 
       const map = { low: new Map(), medium: new Map(), high: new Map() };
 
-      // Process low priority tasks
+      // Categorize tasks by priority and date
       tasks.low.forEach((task) => {
         const dateStr = format(task.dueDate, 'yyyy-MM-dd');
         map.low.set(dateStr, true);
       });
 
-      // Process medium priority tasks
       tasks.medium.forEach((task) => {
         const dateStr = format(task.dueDate, 'yyyy-MM-dd');
         map.medium.set(dateStr, true);
       });
 
-      // Process high priority tasks
       tasks.high.forEach((task) => {
         const dateStr = format(task.dueDate, 'yyyy-MM-dd');
         map.high.set(dateStr, true);
@@ -50,6 +58,7 @@ export const CalendarWeek = React.memo(
     return (
       <Calendar.Row.Week style={styles.weekRow}>
         {week.map((day) => {
+          // Skip rendering days from different months in week view
           if (!isWeekView && day.isDifferentMonth) {
             return <Calendar.Item.Empty key={day.id} />;
           }
@@ -72,7 +81,7 @@ export const CalendarWeek = React.memo(
                 onPress={onDatePress}
                 theme={calendarTheme.itemDay}>
                 <View style={styles.dayContent}>
-                  {/* Event line above the date */}
+                  {/* Indicator for events on this day */}
                   <View
                     style={[
                       styles.eventLine,
@@ -80,7 +89,7 @@ export const CalendarWeek = React.memo(
                     ]}
                   />
 
-                  {/* Date text in the middle */}
+                  {/* Date text with dynamic coloring for selected date */}
                   <Text
                     style={{
                       flex: 1,
@@ -90,7 +99,7 @@ export const CalendarWeek = React.memo(
                     {day.displayLabel}
                   </Text>
 
-                  {/* Task dots below the date */}
+                  {/* Task priority indicators */}
                   <View style={styles.dotContainer}>
                     {hasLowTasks && (
                       <View

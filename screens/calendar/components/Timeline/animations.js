@@ -63,10 +63,10 @@ const AnimationConstants = {
    * Auto-scroll related constants
    */
   SCROLL: {
-    EDGE_THRESHOLD: 100, // Distance from edge to trigger auto-scroll
-    MAX_SCROLL_SPEED: 8, // Maximum scroll speed
-    DIRECTION_SAMPLES_NEEDED: 3, // Consecutive samples needed to start auto-scrolling
-    SNAP_THRESHOLD: 150, // Snapping threshold in pixels
+    EDGE_THRESHOLD: 100,
+    MAX_SCROLL_SPEED: 8,
+    DIRECTION_SAMPLES_NEEDED: 3,
+    SNAP_THRESHOLD: 150,
   },
 };
 
@@ -418,8 +418,8 @@ export const useTooltipStyles = (
     const verticalOffset = tooltipHeight.value / 2 + TASK_ITEM_HEIGHT / 2;
 
     // Default positions (when no parentViewLayout is available)
-    let tooltipX = position.x - horizontalOffset; // Center tooltip horizontally
-    let tooltipY = position.y - verticalOffset; // Position above finger
+    let tooltipX = position.x - horizontalOffset;
+    let tooltipY = position.y - verticalOffset;
 
     // If parentViewLayout is available, adjust position
     if (parentViewLayout) {
@@ -438,10 +438,10 @@ export const useTooltipStyles = (
     // Horizontal boundaries
     const rightEdge = tooltipX + tooltipWidth.value;
     if (rightEdge > screenWidth - 10) {
-      tooltipX = screenWidth - tooltipWidth.value - 10; // 10px padding from edge
+      tooltipX = screenWidth - tooltipWidth.value - 10;
     }
     if (tooltipX < 10) {
-      tooltipX = 10; // 10px padding from left edge
+      tooltipX = 10;
     }
 
     // Set arrow position relative to the tooltip's adjusted position
@@ -457,7 +457,7 @@ export const useTooltipStyles = (
 
   // Arrow style
   const arrowStyle = useAnimatedStyle(() => ({
-    left: arrowPosition.value - 10, // -10 to center the 20px wide arrow
+    left: arrowPosition.value - 10,
   }));
 
   return {

@@ -10,35 +10,39 @@ import {
 import { dateToHours, hoursToDate, minutesToHours, SCREEN_HEIGHT } from './utils';
 import { useTimelineStyles } from './styles';
 
-// Import refactored utilities
+// Utilities and helper functions
 import { calculateEventLayout } from './utils';
 import { calculateInvalidZones, computeValidZonesByDuration } from './utils';
 
-// Import custom hooks
+// Custom hooks
 import { useTooltip, useLayoutMeasurement } from './hooks';
 import { useDragAnimations } from './animations';
 
-// Import UI components
+// UI components
 import { UnscheduledTasksSection, TimelineContent, Tooltip } from './components';
 
-// Import task store and manager
+// State management
 import { useTaskStore } from '../../../../store/taskStore';
 import { useTaskManager } from '../../../../hooks/useTaskManager';
-// Import calendar store
 import { useCalendarStore } from '../../../../store/calendarStore';
-import { Divider } from 'react-native-paper';
 
+/**
+ * Timeline Component
+ *
+ * Displays a time-based view of tasks and calendar events for a selected date.
+ * Allows for drag and drop scheduling of tasks and completion status updates.
+ */
 const TimelineComponent = ({ selectedDate, setIsScrolled }) => {
-  // Get task manager for updating tasks
+  const styles = useTimelineStyles();
   const taskManager = useTaskManager();
 
-  // Use a ref to track previous selectedDate to prevent unnecessary renders
+  // Refs for tracking state and preventing redundant operations
   const previousDateRef = useRef(null);
-
-  // Track if we're currently in the process of updating tasks
   const isUpdatingRef = useRef(false);
 
-  // Get tasks for the selected date directly from the store with caching
+  // ======== Data Fetching and Processing ========
+
+  // Get tasks for the selected date from store
   const tasksForSelectedDate = useTaskStore(
     useCallback(
       (state) => {
@@ -49,10 +53,10 @@ const TimelineComponent = ({ selectedDate, setIsScrolled }) => {
     ),
   );
 
-  // Get all calendar events
+  // Get all calendar events from store
   const allEvents = useCalendarStore((state) => state.events);
 
-  // Memoize events for selected date
+  // Filter events for the selected date
   const eventsForSelectedDate = useMemo(() => {
     if (!selectedDate || !allEvents || allEvents.length === 0) return [];
 
@@ -60,7 +64,6 @@ const TimelineComponent = ({ selectedDate, setIsScrolled }) => {
 
     return allEvents.filter((event) => {
       try {
-        // Convert event startDate to same-day comparison
         const eventDate = new Date(event.startDate);
         return eventDate.toDateString() === selectedDateString;
       } catch (e) {
@@ -70,6 +73,7 @@ const TimelineComponent = ({ selectedDate, setIsScrolled }) => {
     });
   }, [allEvents, selectedDate]);
 
+  // Update previous date ref on date change
   useEffect(() => {
     const currentDateString = selectedDate ? selectedDate.toDateString() : null;
     const prevDateString = previousDateRef.current ? previousDateRef.current.toDateString() : null;
@@ -79,12 +83,13 @@ const TimelineComponent = ({ selectedDate, setIsScrolled }) => {
     }
   }, [tasksForSelectedDate, eventsForSelectedDate, selectedDate]);
 
-  // Task state for the timeline
+  // ======== Task State Management ========
+
+  // Local task state for the timeline
   const [tasks, setTasks] = useState([]);
 
-  // Convert tasks from store format to timeline format when tasksForSelectedDate changes
+  // Transform tasks from store format to timeline format
   useEffect(() => {
-    // Skip if we're already in the middle of an update
     if (isUpdatingRef.current) return;
 
     const newTasks = tasksForSelectedDate.map((task) => ({
@@ -100,27 +105,26 @@ const TimelineComponent = ({ selectedDate, setIsScrolled }) => {
     setTasks(newTasks);
   }, [tasksForSelectedDate]);
 
-  // Filter tasks by completion status
-  const uncompletedTasks = useMemo(() => {
-    return tasks.filter((task) => !task.completed);
-  }, [tasks]);
+  // Derived task lists
+  const uncompletedTasks = useMemo(() => tasks.filter((task) => !task.completed), [tasks]);
 
-  // Filter tasks for unscheduled tasks section (uncompleted & unscheduled)
-  const unscheduledTasks = useMemo(() => {
-    return uncompletedTasks.filter((task) => !task.scheduled);
-  }, [uncompletedTasks]);
+  const unscheduledTasks = useMemo(
+    () => uncompletedTasks.filter((task) => !task.scheduled),
+    [uncompletedTasks],
+  );
 
-  // Filter tasks for timeline (scheduled tasks, both completed and uncompleted)
-  const scheduledTasks = useMemo(() => {
-    return tasks.filter((task) => task.scheduled);
-  }, [tasks]);
+  const scheduledTasks = useMemo(() => tasks.filter((task) => task.scheduled), [tasks]);
 
-  // Set up hooks
+  // ======== UI Hooks Setup ========
+
+  // Tooltip state and handlers
   const { tooltipVisible, tooltipPosition, tooltipMessage, showTooltip, hideTooltip } =
     useTooltip();
 
+  // Animation values for drag interactions
   const dragAnimationValues = useDragAnimations();
 
+  // Layout measurement for positioning and interactions
   const {
     timelineLayoutRef,
     removeButtonRef,
@@ -138,12 +142,14 @@ const TimelineComponent = ({ selectedDate, setIsScrolled }) => {
     handleRemoveButtonLayout,
   } = useLayoutMeasurement();
 
-  // Scroll handling
+  // ======== Scroll Handling ========
+
   const scrollViewRef = useAnimatedRef();
   const scrollY = useScrollViewOffset(scrollViewRef);
-  const isScrolledValue = useDerivedValue(() => {
-    return scrollY.value > 10;
-  });
+
+  // Track scroll position for parent component
+  const isScrolledValue = useDerivedValue(() => scrollY.value > 10);
+
   useAnimatedReaction(
     () => isScrolledValue.value,
     (isCurrentlyScrolled, wasScrolled) => {
@@ -153,50 +159,59 @@ const TimelineComponent = ({ selectedDate, setIsScrolled }) => {
     },
   );
 
-  // Calculate event layout with memoization to prevent unnecessary recalculations
+  // ======== Layout Calculations ========
+
+  // Calculate positions for events in the timeline
   const eventLayoutMap = useMemo(
     () => calculateEventLayout(eventsForSelectedDate),
     [eventsForSelectedDate],
   );
 
-  // Calculate invalid and valid zones based on calendar events for the selected date
+  // Calculate time zones that are unavailable due to existing events
   const invalidZones = useMemo(
     () => calculateInvalidZones(eventsForSelectedDate),
     [eventsForSelectedDate],
   );
 
-  // Calculate valid zones for task scheduling that don't conflict with events
+  // Calculate available time slots for tasks of different durations
   const validZonesByDuration = useMemo(
     () => computeValidZonesByDuration(tasks, invalidZones),
     [tasks, invalidZones],
   );
 
-  // Effect to update timelineViewHeight after layout
+  // Set timeline height for web platform
   useEffect(() => {
     if (Platform.OS === 'web') {
-      // For web, we can use window height as an approximation
       timelineViewHeight.value = SCREEN_HEIGHT * 0.85;
     }
   }, [timelineViewHeight]);
 
-  // Set up animation reaction for layout changes
+  // Monitor layout changes
   useAnimatedReaction(
     () => layoutChanged.value,
     (currentValue, previousValue) => {
       if (currentValue !== previousValue) {
-        // We don't need to measure buttons anymore
+        // Layout has changed - additional actions could be performed here
       }
     },
   );
 
-  // Updated task state change handler that uses task manager
+  // ======== Task Update Handlers ========
+
+  /**
+   * Updates a task's scheduled state and time
+   *
+   * @param {string} taskId - ID of the task to update
+   * @param {boolean} isScheduled - Whether the task is now scheduled
+   * @param {number} newStartTime - Start time in hours (if scheduled)
+   */
   const handleTaskStateChange = useCallback(
     async (taskId, isScheduled, newStartTime) => {
       if (isUpdatingRef.current) return;
       isUpdatingRef.current = true;
 
       try {
-        // First update the local state for immediate feedback
+        // Update local state for immediate UI feedback
         setTasks((prev) =>
           prev.map((task) =>
             task.id === taskId
@@ -205,17 +220,15 @@ const TimelineComponent = ({ selectedDate, setIsScrolled }) => {
           ),
         );
 
-        // Find the original task in the tasks for the selected date
+        // Find the original task
         const originalTask = tasksForSelectedDate.find((task) => task.id === taskId);
 
-        // If we found the task, update it using the task manager
         if (originalTask) {
-          console.log('Updating task:', originalTask.title, 'to scheduled:', isScheduled);
           try {
-            // Convert start time to Date or null
+            // Convert hours to Date object or null
             const scheduledTime = isScheduled ? hoursToDate(newStartTime, selectedDate) : null;
 
-            // Edit the task with the task manager
+            // Persist changes via task manager
             await taskManager.editExistingTask(
               taskId,
               originalTask.title,
@@ -229,31 +242,34 @@ const TimelineComponent = ({ selectedDate, setIsScrolled }) => {
           }
         }
       } finally {
-        // Always reset the updating flag
         isUpdatingRef.current = false;
       }
     },
     [tasksForSelectedDate, selectedDate, taskManager],
   );
 
+  /**
+   * Toggles a task's completion status
+   *
+   * @param {string} taskId - ID of the task to toggle
+   */
   const handleTaskCompletion = useCallback(
     async (taskId) => {
       if (isUpdatingRef.current) return;
       isUpdatingRef.current = true;
 
       try {
-        // First update local state for immediate feedback
+        // Update local state for immediate UI feedback
         setTasks((prev) =>
           prev.map((task) => (task.id === taskId ? { ...task, completed: !task.completed } : task)),
         );
 
-        // Find the original task in tasksForSelectedDate
+        // Find the original task
         const originalTask = tasksForSelectedDate.find((task) => task.id === taskId);
 
         if (originalTask) {
-          console.log('Toggling task completion:', originalTask.title, originalTask.completed);
           try {
-            // Edit the task with the task manager
+            // Persist changes via task manager
             await taskManager.toggleTaskCompletion(taskId);
           } catch (error) {
             console.error('Failed to update task completion:', error);
@@ -266,9 +282,7 @@ const TimelineComponent = ({ selectedDate, setIsScrolled }) => {
     [tasksForSelectedDate, taskManager],
   );
 
-  const styles = useTimelineStyles();
-
-  // Group layout values for passing to subcomponents
+  // Group layout values for easier prop passing
   const layoutValues = {
     timelineLayout,
     timelineViewHeight,
@@ -276,10 +290,10 @@ const TimelineComponent = ({ selectedDate, setIsScrolled }) => {
     removeButtonLayout,
   };
 
-  // Render the UI
+  // ======== Render Component ========
   return (
     <View style={styles.container} ref={parentViewRef} onLayout={handleParentViewLayout}>
-      {/* Tooltip */}
+      {/* Tooltip for user feedback */}
       <Tooltip
         message={tooltipMessage}
         position={tooltipPosition}
@@ -288,7 +302,7 @@ const TimelineComponent = ({ selectedDate, setIsScrolled }) => {
         parentViewLayout={parentViewLayout}
       />
 
-      {/* Unscheduled Tasks Area */}
+      {/* Area for unscheduled tasks */}
       <UnscheduledTasksSection
         tasks={unscheduledTasks}
         onStateChange={handleTaskStateChange}
@@ -308,7 +322,7 @@ const TimelineComponent = ({ selectedDate, setIsScrolled }) => {
         handleCancelButtonLayout={handleCancelButtonLayout}
       />
 
-      {/* Timeline */}
+      {/* Main timeline content */}
       <TimelineContent
         scrollViewRef={scrollViewRef}
         timelineLayoutRef={timelineLayoutRef}

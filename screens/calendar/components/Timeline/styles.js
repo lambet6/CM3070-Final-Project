@@ -23,8 +23,6 @@ export const useTimelineStyles = () => {
 
         // Unscheduled tasks
         unscheduledArea: {
-          // borderBottomWidth: 1,
-          // borderBottomColor: '#e0e0e0',
           backgroundColor: theme.colors.primary,
           paddingVertical: 10,
         },
@@ -34,8 +32,6 @@ export const useTimelineStyles = () => {
         unscheduledTasksContainer: {
           width: '100%',
           height: TASK_ITEM_HEIGHT / 2 + 20,
-          // zIndex: 1,
-          // zIndex: 100,
         },
         unscheduledTaskList: {
           overflow: 'visible',
@@ -73,8 +69,6 @@ export const useTimelineStyles = () => {
         // Timeline styles
         timelineContainer: {
           flex: 1,
-          // backgroundColor: theme.colors.surface,
-          // overflow: 'hidden',
         },
         timelineSideBar: {
           position: 'absolute',
@@ -102,9 +96,6 @@ export const useTimelineStyles = () => {
         hourLabelRow: {
           paddingHorizontal: 5,
           flex: 1,
-          // height: QUARTER_HEIGHT,
-          // justifyContent: 'flex-start',
-          // alignItems: 'flex-start',
         },
         hourText: {
           color: theme.colors.onSurfaceVariant,
@@ -112,20 +103,14 @@ export const useTimelineStyles = () => {
         quartersContainer: {
           flexDirection: 'column',
           justifyContent: 'center',
-          // borderWidth: 1,
-          // justifyContent: 'flex-start',
-          // alignItems: 'flex-start',
         },
         quarterRow: {
           flexDirection: 'row',
           justifyContent: 'flex-end',
           alignItems: 'center',
-          // paddingHorizontal: 16,
-          // borderWidth: 1,
         },
         quarterText: {
           color: theme.colors.outline,
-          // opacity: 0.8,
           textAlign: 'right',
           marginRight: 8,
         },
@@ -134,7 +119,6 @@ export const useTimelineStyles = () => {
           height: 2,
           borderRadius: 2,
           backgroundColor: theme.colors.outline,
-          // opacity: 0.6,
         },
         hourDivider: {
           position: 'absolute',
@@ -175,7 +159,6 @@ export const useTimelineStyles = () => {
           flexDirection: 'row',
           justifyContent: 'space-between',
           width: '100%',
-          // marginTop: 4,
           textAlign: 'center',
         },
         EventDetails: {
@@ -333,8 +316,8 @@ export const getEventWidthStyle = (layout) => {
       return {
         width: `${layout.width}%`,
         left: `${layout.leftPosition}%`,
-        marginHorizontal: 2, // Reduced for better fit
-        padding: layout.columnCount > 2 ? 4 : 8, // Adjust padding for narrower events
+        marginHorizontal: 2,
+        padding: layout.columnCount > 2 ? 4 : 8,
       };
     }
   }
@@ -379,12 +362,8 @@ export const usePriorityIndicatorStyles = () => {
         container: {
           position: 'absolute',
           left: 2,
-          // top: 0,
-          // bottom: 0,
           width: 8,
           borderRadius: 2,
-          // borderTopLeftRadius: 8,
-          // borderBottomLeftRadius: 8,
         },
         high: {
           backgroundColor: theme.colors.red,

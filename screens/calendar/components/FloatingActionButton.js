@@ -1,8 +1,16 @@
 import React from 'react';
-import { StyleSheet, Animated } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { AnimatedFAB } from 'react-native-paper';
 
-const FloatingActionButton = ({ isScrolled }) => {
+/**
+ * FloatingActionButton - Renders an animated Floating Action Button
+ *
+ * Features:
+ * - Dynamically extends/collapses based on scroll state
+ * - Static icon mode
+ * - Positioned at the bottom right of the screen
+ */
+const FloatingActionButton = ({ isScrolled, onPress }) => {
   // The FAB is extended when not scrolled, collapsed when scrolled
   const isExtended = !isScrolled;
 
@@ -11,7 +19,7 @@ const FloatingActionButton = ({ isScrolled }) => {
       icon={'plus'}
       label={'Add Task'}
       extended={isExtended}
-      onPress={() => console.log('FAB Pressed')}
+      onPress={onPress}
       visible={true}
       animateFrom={'right'}
       iconMode={'static'}
