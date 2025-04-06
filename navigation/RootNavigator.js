@@ -38,6 +38,7 @@ export function RootNavigator() {
           <Tab.Screen
             name="Tasks"
             component={TasksScreen}
+            tabBarTestID="tasks-tab"
             options={{
               tabBarIcon: ({ color }) => <Icon source="list-status" size={24} color={color} />,
             }}
@@ -45,6 +46,7 @@ export function RootNavigator() {
           <Tab.Screen
             name="Schedule"
             component={CalendarScreen}
+            tabBarTestID="calendar-tab"
             options={{
               tabBarIcon: ({ color }) => <Icon source="calendar" size={24} color={color} />,
             }}
@@ -70,6 +72,7 @@ export function RootNavigator() {
           <Tab.Screen
             name="Goals"
             component={GoalsScreen}
+            tabBarTestID="goals-tab"
             options={{
               tabBarIcon: ({ color }) => <Icon source="bullseye-arrow" size={24} color={color} />,
             }}
@@ -77,6 +80,7 @@ export function RootNavigator() {
           <Tab.Screen
             name="Wellbeing"
             component={WellbeingScreen}
+            tabBarTestID="wellbeing-tab"
             options={{
               tabBarIcon: ({ color }) => <Icon source="heart-outline" size={24} color={color} />,
             }}

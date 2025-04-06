@@ -79,5 +79,5 @@ export const createWellbeingRepository = (storage = AsyncStorage) => {
   };
 };
 
-// Default repository instance for backward compatibility and easy use
+// Default repository instance
 export const wellbeingRepository = createWellbeingRepository();
