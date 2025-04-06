@@ -2,12 +2,14 @@ import { useState, useCallback } from 'react';
 
 /**
  * Hook for handling task-related actions with appropriate feedback
- * @param {Object} tasks - The current tasks object
+ *
+ * @param {Object} tasks - Current tasks object grouped by priority
  * @param {Function} createNewTask - Function to create a new task
  * @param {Function} deleteTasks - Function to delete tasks
  * @returns {Object} Task action handlers and state
  */
 const useTaskActions = (tasks, createNewTask, deleteTasks) => {
+  // State
   const [error, setError] = useState(null);
   const [snackbarState, setSnackbarState] = useState({
     visible: false,
@@ -15,12 +17,18 @@ const useTaskActions = (tasks, createNewTask, deleteTasks) => {
     action: null,
   });
 
-  // Handle snackbar dismissal
+  /**
+   * Handles snackbar dismissal
+   */
   const handleSnackbarDismiss = useCallback(() => {
     setSnackbarState((prev) => ({ ...prev, visible: false }));
   }, []);
 
-  // Delete a single task with confirmation feedback
+  /**
+   * Deletes a single task with undo functionality
+   *
+   * @param {string} taskId - ID of the task to delete
+   */
   const handleDeleteTask = useCallback(
     async (taskId) => {
       try {
@@ -65,7 +73,11 @@ const useTaskActions = (tasks, createNewTask, deleteTasks) => {
     [tasks, deleteTasks, createNewTask],
   );
 
-  // Delete multiple tasks with undo functionality
+  /**
+   * Deletes multiple tasks with batch undo functionality
+   *
+   * @param {string[]} taskIds - Array of task IDs to delete
+   */
   const handleDeleteMultipleTasks = useCallback(
     async (taskIds) => {
       if (!taskIds.length) return;

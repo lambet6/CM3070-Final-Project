@@ -10,10 +10,7 @@ import {
   useSharedValue,
   useAnimatedStyle,
   useAnimatedReaction,
-  withSpring,
-  withTiming,
   scrollTo,
-  runOnJS,
 } from 'react-native-reanimated';
 
 import {

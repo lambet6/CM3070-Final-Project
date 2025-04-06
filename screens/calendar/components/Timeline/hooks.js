@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import {
   useSharedValue,
-  withSpring,
+  withTiming,
   runOnJS,
   useAnimatedRef,
   runOnUI,
@@ -206,7 +206,7 @@ export function useTaskGestures({
 
       // Update animation states
       animations.isPressed.value = true;
-      animations.scale.value = withSpring(task.scheduled ? 1.05 : 1.2);
+      animations.scale.value = withTiming(task.scheduled ? 1.05 : 1.2);
       animations.resetAnimationValues();
 
       // Update global states
@@ -287,8 +287,8 @@ export function useTaskGestures({
       if (isOverRemove) {
         runOnJS(onStateChange)(task.id, false, null);
         previewVisible.value = false;
-        animations.translateX.value = withSpring(0);
-        animations.translateY.value = withSpring(0);
+        animations.translateX.value = withTiming(0);
+        animations.translateY.value = withTiming(0);
         if (task.scheduled) {
           ghostVisible.value = false;
         } else {
@@ -339,8 +339,8 @@ export function useTaskGestures({
           // Task successfully scheduled - trigger success haptic
           runOnJS(triggerHaptic)('success');
         } else {
-          animations.translateX.value = withSpring(0);
-          animations.translateY.value = withSpring(0);
+          animations.translateX.value = withTiming(0);
+          animations.translateY.value = withTiming(0);
           animations.isOverTimeline.value = false;
 
           // Failed to schedule - trigger warning haptic
@@ -350,7 +350,7 @@ export function useTaskGestures({
       }
 
       // Reset visual states
-      animations.scale.value = withSpring(1);
+      animations.scale.value = withTiming(1);
       animations.isPressed.value = false;
       isDragging.value = false;
       isDraggingScheduled.value = false;
@@ -570,7 +570,7 @@ const handleTaskMovement = (event, task, animations, params) => {
     // Update scale based on whether we're over timeline
     if (isOver !== animations.isOverTimeline.value) {
       animations.isOverTimeline.value = isOver;
-      animations.scale.value = withSpring(isOver ? 1.6 : 1.2);
+      animations.scale.value = withTiming(isOver ? 1.6 : 1.2);
     }
 
     // Show/update preview when over timeline

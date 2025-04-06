@@ -1,3 +1,23 @@
+/**
+ * TaskScreen
+ *
+ * Primary task management interface that allows users to view, create, complete,
+ * edit, and delete tasks with a low-friction user experience.
+ *
+ * Features:
+ * - Two view modes: Priority (grouped by High/Medium/Low) and Due Date (chronological list)
+ * - Quick task completion via tap with optimistic UI updates
+ * - Swipe actions for editing and deletion
+ * - Multi-select mode for batch deletion
+ * - Automatic rescheduling of overdue tasks
+ *
+ * UX enhancements:
+ * - Animations for view transitions and list updates
+ * - Haptic feedback for important interactions
+ * - Informative snackbar notifications
+ * - Error handling with clear user feedback
+ */
+
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { useTaskStore } from '../../store/taskStore';
@@ -14,6 +34,8 @@ import Animated, {
   FadeOut,
 } from 'react-native-reanimated';
 import { FlatList } from 'react-native-gesture-handler';
+import { calculateOffset, preparePriorityData } from './utils';
+import SectionHeader from './components/SectionHeader';
 
 // Custom hooks
 import useTaskActions from './hooks/useTaskActions';
@@ -22,102 +44,43 @@ import useSelectionMode from './hooks/useSelectionMode';
 // Components
 import SwipeableTaskItem from './components/SwipeableTaskItem';
 
-// Constants for item height calculation
+// Constants
 const ITEM_HEIGHT = 64;
 const SECTION_HEADER_HEIGHT = 42;
-
-// Create animated versions of our components
-const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
-
-// Item types for our FlashList
 const ITEM_TYPES = {
   SECTION_HEADER: 'section-header',
   TASK_ITEM: 'task-item',
 };
 
-const calculateOffset = (data, index) => {
-  // Calculate the offset position of an item in the list
-  // by determining the total height of all items before it
-  let offset = 0;
-
-  for (let i = 0; i < index; i++) {
-    offset += data[i].type === ITEM_TYPES.SECTION_HEADER ? SECTION_HEADER_HEIGHT : ITEM_HEIGHT;
-  }
-
-  return offset;
-};
-
-// Section Header component with animations
-const SectionHeader = React.memo(({ title }) => {
-  const theme = useTheme();
-  const styles = getStyles(theme);
-  return (
-    <Animated.View entering={FadeIn.duration(300)} style={styles.priorityHeader}>
-      <Text variant="headlineSmall">{title}</Text>
-    </Animated.View>
-  );
-});
-SectionHeader.displayName = 'SectionHeader';
-
-// Prepare data for Priority view FlashList (flattening sections)
-const preparePriorityData = (sections) => {
-  const data = [];
-
-  sections.forEach((section) => {
-    // Add section header
-    data.push({
-      id: `header-${section.title}`,
-      title: section.title,
-      type: ITEM_TYPES.SECTION_HEADER,
-    });
-
-    // Add tasks with their type
-    section.data.forEach((task) => {
-      data.push({
-        ...task,
-        type: ITEM_TYPES.TASK_ITEM,
-      });
-    });
-  });
-
-  return data;
-};
-
-// MemoizedSwipeableTaskItem component (from original code)
-const MemoizedSwipeableTaskItem = React.memo(SwipeableTaskItem, (prevProps, nextProps) => {
-  // Shallow compare task properties that affect rendering
-  return (
-    Object.is(prevProps.task.id, nextProps.task.id) &&
-    Object.is(prevProps.task.title, nextProps.task.title) &&
-    Object.is(prevProps.task.dueDate, nextProps.task.dueDate) &&
-    Object.is(prevProps.task.completed, nextProps.task.completed) &&
-    Object.is(prevProps.task.priority, nextProps.task.priority) &&
-    Object.is(prevProps.selected, nextProps.selected) &&
-    Object.is(prevProps.selectionMode, nextProps.selectionMode)
-  );
-});
+// Create animated components
+const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
 
 export default function TasksScreen() {
-  // Get state from store with shallow equality to prevent unnecessary rerenders
+  // State from store
   const tasks = useTaskStore((state) => state.tasks);
   const error = useTaskStore((state) => state.error);
   const getConsolidatedTasks = useTaskStore((state) => state.getConsolidatedTasks);
-
-  // Pre-compute consolidated tasks to avoid recomputation during view toggle
   const consolidatedTasks = useMemo(() => getConsolidatedTasks(), [tasks]);
 
-  // Get methods from manager
+  // Task manager
   const taskManager = useTaskManager();
 
+  // Local state
   const [viewMode, setViewMode] = useState('Priority'); // 'Priority' or 'DueDate'
+  const [optimisticUpdates, setOptimisticUpdates] = useState({});
 
-  // Animation values for view transitions
+  // Animation values
   const priorityOpacity = useSharedValue(1);
   const dueDateOpacity = useSharedValue(0);
 
+  // Theme
   const theme = useTheme();
   const styles = getStyles(theme);
 
+  // Bottom sheet context
+  const { openSheet } = useBottomSheet();
+
+  // Custom hooks
   const {
     snackbarState,
     setSnackbarState,
@@ -135,39 +98,34 @@ export default function TasksScreen() {
     deleteSelectedItems,
   } = useSelectionMode(handleDeleteMultipleTasks);
 
-  const { openSheet } = useBottomSheet();
-
-  const [optimisticUpdates, setOptimisticUpdates] = useState({});
-
-  // Handle view mode change with animations
+  /**
+   * Handle view mode change with animations
+   */
   const handleViewModeChange = useCallback(
     (newMode) => {
-      // Only process if the view is actually changing
       if (newMode !== viewMode) {
-        const sharedConfig = { duration: 200 };
-
         if (newMode === 'Priority') {
-          dueDateOpacity.value = withTiming(0, sharedConfig);
-          priorityOpacity.value = withTiming(1, sharedConfig);
+          dueDateOpacity.value = 0;
+          priorityOpacity.value = 1;
         } else {
-          priorityOpacity.value = withTiming(0, sharedConfig);
-          dueDateOpacity.value = withTiming(1, sharedConfig);
+          priorityOpacity.value = 0;
+          dueDateOpacity.value = 1;
         }
 
-        // Update state only after animation is in progress
         setViewMode(newMode);
       }
     },
     [viewMode, priorityOpacity, dueDateOpacity],
   );
 
+  /**
+   * Reschedule overdue tasks when component mounts
+   */
   useEffect(() => {
     const rescheduleTasks = async () => {
       try {
-        // Handle any overdue tasks
         const { count } = await taskManager.rescheduleOverdueTasks();
 
-        // Show notification immediately if needed
         if (count > 0) {
           setSnackbarState({
             visible: true,
@@ -184,9 +142,9 @@ export default function TasksScreen() {
     };
 
     rescheduleTasks();
-  }, [setSnackbarState, taskManager]); // Run once on component mount
+  }, [setSnackbarState, taskManager]);
 
-  // Memoize priority sections to prevent recalculation on every render
+  // Prepare data for views
   const prioritySections = useMemo(() => {
     return [
       { title: 'High Priority', data: tasks.high },
@@ -195,10 +153,8 @@ export default function TasksScreen() {
     ];
   }, [tasks.high, tasks.medium, tasks.low]);
 
-  // Prepare data for priority view
   const priorityData = useMemo(() => preparePriorityData(prioritySections), [prioritySections]);
 
-  // Ensure consolidated tasks are ready for the due date view
   const dueDateData = useMemo(
     () =>
       consolidatedTasks.map((task) => ({
@@ -208,7 +164,7 @@ export default function TasksScreen() {
     [consolidatedTasks],
   );
 
-  // Create animated styles for view transitions
+  // Animated styles for view transitions
   const priorityAnimatedStyle = useAnimatedStyle(() => {
     return {
       opacity: priorityOpacity.value,
@@ -223,7 +179,21 @@ export default function TasksScreen() {
     };
   });
 
-  // Item renderer for FlashList - shared between both views
+  /**
+   * Shared empty list component
+   */
+  const EmptyComponent = useCallback(
+    () => (
+      <Animated.Text entering={FadeIn.delay(300)} style={styles.emptyText}>
+        No tasks yet. Add a task to get started!
+      </Animated.Text>
+    ),
+    [styles.emptyText],
+  );
+
+  /**
+   * Renders a list item (either section header or task)
+   */
   const renderItem = useCallback(
     ({ item }) => {
       if (item.type === ITEM_TYPES.SECTION_HEADER) {
@@ -242,10 +212,10 @@ export default function TasksScreen() {
 
       return (
         <Animated.View entering={FadeIn.duration(300)} exiting={FadeOut.duration(200)}>
-          <MemoizedSwipeableTaskItem
-            task={displayTask} // Use modified task
+          <SwipeableTaskItem
+            task={displayTask}
             onEdit={() => {
-              openSheet(item); // Open sheet with the task to edit
+              openSheet(item);
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
             }}
             onDelete={() => handleDeleteTask(item.id)}
@@ -295,16 +265,6 @@ export default function TasksScreen() {
     ],
   );
 
-  // Shared empty component for both lists
-  const EmptyComponent = useCallback(
-    () => (
-      <Animated.Text entering={FadeIn.delay(300)} style={styles.emptyText}>
-        No tasks yet. Add a task to get started!
-      </Animated.Text>
-    ),
-    [styles.emptyText],
-  );
-
   return (
     <View testID="tasks-screen" style={styles.container}>
       {error && <Text style={styles.errorMessage}>{error}</Text>}
@@ -352,12 +312,10 @@ export default function TasksScreen() {
           renderItem={renderItem}
           keyExtractor={(item) => item.id}
           extraData={[selectionMode, selectedItems]}
-          // Performance optimizations
-          initialNumToRender={10} // Reduce initial render amount
-          maxToRenderPerBatch={10} // Reduce number in each render batch
-          updateCellsBatchingPeriod={50} // Increase time between batches
-          windowSize={21} // Reduce the window size (visible items = approx. 10)
-          // Only re-render items that change
+          initialNumToRender={10}
+          maxToRenderPerBatch={10}
+          updateCellsBatchingPeriod={50}
+          windowSize={21}
           getItemLayout={(data, index) => ({
             length:
               data[index].type === ITEM_TYPES.SECTION_HEADER ? SECTION_HEADER_HEIGHT : ITEM_HEIGHT,
@@ -398,11 +356,11 @@ export default function TasksScreen() {
         />
       </Animated.View>
 
-      {/* Consolidated single snackbar */}
+      {/* Snackbar for notifications */}
       <Snackbar
         visible={snackbarState.visible}
         wrapperStyle={styles.snackbar}
-        onDismiss={handleSnackbarDismiss} // Use the dismissal handler
+        onDismiss={handleSnackbarDismiss}
         duration={5000}
         action={snackbarState.action}>
         {snackbarState.message}
@@ -411,6 +369,9 @@ export default function TasksScreen() {
   );
 }
 
+/**
+ * Component styles with theme support
+ */
 const getStyles = (theme) =>
   StyleSheet.create({
     container: {
@@ -445,7 +406,6 @@ const getStyles = (theme) =>
     selectionHeaderText: {
       color: theme.colors.primary,
     },
-
     selectionActions: {
       flexDirection: 'row',
     },

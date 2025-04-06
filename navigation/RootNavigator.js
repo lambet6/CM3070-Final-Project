@@ -34,7 +34,7 @@ export function RootNavigator() {
   return (
     <BottomSheetContext.Provider value={{ openSheet: handleOpenSheet }}>
       <NavigationContainer>
-        <Tab.Navigator initialRouteName="Tasks" shifting={true}>
+        <Tab.Navigator initialRouteName="Tasks" shifting={true} screenOptions={{ lazy: false }}>
           <Tab.Screen
             name="Tasks"
             component={TasksScreen}
