@@ -6,28 +6,13 @@ import Reanimated, { useAnimatedStyle, runOnJS } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { useTheme, Text, Icon } from 'react-native-paper';
 
-// Move constants outside component scope for better memory usage
-const PRIORITY_COLORS = {
-  High: '#FF5252', // Red for high priority
-  Medium: '#FFD740', // Yellow for medium priority
-  Low: '#4CAF50', // Green for low priority
-};
+const createPriorityColors = (theme) => ({
+  High: theme.colors.red,
+  Medium: theme.colors.yellow,
+  Low: theme.colors.green,
+});
 
-// Date formatting cache to avoid repetitive calculations
 const dateCache = new Map();
-
-// Utility functions moved outside components
-const getPriorityDots = (priority) => {
-  switch (priority) {
-    case 'High':
-      return [1, 2, 3];
-    case 'Medium':
-      return [1, 2];
-    case 'Low':
-    default:
-      return [1];
-  }
-};
 
 const formatDate = (dateString) => {
   if (dateCache.has(dateString)) {
@@ -81,7 +66,7 @@ const createStyles = (theme) =>
       flexDirection: 'row',
     },
     editButton: {
-      backgroundColor: theme.colors.tertiary,
+      backgroundColor: theme.colors.primary,
       width: 75,
       justifyContent: 'center',
       alignItems: 'center',
@@ -117,16 +102,13 @@ const createStyles = (theme) =>
       fontWeight: 'bold',
     },
     priorityIndicator: {
-      width: 16,
+      width: 10,
       margin: 0,
       padding: 0,
       height: 40,
       borderRadius: 4,
       justifyContent: 'center',
       alignItems: 'center',
-    },
-    priorityDot: {
-      padding: 0,
     },
   });
 
@@ -180,7 +162,7 @@ const RightAction = React.memo(({ prog, drag, onEdit, onDelete, swipeableRef }) 
     <Reanimated.View style={[styleAnimation, styles.rightButtonContainer]}>
       <GestureDetector gesture={tapEdit}>
         <View style={styles.editButton}>
-          <Icon size={22} source="pencil" color={theme.colors.onTertiary} />
+          <Icon size={22} source="pencil" color={theme.colors.onPrimary} />
         </View>
       </GestureDetector>
       <GestureDetector gesture={tapDelete}>
@@ -205,8 +187,8 @@ const SwipeableTaskItem = ({
   const swipeableRef = useRef(null);
   const theme = useTheme();
 
-  // Create styles once per theme change
   const styles = useMemo(() => createStyles(theme), [theme]);
+  const PRIORITY_COLORS = useMemo(() => createPriorityColors(theme), [theme]);
 
   // Callbacks for event handlers
   const handleTap = useCallback(() => {
@@ -230,13 +212,11 @@ const SwipeableTaskItem = ({
 
   // Memoize derived values
   const priorityColor = useMemo(
-    () => (selected ? '#e6f2ff' : PRIORITY_COLORS[task.priority] || '#f5f5f5'),
-    [selected, task.priority],
+    () => (selected ? '#e6f2ff' : PRIORITY_COLORS[task.priority]),
+    [PRIORITY_COLORS, selected, task.priority],
   );
 
   const formattedDate = useMemo(() => formatDate(task.dueDate), [task.dueDate]);
-
-  const priorityDots = useMemo(() => getPriorityDots(task.priority), [task.priority]);
 
   // Memoize checkbox rendering
   const checkboxElement = useMemo(() => {
@@ -261,20 +241,13 @@ const SwipeableTaskItem = ({
       <View
         style={[
           styles.priorityIndicator,
-          { backgroundColor: task.completed ? theme.colors.outline : priorityColor },
-        ]}>
-        {priorityDots.map((dot, index) => (
-          <Icon
-            key={index}
-            style={styles.priorityDot}
-            source="circle-medium"
-            size={12}
-            color={'white'}
-          />
-        ))}
-      </View>
+          {
+            backgroundColor: task.completed ? theme.colors.outline : priorityColor,
+            height: task.priority === 'Low' ? '30%' : task.priority === 'Medium' ? '60%' : '100%',
+          },
+        ]}></View>
     ),
-    [priorityDots, task.completed, priorityColor, theme.colors.outline, styles],
+    [styles.priorityIndicator, task.completed, task.priority, theme.colors.outline, priorityColor],
   );
 
   // Memoize task content rendering

@@ -247,13 +247,11 @@ export const QuickTaskSheet = ({ onClose, taskToEdit }) => {
                 testID="priority-low-button"
                 style={[
                   styles.priorityButton,
-                  taskPriority === 'Low' && [
-                    styles.priorityButtonSelected,
-                    styles.lowPrioritySelected,
-                  ],
+                  taskPriority === 'Low' && styles.lowPrioritySelected,
+                  ,
                 ]}
                 onPress={() => setTaskPriority('Low')}>
-                <Text style={taskPriority === 'Low' ? styles.lowPriorityTextSelected : null}>
+                <Text style={[taskPriority === 'Low' ? styles.lowPriorityTextSelected : null]}>
                   Low
                 </Text>
               </TouchableOpacity>
@@ -263,10 +261,7 @@ export const QuickTaskSheet = ({ onClose, taskToEdit }) => {
                 testID="priority-medium-button"
                 style={[
                   styles.priorityButton,
-                  taskPriority === 'Medium' && [
-                    styles.priorityButtonSelected,
-                    styles.mediumPrioritySelected,
-                  ],
+                  taskPriority === 'Medium' && styles.mediumPrioritySelected,
                 ]}
                 onPress={() => setTaskPriority('Medium')}>
                 <Text style={taskPriority === 'Medium' ? styles.mediumPriorityTextSelected : null}>
@@ -279,10 +274,7 @@ export const QuickTaskSheet = ({ onClose, taskToEdit }) => {
                 testID="priority-high-button"
                 style={[
                   styles.priorityButton,
-                  taskPriority === 'High' && [
-                    styles.priorityButtonSelected,
-                    styles.highPrioritySelected,
-                  ],
+                  taskPriority === 'High' && styles.highPrioritySelected,
                 ]}
                 onPress={() => setTaskPriority('High')}>
                 <Text style={taskPriority === 'High' ? styles.highPriorityTextSelected : null}>
@@ -330,7 +322,6 @@ const makeStyles = (theme) =>
     inputContents: {
       flexDirection: 'row',
       alignItems: 'center',
-      // width: '95%',
     },
     inputButton: {
       flex: 1,
@@ -378,21 +369,20 @@ const makeStyles = (theme) =>
       height: 42,
       borderColor: theme.colors.outline,
     },
-    priorityButtonSelected: {},
     lowPrioritySelected: {
-      borderColor: '#4CAF50',
-      backgroundColor: '#e0f2e0',
+      borderColor: theme.colors.onGreen,
+      backgroundColor: theme.colors.green,
     },
     mediumPrioritySelected: {
-      borderColor: '#FFC107',
-      backgroundColor: '#fff0c0',
+      borderColor: theme.colors.onYellow,
+      backgroundColor: theme.colors.yellow,
     },
     highPrioritySelected: {
-      borderColor: '#F44336',
-      backgroundColor: '#ffe0e0',
+      borderColor: theme.colors.onRed,
+      backgroundColor: theme.colors.red,
     },
     lowPriorityButtonText: {
-      // color: '#2E7D32',
+      // color: theme.colors.onGreen,
     },
     mediumPriorityButtonText: {
       color: '#FF8F00',
@@ -401,13 +391,13 @@ const makeStyles = (theme) =>
       color: '#C62828',
     },
     lowPriorityTextSelected: {
-      color: '#2E7D32',
+      color: theme.colors.onGreen,
     },
     mediumPriorityTextSelected: {
-      color: '#FF8F00',
+      color: theme.colors.onYellow,
     },
     highPriorityTextSelected: {
-      color: '#C62828',
+      color: theme.colors.onRed,
     },
     dateButton: {
       borderWidth: 1,
@@ -424,8 +414,6 @@ const makeStyles = (theme) =>
       flexDirection: 'row',
       justifyContent: 'center',
       marginTop: 20,
-      // marginBottom: 20,
-      // paddingBottom: 20,
       gap: 16,
     },
     actionButtonWrapper: {
@@ -433,7 +421,6 @@ const makeStyles = (theme) =>
     },
     cancelButton: {
       borderColor: theme.colors.outline,
-      // borderRadius: 30,
       alignItems: 'center',
       justifyContent: 'center',
       height: 48,

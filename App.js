@@ -25,6 +25,11 @@ const customTheme = {
   colors: lightTheme.colors,
 };
 
+const customDarkTheme = {
+  ...MD3DarkTheme,
+  colors: darkTheme.colors,
+};
+
 const { LightTheme, DarkTheme } = adaptNavigationTheme({
   reactNavigationLight: NavigationDefaultTheme,
   reactNavigationDark: NavigationDarkTheme,
@@ -86,9 +91,9 @@ export default function App() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <TaskProvider>
         <PreferencesContext.Provider value={preferences}>
-          <PaperProvider theme={MD3LightTheme}>
+          <PaperProvider theme={customTheme}>
             <SafeAreaView style={{ flex: 1 }}>
-              <RootNavigator theme={MD3LightTheme} />
+              <RootNavigator theme={customTheme} />
               <StatusBar style="dark" />
             </SafeAreaView>
           </PaperProvider>
