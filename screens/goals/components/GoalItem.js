@@ -2,6 +2,14 @@ import { View, StyleSheet } from 'react-native';
 import { Card, IconButton, Text } from 'react-native-paper';
 import { useTheme } from 'react-native-paper';
 
+/**
+ * GoalItem component - Displays a single goal with actions
+ *
+ * @param {Object} goal - The goal object to display
+ * @param {Function} onEdit - Callback when edit button is pressed
+ * @param {Function} onDelete - Callback when delete button is pressed
+ * @param {Function} onSchedule - Callback when schedule button is pressed
+ */
 const GoalItem = ({ goal, onEdit, onDelete, onSchedule }) => {
   const theme = useTheme();
   const styles = getStyles(theme);
@@ -39,8 +47,10 @@ const GoalItem = ({ goal, onEdit, onDelete, onSchedule }) => {
     </Card>
   );
 };
-export default GoalItem;
 
+/**
+ * Create component styles based on theme
+ */
 const getStyles = (theme) =>
   StyleSheet.create({
     goalCard: {
@@ -58,3 +68,5 @@ const getStyles = (theme) =>
       flexDirection: 'row',
     },
   });
+
+export default GoalItem;

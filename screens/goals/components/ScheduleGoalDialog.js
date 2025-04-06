@@ -14,6 +14,9 @@ import {
 import { DatePickerModal, TimePickerModal } from 'react-native-paper-dates';
 import { format, addHours, getHours, getMinutes, setHours, setMinutes } from 'date-fns';
 
+/**
+ * Constants for recurrence options
+ */
 const RecurrenceOptions = {
   NONE: 'none',
   DAILY: 'daily',
@@ -21,11 +24,21 @@ const RecurrenceOptions = {
   MONTHLY: 'monthly',
 };
 
+/**
+ * Dialog component for scheduling time blocks for goals
+ *
+ * @param {Object} props Component props
+ * @param {Object} props.goal The goal to schedule
+ * @param {boolean} props.visible Whether the dialog is visible
+ * @param {Function} props.onDismiss Function to call when dismissing dialog
+ * @param {Function} props.onSchedule Function to call when scheduling a goal
+ * @returns {JSX.Element} Dialog for scheduling a goal
+ */
 const ScheduleGoalDialog = ({ goal, visible, onDismiss, onSchedule }) => {
   const theme = useTheme();
   const styles = createStyles(theme);
 
-  // State for date and time
+  // Date and time state
   const [startDate, setStartDate] = useState(new Date());
   const [endDate, setEndDate] = useState(addHours(new Date(), 1));
   const [showStartDateModal, setShowStartDateModal] = useState(false);
@@ -33,11 +46,13 @@ const ScheduleGoalDialog = ({ goal, visible, onDismiss, onSchedule }) => {
   const [showEndTimeModal, setShowEndTimeModal] = useState(false);
   const [dateTimeError, setDateTimeError] = useState('');
 
-  // State for recurrence
+  // Recurrence state
   const [isRecurring, setIsRecurring] = useState(false);
   const [recurrenceType, setRecurrenceType] = useState(RecurrenceOptions.DAILY);
 
-  // Reset form when dialog opens
+  /**
+   * Reset form when dialog opens
+   */
   useEffect(() => {
     if (visible) {
       // Initialize start date to current time, rounded to nearest half hour
@@ -59,7 +74,9 @@ const ScheduleGoalDialog = ({ goal, visible, onDismiss, onSchedule }) => {
     }
   }, [visible]);
 
-  // Validate times
+  /**
+   * Validates that end time is after start time
+   */
   const validateDateTime = () => {
     if (endDate <= startDate) {
       setDateTimeError('End time must be after start time');
@@ -69,7 +86,11 @@ const ScheduleGoalDialog = ({ goal, visible, onDismiss, onSchedule }) => {
     return true;
   };
 
-  // Handle date/time changes
+  // Date picker handlers
+
+  /**
+   * Handles confirmation of the date selection
+   */
   const onConfirmStartDate = ({ date }) => {
     setShowStartDateModal(false);
     if (date) {
@@ -88,6 +109,11 @@ const ScheduleGoalDialog = ({ goal, visible, onDismiss, onSchedule }) => {
     setShowStartDateModal(false);
   };
 
+  // Start time picker handlers
+
+  /**
+   * Handles confirmation of the start time selection
+   */
   const onConfirmStartTime = ({ hours, minutes }) => {
     setShowStartTimeModal(false);
 
@@ -106,6 +132,11 @@ const ScheduleGoalDialog = ({ goal, visible, onDismiss, onSchedule }) => {
     setShowStartTimeModal(false);
   };
 
+  // End time picker handlers
+
+  /**
+   * Handles confirmation of the end time selection
+   */
   const onConfirmEndTime = ({ hours, minutes }) => {
     setShowEndTimeModal(false);
 
@@ -119,7 +150,9 @@ const ScheduleGoalDialog = ({ goal, visible, onDismiss, onSchedule }) => {
     setShowEndTimeModal(false);
   };
 
-  // Handle form submission
+  /**
+   * Handles goal scheduling after validation
+   */
   const handleSchedule = () => {
     if (validateDateTime()) {
       onSchedule({
@@ -143,7 +176,7 @@ const ScheduleGoalDialog = ({ goal, visible, onDismiss, onSchedule }) => {
             Goal: {goal?.title} - {goal?.hoursPerWeek} hours/week
           </Text>
 
-          {/* Date Picker */}
+          {/* Date selector */}
           <View style={styles.dateContainer}>
             <Button
               mode="outlined"
@@ -163,7 +196,7 @@ const ScheduleGoalDialog = ({ goal, visible, onDismiss, onSchedule }) => {
             />
           </View>
 
-          {/* Time Pickers */}
+          {/* Time selectors */}
           <View style={styles.timeContainer}>
             <View style={styles.timePickerContainer}>
               <Text style={styles.timeLabel}>Start Time</Text>
@@ -208,7 +241,7 @@ const ScheduleGoalDialog = ({ goal, visible, onDismiss, onSchedule }) => {
 
           <Divider style={styles.divider} />
 
-          {/* Recurrence Options */}
+          {/* Recurrence options */}
           <View style={styles.recurrenceContainer}>
             <View style={styles.switchContainer}>
               <Text>Recurring Event</Text>
@@ -245,6 +278,9 @@ const ScheduleGoalDialog = ({ goal, visible, onDismiss, onSchedule }) => {
   );
 };
 
+/**
+ * Creates component styles based on theme
+ */
 const createStyles = (theme) =>
   StyleSheet.create({
     dialog: {

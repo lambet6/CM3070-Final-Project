@@ -2,17 +2,25 @@ import React, { useState, useEffect } from 'react';
 import { StyleSheet, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { Button, TextInput, HelperText, Dialog, useTheme } from 'react-native-paper';
 
+/**
+ * EditGoalForm component - Handles editing an existing goal
+ *
+ * @param {Object} goal - The goal object to edit
+ * @param {boolean} visible - Controls dialog visibility
+ * @param {Function} onDismiss - Callback when dialog is dismissed
+ * @param {Function} onSave - Callback when goal is saved, provides (id, title, hours)
+ */
 const EditGoalForm = ({ goal, visible, onDismiss, onSave }) => {
-  // Local state for the form
+  const theme = useTheme();
+  const styles = createStyles(theme);
+
+  // Form state management
   const [title, setTitle] = useState('');
   const [hours, setHours] = useState('');
   const [titleError, setTitleError] = useState('');
   const [hoursError, setHoursError] = useState('');
 
-  const theme = useTheme();
-  const styles = createStyles(theme);
-
-  // Initialize form when a goal is provided
+  // Initialize form with goal data when it changes
   useEffect(() => {
     if (goal) {
       setTitle(goal.title || '');
@@ -22,6 +30,9 @@ const EditGoalForm = ({ goal, visible, onDismiss, onSave }) => {
     }
   }, [goal]);
 
+  /**
+   * Validates the goal title
+   */
   const validateTitle = (text) => {
     if (!text?.trim()) {
       setTitleError('Goal title cannot be empty');
@@ -31,6 +42,9 @@ const EditGoalForm = ({ goal, visible, onDismiss, onSave }) => {
     return true;
   };
 
+  /**
+   * Validates the hours per week
+   */
   const validateHours = (value) => {
     const numHours = Number(value);
     if (isNaN(numHours) || numHours <= 0) {
@@ -45,6 +59,9 @@ const EditGoalForm = ({ goal, visible, onDismiss, onSave }) => {
     return true;
   };
 
+  /**
+   * Handle saving the goal after validation
+   */
   const handleSave = () => {
     const titleValid = validateTitle(title);
     const hoursValid = validateHours(hours);
@@ -101,8 +118,9 @@ const EditGoalForm = ({ goal, visible, onDismiss, onSave }) => {
   );
 };
 
-export default EditGoalForm;
-
+/**
+ * Create component styles based on theme
+ */
 const createStyles = (theme) =>
   StyleSheet.create({
     keyboardAvoid: {
@@ -121,3 +139,5 @@ const createStyles = (theme) =>
       flexGrow: 1,
     },
   });
+
+export default EditGoalForm;

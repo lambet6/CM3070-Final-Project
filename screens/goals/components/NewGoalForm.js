@@ -2,14 +2,30 @@ import React, { useState } from 'react';
 import { useTheme, Text, TextInput, Card, HelperText, Button } from 'react-native-paper';
 import { StyleSheet } from 'react-native';
 
+/**
+ * Component for creating new goals with validation
+ *
+ * @param {Object} props Component props
+ * @param {Function} props.onAddGoal Callback for adding a new goal
+ * @param {number} props.goalsCount Current number of goals
+ * @returns {JSX.Element} A form for adding new goals
+ */
 const NewGoalForm = ({ onAddGoal, goalsCount }) => {
+  // State management
   const [title, setTitle] = useState('');
   const [hours, setHours] = useState('');
   const [titleError, setTitleError] = useState('');
   const [hoursError, setHoursError] = useState('');
+
   const theme = useTheme();
   const styles = createStyles(theme);
 
+  // Check if max goal limit reached (7 goals)
+  const atMaxGoals = goalsCount >= 7;
+
+  /**
+   * Validates the goal title
+   */
   const validateTitle = (text) => {
     if (!text?.trim()) {
       setTitleError('Goal title cannot be empty');
@@ -19,6 +35,9 @@ const NewGoalForm = ({ onAddGoal, goalsCount }) => {
     return true;
   };
 
+  /**
+   * Validates the weekly hour target
+   */
   const validateHours = (value) => {
     const numHours = Number(value);
     if (isNaN(numHours) || numHours <= 0) {
@@ -33,6 +52,9 @@ const NewGoalForm = ({ onAddGoal, goalsCount }) => {
     return true;
   };
 
+  /**
+   * Handles form submission after validation
+   */
   const handleSubmit = () => {
     const titleValid = validateTitle(title);
     const hoursValid = validateHours(hours);
@@ -43,8 +65,6 @@ const NewGoalForm = ({ onAddGoal, goalsCount }) => {
       setHours('');
     }
   };
-
-  const atMaxGoals = goalsCount >= 7;
 
   return (
     <Card style={styles.card}>
@@ -98,6 +118,9 @@ const NewGoalForm = ({ onAddGoal, goalsCount }) => {
   );
 };
 
+/**
+ * Creates component styles based on the theme
+ */
 const createStyles = (theme) =>
   StyleSheet.create({
     card: {

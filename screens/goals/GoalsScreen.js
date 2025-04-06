@@ -1,3 +1,24 @@
+/**
+ * GoalsScreen
+ *
+ * Primary goals management interface that allows users to define, track,
+ * and schedule time blocks for their long-term priorities and aspirations.
+ *
+ * Features:
+ * - Create and manage up to 7 personal goals with weekly hour targets
+ * - Schedule goal-related calendar events, both one-time and recurring
+ * - Integrates with device calendar via two-way sync
+ * - Edit and delete goals with option to undo recent deletions
+ * - Form validation with clear error messages
+ *
+ * UX enhancements:
+ * - Haptic feedback for important interactions
+ * - Informative snackbar notifications
+ * - Form validation with real-time feedback
+ * - Accessibility considerations including appropriate labeling
+ * - animations for dialog transitions
+ */
+
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
 import * as Haptics from 'expo-haptics';
@@ -21,36 +42,45 @@ import GoalItem from './components/GoalItem';
 import ScheduleGoalDialog from './components/ScheduleGoalDialog';
 import * as Calendar from 'expo-calendar';
 
-// Main GoalsScreen component
 export default function GoalsScreen() {
+  // Store and manager hooks
   const { goals, error, isLoading } = useGoalsStore();
   const goalsManager = useGoalsManager();
   const calendarManager = useCalendarManager();
 
+  // State for goal editing
   const [editingGoal, setEditingGoal] = useState(null);
   const [editTitle, setEditTitle] = useState('');
   const [editHours, setEditHours] = useState('');
   const [editTitleError, setEditTitleError] = useState('');
   const [editHoursError, setEditHoursError] = useState('');
   const [showEditDialog, setShowEditDialog] = useState(false);
+
+  // State for goal deletion
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [goalToDelete, setGoalToDelete] = useState(null);
-
-  const [showSnackbar, setShowSnackbar] = useState(false);
-  const [snackbarMessage, setSnackbarMessage] = useState('');
   const [deletedGoalInfo, setDeletedGoalInfo] = useState(null);
 
-  // New state for scheduling
+  // State for notifications
+  const [showSnackbar, setShowSnackbar] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
+
+  // State for goal scheduling
   const [schedulingGoal, setSchedulingGoal] = useState(null);
   const [showScheduleDialog, setShowScheduleDialog] = useState(false);
 
+  // Theme and styles
   const theme = useTheme();
   const styles = getStyles(theme);
 
+  // Fetch goals when component mounts
   useEffect(() => {
     goalsManager.fetchGoals();
   }, [goalsManager]);
 
+  /**
+   * Add a new goal with title and weekly hours
+   */
   const handleAddGoal = async (title, hours) => {
     try {
       await goalsManager.addGoal(title, hours);
@@ -60,6 +90,9 @@ export default function GoalsScreen() {
     }
   };
 
+  /**
+   * Open dialog to edit an existing goal
+   */
   const openEditDialog = (goal) => {
     setEditingGoal(goal);
     setEditTitle(goal.title);
@@ -69,11 +102,17 @@ export default function GoalsScreen() {
     setShowEditDialog(true);
   };
 
+  /**
+   * Close the edit goal dialog
+   */
   const closeEditDialog = () => {
     setShowEditDialog(false);
     setEditingGoal(null);
   };
 
+  /**
+   * Validate goal title during editing
+   */
   const validateEditTitle = (text) => {
     if (!text?.trim()) {
       setEditTitleError('Goal title cannot be empty');
@@ -83,6 +122,9 @@ export default function GoalsScreen() {
     return true;
   };
 
+  /**
+   * Validate goal hours during editing
+   */
   const validateEditHours = (value) => {
     const numHours = Number(value);
     if (isNaN(numHours) || numHours <= 0) {
@@ -97,6 +139,9 @@ export default function GoalsScreen() {
     return true;
   };
 
+  /**
+   * Update an existing goal's data
+   */
   const handleUpdateGoal = async (goalId, newTitle, newHours) => {
     try {
       await goalsManager.updateGoalData(goalId, newTitle, newHours);
@@ -107,11 +152,19 @@ export default function GoalsScreen() {
     }
   };
 
+  /**
+   * Open confirmation dialog for goal deletion
+   * @param {string} goalId - ID of goal to delete
+   */
   const openDeleteDialog = (goalId) => {
     setGoalToDelete(goalId);
     setShowDeleteDialog(true);
   };
 
+  /**
+   * Trigger haptic feedback for different interaction types
+   * @param {string} type - Type of haptic feedback
+   */
   const triggerHaptic = useCallback((type) => {
     switch (type) {
       case 'light':
@@ -137,6 +190,9 @@ export default function GoalsScreen() {
     }
   }, []);
 
+  /**
+   * Delete a goal and show undo option
+   */
   const handleDeleteGoal = async () => {
     if (goalToDelete) {
       try {
@@ -158,6 +214,9 @@ export default function GoalsScreen() {
     }
   };
 
+  /**
+   * Restore a recently deleted goal
+   */
   const handleUndoDelete = async () => {
     if (deletedGoalInfo) {
       try {
@@ -171,12 +230,18 @@ export default function GoalsScreen() {
     }
   };
 
+  /**
+   * Dismiss the snackbar notification
+   */
   const handleSnackbarDismiss = () => {
     setShowSnackbar(false);
     setDeletedGoalInfo(null);
   };
 
-  // Updated Schedule Goal function
+  /**
+   * Prepare goal for scheduling by opening schedule dialog
+   * @param {string} goalId - ID of goal to schedule
+   */
   const handleScheduleGoal = (goalId) => {
     const goalToSchedule = goals.find((goal) => goal.id === goalId);
     if (goalToSchedule) {
@@ -185,7 +250,10 @@ export default function GoalsScreen() {
     }
   };
 
-  // Function to handle scheduling a goal
+  /**
+   * Create a calendar event for a goal
+   * @param {Object} eventData - Details of the event to schedule
+   */
   const handleScheduleEvent = async (eventData) => {
     try {
       // Format the event title to include the goal name
@@ -273,7 +341,7 @@ export default function GoalsScreen() {
         </ScrollView>
       </View>
 
-      {/* Portal section */}
+      {/* Portal section for dialogs and snackbars */}
       <Portal>
         {/* Edit Goal Dialog */}
         <EditGoalForm
