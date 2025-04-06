@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import React, { useEffect, useMemo, useState, useCallback, useContext } from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
 import { useWellbeingStore } from '../../store/wellbeingStore';
 import { useWellbeingManager } from '../../hooks/useWellbeingManager';
@@ -12,15 +12,18 @@ import {
   IconButton,
   Card,
   Divider,
+  Switch,
 } from 'react-native-paper';
 import MoodTasksChart from './components/MoodTaskChart';
 import * as Haptics from 'expo-haptics';
+import { PreferencesContext } from '../../Preferences';
 
 export default function WellbeingScreen() {
   const { moodData, error, isLoading } = useWellbeingStore();
   const wellbeingManager = useWellbeingManager();
   const taskStore = useTaskStore();
   const [todayMood, setTodayMood] = useState(null);
+  const { toggleTheme, isThemeDark } = useContext(PreferencesContext);
 
   const [chartData, setChartData] = useState({
     mood: { labels: [], data: [] },
@@ -106,9 +109,11 @@ export default function WellbeingScreen() {
     <View testID="wellbeing-screen" style={styles.container}>
       <View style={styles.intro}>
         <View style={styles.header}>
-          <Text style={styles.headerText} variant="titleMedium">
-            Track your mood over time
-          </Text>
+          <View style={styles.themeToggleContainer}>
+            <IconButton icon="white-balance-sunny" size={20} iconColor={theme.colors.onSurface} />
+            <Switch value={isThemeDark} onValueChange={toggleTheme} color={theme.colors.primary} />
+            <IconButton icon="weather-night" size={20} iconColor={theme.colors.onSurface} />
+          </View>
         </View>
         {error && (
           <View style={styles.errorContainer}>
@@ -161,7 +166,7 @@ const createStyles = (theme) =>
       padding: 10,
     },
     intro: {
-      paddingTop: 20,
+      paddingTop: 10,
       marginBottom: 16,
     },
     header: {
@@ -170,6 +175,12 @@ const createStyles = (theme) =>
     },
     headerText: {
       textAlign: 'center',
+    },
+    themeToggleContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginTop: 12,
     },
     errorContainer: {
       padding: 16,

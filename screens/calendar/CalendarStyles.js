@@ -65,9 +65,10 @@ export const styles = StyleSheet.create({
     borderRadius: 2,
   },
   TaskDot: {
-    width: 4,
-    height: 4,
+    width: 6,
+    height: 6,
     borderRadius: 2,
+    borderWidth: 1,
   },
   dotContainer: {
     flexDirection: 'row',

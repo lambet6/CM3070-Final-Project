@@ -3,24 +3,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { RootNavigator } from './navigation/RootNavigator';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { TaskProvider } from './TaskProvider';
-import {
-  adaptNavigationTheme,
-  MD3DarkTheme,
-  MD3LightTheme,
-  PaperProvider,
-} from 'react-native-paper';
-import {
-  DarkTheme as NavigationDarkTheme,
-  DefaultTheme as NavigationDefaultTheme,
-} from '@react-navigation/native';
+import { MD3DarkTheme, MD3LightTheme, PaperProvider } from 'react-native-paper';
 import { lightTheme, darkTheme } from './themes';
 import { PreferencesContext } from './Preferences';
-import { useCallback, useMemo, useState } from 'react';
-
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import * as NavigationBar from 'expo-navigation-bar';
 import { enGB, registerTranslation } from 'react-native-paper-dates';
-registerTranslation('en-GB', enGB);
 
-const customTheme = {
+const customLightTheme = {
   ...MD3LightTheme,
   colors: lightTheme.colors,
 };
@@ -30,53 +20,23 @@ const customDarkTheme = {
   colors: darkTheme.colors,
 };
 
-const { LightTheme, DarkTheme } = adaptNavigationTheme({
-  reactNavigationLight: NavigationDefaultTheme,
-  reactNavigationDark: NavigationDarkTheme,
-});
-
-const CombinedDefaultTheme = {
-  ...MD3LightTheme,
-  ...LightTheme,
-  colors: {
-    ...MD3LightTheme.colors,
-    ...LightTheme.colors,
-  },
-  // fonts: {
-  //   ...NavigationDefaultTheme.fonts,
-  //   // Define all expected variants, falling back to 'regular' or another existing variant
-  //   displayLarge: NavigationDefaultTheme.fonts.regular,
-  //   displayMedium: NavigationDefaultTheme.fonts.regular,
-  //   displaySmall: NavigationDefaultTheme.fonts.regular,
-  //   headlineLarge: NavigationDefaultTheme.fonts.regular,
-  //   headlineMedium: NavigationDefaultTheme.fonts.regular,
-  //   headlineSmall: NavigationDefaultTheme.fonts.regular,
-  //   titleLarge: NavigationDefaultTheme.fonts.regular,
-  //   titleMedium: NavigationDefaultTheme.fonts.medium, // Example using medium for title variants
-  //   titleSmall: NavigationDefaultTheme.fonts.medium,
-  //   labelLarge: NavigationDefaultTheme.fonts.medium,
-  //   labelMedium: NavigationDefaultTheme.fonts.medium,
-  //   labelSmall: NavigationDefaultTheme.fonts.medium,
-  //   bodyLarge: NavigationDefaultTheme.fonts.regular,
-  //   bodyMedium: NavigationDefaultTheme.fonts.regular,
-  //   bodySmall: NavigationDefaultTheme.fonts.regular,
-  // },
-};
-const CombinedDarkTheme = {
-  ...MD3DarkTheme,
-  ...DarkTheme,
-  colors: {
-    ...MD3DarkTheme.colors,
-    ...DarkTheme.colors,
-  },
-};
+registerTranslation('en-GB', enGB);
 
 export default function App() {
-  const [isThemeDark, setIsThemeDark] = useState(false);
-  let theme = isThemeDark ? CombinedDarkTheme : CombinedDefaultTheme;
+  const [isThemeDark, setIsThemeDark] = useState(true);
+  let theme = isThemeDark ? customDarkTheme : customLightTheme;
+
+  useEffect(() => {
+    NavigationBar.setBackgroundColorAsync(
+      isThemeDark
+        ? customDarkTheme.colors.secondaryContainer
+        : customLightTheme.colors.secondaryContainer,
+    );
+  }, [isThemeDark]);
 
   const toggleTheme = useCallback(() => {
-    return setIsThemeDark(!isThemeDark);
+    setIsThemeDark(!isThemeDark);
+    return;
   }, [isThemeDark]);
 
   const preferences = useMemo(
@@ -91,11 +51,14 @@ export default function App() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <TaskProvider>
         <PreferencesContext.Provider value={preferences}>
-          <PaperProvider theme={customDarkTheme}>
+          <PaperProvider theme={theme}>
             <SafeAreaView style={{ flex: 1 }}>
-              <RootNavigator theme={customDarkTheme} />
-              <StatusBar style="dark" />
+              <RootNavigator />
             </SafeAreaView>
+            <StatusBar
+              style={isThemeDark ? 'light' : 'dark'}
+              backgroundColor={theme.colors.background}
+            />
           </PaperProvider>
         </PreferencesContext.Provider>
       </TaskProvider>

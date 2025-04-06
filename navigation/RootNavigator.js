@@ -2,7 +2,7 @@ import React, { useRef, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createMaterialBottomTabNavigator } from 'react-native-paper/react-navigation';
 import { TouchableOpacity } from 'react-native';
-import { Icon } from 'react-native-paper';
+import { Icon, useTheme } from 'react-native-paper';
 import TasksScreen from '../screens/tasks/TaskScreen';
 import CalendarScreen from '../screens/calendar/CalendarScreen';
 import GoalsScreen from '../screens/goals/GoalsScreen';
@@ -16,7 +16,8 @@ const Tab = createMaterialBottomTabNavigator();
 // A dummy screen that renders nothing
 const OpenSheetScreen = () => null;
 
-export function RootNavigator({ theme }) {
+export function RootNavigator() {
+  const theme = useTheme();
   const bottomSheetRef = useRef(null);
   const [taskToEdit, setTaskToEdit] = useState(null);
 
@@ -32,13 +33,8 @@ export function RootNavigator({ theme }) {
 
   return (
     <BottomSheetContext.Provider value={{ openSheet: handleOpenSheet }}>
-      <NavigationContainer theme={theme}>
-        <Tab.Navigator
-          initialRouteName="Tasks"
-          activeColor={theme.colors.primary}
-          inactiveColor={theme.colors.disabled}
-          barStyle={{ backgroundColor: theme.colors.surface }}
-          shifting={true}>
+      <NavigationContainer>
+        <Tab.Navigator initialRouteName="Tasks" shifting={true}>
           <Tab.Screen
             name="Tasks"
             component={TasksScreen}
@@ -59,7 +55,7 @@ export function RootNavigator({ theme }) {
             name="OpenSheet"
             component={OpenSheetScreen}
             options={{
-              tabBarIcon: ({ color }) => <Icon source="plus-box" size={30} color={color} />,
+              tabBarIcon: () => <Icon source="plus-box" size={30} color={theme.colors.primary} />,
               tabBarLabel: '',
             }}
             listeners={{

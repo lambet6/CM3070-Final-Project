@@ -92,11 +92,36 @@ export const CalendarWeek = React.memo(
 
                   {/* Task dots below the date */}
                   <View style={styles.dotContainer}>
-                    {hasLowTasks && <View style={[styles.TaskDot, { backgroundColor: 'green' }]} />}
-                    {hasMediumTasks && (
-                      <View style={[styles.TaskDot, { backgroundColor: 'orange' }]} />
+                    {hasLowTasks && (
+                      <View
+                        style={[
+                          styles.TaskDot,
+                          {
+                            backgroundColor: theme.colors.green,
+                            borderColor: theme.colors.onGreen,
+                          },
+                        ]}
+                      />
                     )}
-                    {hasHighTasks && <View style={[styles.TaskDot, { backgroundColor: 'red' }]} />}
+                    {hasMediumTasks && (
+                      <View
+                        style={[
+                          styles.TaskDot,
+                          {
+                            backgroundColor: theme.colors.yellow,
+                            borderColor: theme.colors.onYellow,
+                          },
+                        ]}
+                      />
+                    )}
+                    {hasHighTasks && (
+                      <View
+                        style={[
+                          styles.TaskDot,
+                          { backgroundColor: theme.colors.red, borderColor: theme.colors.onRed },
+                        ]}
+                      />
+                    )}
                   </View>
                 </View>
               </Calendar.Item.Day>
