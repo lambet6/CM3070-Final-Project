@@ -91,9 +91,9 @@ export default function App() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <TaskProvider>
         <PreferencesContext.Provider value={preferences}>
-          <PaperProvider theme={customTheme}>
+          <PaperProvider theme={customDarkTheme}>
             <SafeAreaView style={{ flex: 1 }}>
-              <RootNavigator theme={customTheme} />
+              <RootNavigator theme={customDarkTheme} />
               <StatusBar style="dark" />
             </SafeAreaView>
           </PaperProvider>

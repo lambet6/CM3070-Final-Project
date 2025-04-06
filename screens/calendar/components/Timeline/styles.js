@@ -3,7 +3,6 @@ import { HOUR_HEIGHT, QUARTER_HEIGHT, TASK_ITEM_WIDTH, TIMELINE_OFFSET } from '.
 import { TASK_ITEM_HEIGHT } from './utils';
 import { useTheme } from 'react-native-paper';
 import { useMemo } from 'react';
-import { te } from 'date-fns/locale';
 
 export const useTimelineStyles = () => {
   const theme = useTheme();
@@ -36,7 +35,7 @@ export const useTimelineStyles = () => {
           width: '100%',
           height: TASK_ITEM_HEIGHT / 2 + 20,
           // zIndex: 1,
-          zIndex: 100,
+          // zIndex: 100,
         },
         unscheduledTaskList: {
           overflow: 'visible',
@@ -371,23 +370,35 @@ export const getClippedEventStyle = (isClippedStart, isClippedEnd) => {
 };
 
 // Priority indicator styles
-export const priorityIndicatorStyles = StyleSheet.create({
-  container: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 8,
-    borderTopLeftRadius: 8,
-    borderBottomLeftRadius: 8,
-  },
-  high: {
-    backgroundColor: '#ff5252', // Red color for high priority
-  },
-  medium: {
-    backgroundColor: '#ffca28', // Yellow color for medium priority
-  },
-  low: {
-    backgroundColor: '#4caf50', // Green color for low priority
-  },
-});
+export const usePriorityIndicatorStyles = () => {
+  const theme = useTheme();
+
+  return useMemo(
+    () =>
+      StyleSheet.create({
+        container: {
+          position: 'absolute',
+          left: 2,
+          // top: 0,
+          // bottom: 0,
+          width: 8,
+          borderRadius: 2,
+          // borderTopLeftRadius: 8,
+          // borderBottomLeftRadius: 8,
+        },
+        high: {
+          backgroundColor: theme.colors.red,
+          height: '90%',
+        },
+        medium: {
+          backgroundColor: theme.colors.yellow,
+          height: '60%',
+        },
+        low: {
+          backgroundColor: theme.colors.green,
+          height: '30%',
+        },
+      }),
+    [theme],
+  );
+};

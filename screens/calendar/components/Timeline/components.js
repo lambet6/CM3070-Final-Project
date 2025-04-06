@@ -14,8 +14,8 @@ import {
   getClippedEventStyle,
   getEventBaseStyle,
   getEventWidthStyle,
-  priorityIndicatorStyles,
   stylesTooltip,
+  usePriorityIndicatorStyles,
 } from './styles';
 import {
   HOURS,
@@ -359,7 +359,7 @@ const TaskItem = React.memo(
     isSchedulable = true,
     onTapUnScheduled,
     onDismissTooltip,
-    isAnyTaskDragging = false, // Accept new prop with default value
+    isAnyTaskDragging = false,
   }) => {
     const styles = useTimelineStyles();
     // Extract props from animation and layout values
@@ -787,20 +787,21 @@ export const Tooltip = ({ message, position, isVisible, onDismiss, parentViewLay
 };
 
 export const PriorityIndicator = React.memo(({ priority }) => {
+  const styles = usePriorityIndicatorStyles();
+
   // Determine the style based on priority
   const getPriorityStyle = () => {
-    // Handle exactly the three possible values
     switch (priority) {
       case 'High':
-        return priorityIndicatorStyles.high;
+        return styles.high;
       case 'Medium':
-        return priorityIndicatorStyles.medium;
+        return styles.medium;
       case 'Low':
       default:
-        return priorityIndicatorStyles.low;
+        return styles.low;
     }
   };
 
-  return <View style={[priorityIndicatorStyles.container, getPriorityStyle()]} />;
+  return <View style={[styles.container, getPriorityStyle()]} />;
 });
 PriorityIndicator.displayName = 'PriorityIndicator';
