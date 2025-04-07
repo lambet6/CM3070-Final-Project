@@ -140,20 +140,25 @@ export default function WellbeingScreen() {
         <View style={styles.header}>
           <View style={styles.themeToggleContainer}>
             <IconButton icon="white-balance-sunny" size={20} iconColor={theme.colors.onSurface} />
-            <Switch value={isThemeDark} onValueChange={toggleTheme} color={theme.colors.primary} />
+            <Switch
+              testID="theme-toggle"
+              value={isThemeDark}
+              onValueChange={toggleTheme}
+              color={theme.colors.primary}
+            />
             <IconButton icon="weather-night" size={20} iconColor={theme.colors.onSurface} />
           </View>
         </View>
 
         {/* Error and Loading States */}
         {error && (
-          <View style={styles.errorContainer}>
+          <View testID="error-container" style={styles.errorContainer}>
             <Text style={styles.errorText}>{error}</Text>
           </View>
         )}
         {isLoading && (
           <View style={styles.loading}>
-            <ActivityIndicator style={styles.indicator} />
+            <ActivityIndicator testID="loading-indicator" style={styles.indicator} />
             <Text style={styles.loadingText}>Loading wellbeing data...</Text>
           </View>
         )}
@@ -185,7 +190,11 @@ export default function WellbeingScreen() {
       </Card>
 
       {/* Mood & Tasks Chart */}
-      <MoodTasksChart moodData={chartData.mood} taskData={chartData.tasks} />
+      <MoodTasksChart
+        testID="mood-tasks-chart"
+        moodData={chartData.mood}
+        taskData={chartData.tasks}
+      />
     </View>
   );
 }

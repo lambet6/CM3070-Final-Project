@@ -92,9 +92,8 @@
   1. The daily timeline shows tasks as reorderable items alongside fixed calendar events.
   2. Users can press-and-hold a task to initiate a drag operation.
   3. When dragging a task near calendar events, the task automatically snaps to position above or below the event (depending on which is closer).
-  4. When dragging a task near other tasks, it behaves similar to reordering apps on a smartphone, with other tasks shifting to make space.
-  5. Dragging is limited to the current day's timeline only.
-  6. Visual feedback is provided during drag operations (e.g., highlighting potential drop zones).
+  4. Dragging is limited to the current day's timeline only.
+  5. Visual feedback is provided during drag operations (e.g., highlighting potential drop zones).
 
 ---
 
@@ -177,20 +176,45 @@
 
 ---
 
-## Future Feature Stories (Placeholders)
+## AI-Assisted Scheduling Stories
 
-1. **AI-Assisted Scheduling**:
+### Auto-Schedule Tasks
 
-   - "As a user, I want AI to automatically place tasks in free calendar slots based on my history, so I can optimize my time without manual planning."
-   - "As a user, I want AI to automatically place goals, in appropriate blocks, in free calendar slots based on my history, so I can optimize my wellbeing."
+- **Story**: As a busy user, I want AI to automatically place tasks in free calendar slots based on priority and constraints, so I can optimize my time without manual planning.
+- **Acceptance Criteria**:
+  1. Users can generate an optimized schedule for tasks due on a specific date
+  2. The scheduler considers existing calendar events as fixed commitments
+  3. Tasks are scheduled based on priority, duration, and availability
+  4. The system respects work hour constraints (default: 7:00 AM - 7:00 PM)
+  5. Maximum continuous work periods are enforced (default: 90 minutes)
+  6. If not all tasks can be scheduled, the system creates a partial schedule and clearly indicates which tasks could not be accommodated
+  7. If the scheduling service is unavailable, users receive a clear error message
 
-2. **Cross-Device Sync**:
+### Schedule Customization
 
-   - "As a user with multiple devices, I want to sign in and see my data everywhere, so I can manage tasks and mood on any device seamlessly."
+- **Story**: As a user with personal preferences, I want to customize scheduling parameters, so the AI creates schedules that match my work style.
+- **Acceptance Criteria**:
+  1. Users can specify preferred work hours for scheduling
+  2. Users can adjust maximum continuous work time
+  3. Users can select different optimization goals (e.g., "maximize wellbeing")
+  4. Custom settings are applied when generating new schedules
 
-3. **Advanced Mood Analytics**:
+### Schedule Feedback
 
-   - "As a user wanting deeper insights, I want to see correlations between mood, time of day, and task difficulty, so I can adjust my schedule for better wellbeing."
+- **Story**: As a user, I want to provide feedback on auto-generated schedules, so the system can learn my preferences over time.
+- **Acceptance Criteria**:
+  1. Users can record their mood (score 1-5) associated with a generated schedule
+  2. The system captures which scheduled tasks were completed
+  3. The system records manual adjustments made to the schedule
+  4. Feedback data is sent to the scheduling service to improve future recommendations
+  5. Failed feedback submission attempts show clear error messages
 
-4. **Handwritten List Scanning**
-   - "As a user who writes tasks on paper, I want to use my phone's camera to scan and convert them into digital tasks, so I can avoid manual typing."
+### Clear Scheduled Times
+
+- **Story**: As a user, I want to clear all automatically scheduled times for a specific date, so I can start fresh if needed.
+- **Acceptance Criteria**:
+  1. A "Clear Schedule" option is available for each day
+  2. Clearing a schedule removes all AI-assigned scheduled times but preserves the tasks themselves
+  3. The system confirms how many task schedules were cleared
+  4. Error handling provides clear feedback if the operation fails
+

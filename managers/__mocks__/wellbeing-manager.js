@@ -21,6 +21,12 @@ export const createWellbeingManager = (
       });
       return Promise.resolve(newMood);
     }),
+    getLast14DaysMoodData: jest.fn().mockImplementation(() => {
+      return {
+        labels: Array.from({ length: 14 }, (_, i) => `2025-03-${String(i + 1).padStart(2, '0')}`),
+        data: Array.from({ length: 14 }, () => Math.floor(Math.random() * 5) + 1),
+      };
+    }),
 
     // Override with any custom implementations provided
     ...customImplementations,

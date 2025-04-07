@@ -97,7 +97,6 @@ This application aims to **balance productivity and wellbeing** by integrating:
    - When positioning tasks in the daily timeline:
      - Tasks can be dragged and positioned between calendar events
      - When dragging a task near a calendar event, the task will automatically snap to position above or below the event (whichever is closer)
-     - When dragging tasks near other tasks, the behavior mimics app reordering on smartphones, with items shifting to make space
 
 ---
 
@@ -147,6 +146,40 @@ This application aims to **balance productivity and wellbeing** by integrating:
 
 ---
 
+### AI-Assisted Scheduling
+
+1. **Automated Task Scheduling**
+
+   - Uses external scheduling service to automatically schedule tasks based on:
+     - **Task Priority** (High, Medium, Low)
+     - **Estimated Task Duration**
+     - **Calendar availability** (accounting for existing events)
+   - Optimizes schedules according to configurable goals:
+     - "maximize_wellbeing" (default) - prioritizes balanced workloads
+     - Other optimization strategies as supported by the API
+
+2. **Scheduling with Constraints**
+
+   - Respects customizable work hours (default: 7:00 AM to 7:00 PM)
+   - Enforces maximum continuous work time (default: 90 minutes)
+   - Provides appropriate breaks between scheduled tasks
+   - Avoids scheduling conflicts with existing calendar events
+
+3. **Feedback & Learning**
+
+   - Records user mood scores (1-5) in relation to schedules
+   - Tracks completed vs. uncompleted tasks
+   - Captures manual task adjustments to improve future scheduling
+   - Sends data to machine learning service for schedule optimization
+
+4. **Schedule Management**
+   - Allows generating schedules for specific dates
+   - Supports clearing automatically scheduled times
+   - Handles partial schedules when time constraints prevent full scheduling
+   - Provides clear feedback when scheduling service is unavailable
+
+---
+
 ### Data Persistence & User Accounts
 
 1. **Local Storage & Error Handling**
@@ -176,9 +209,7 @@ This application aims to **balance productivity and wellbeing** by integrating:
 
 1. **W3C/WCAG Best Practices**
    - High contrast UI elements with adequate color differentiation
-   - Support for screen readers with appropriate labels
    - Adequate text scaling and large touch targets for drag & drop operations
-   - Keyboard navigation support where applicable
 2. **Usability Focus**
    - Quick setup of tasks
    - Clear labeling of priorities/due dates
@@ -189,54 +220,23 @@ This application aims to **balance productivity and wellbeing** by integrating:
 
 ## Non-Functional Requirements
 
-1. **Performance**
-
-   - Launch under 2 seconds on standard devices (Android 10+, iOS 14+).
-   - Calendar and list transitions respond within ~150 ms to user interactions.
-
-2. **Reliability**
+1. **Reliability**
 
    - Must function offline (storing data locally) without losing tasks or mood entries.
    - Graceful error handling with clear user feedback.
 
-3. **Maintainability**
+2. **Maintainability**
 
    - Code structured with managers (business logic), repositories (data layer), and screens (UI).
    - Follows a consistent coding style documented in `CONVENTIONS.md`.
 
-4. **Scalability**
+3. **Scalability**
 
    - Should handle hundreds of tasks, goals, and mood entries without performance issues.
    - Flexible architecture to support future features like AI-based auto-scheduling.
 
-5. **Security & Privacy**
+4. **Security & Privacy**
    - Basic local data storage (AsyncStorage).
-   - Respect user privacy; no external sharing of data unless the user opts in for future cloud sync.
+   - Respect user privacy; no external sharing of data
 
----
 
-## Future Extensions
-
-1. **AI-Assisted Scheduling**
-
-   - Auto-scheduling tasks based on availability, user behavior, and historical data.
-   - Intelligent task time estimation.
-   - Proactive suggestions for calendar blocks to meet weekly goal hours.
-
-2. **Expanded Analytics**
-
-   - Advanced correlations for mood, completion rate, time of day, goal achievements, etc.
-
-3. **Cross-Device Sync**
-
-   - Cloud-based accounts for multi-device support (phone, tablet, web).
-
-4. **Collaboration**
-
-   - Potential for shared tasks or group goals.
-
-5. **Handwritten To-Do Scanning**
-   - Use device camera to scan handwritten lists.
-   - The app would parse recognized text (via OCR) to create tasks automatically, reducing manual entry time.
-
----

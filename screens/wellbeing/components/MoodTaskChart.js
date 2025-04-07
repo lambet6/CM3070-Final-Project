@@ -96,6 +96,7 @@ const MoodTasksChart = ({ moodData, taskData }) => {
             accessibilityLabel="Chart showing mood ratings and tasks completed over the last 14 days"
             accessibilityHint="Displays correlation between your mood and productivity">
             <LineChart
+              testID="line-chart"
               data={chartData}
               width={screenWidth}
               height={220}
